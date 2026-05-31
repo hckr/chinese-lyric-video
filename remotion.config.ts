@@ -7,3 +7,5 @@ import { Config } from "@remotion/cli/config";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
+Config.setExperimentalClientSideRenderingEnabled(true);
+Config.setScale(2);

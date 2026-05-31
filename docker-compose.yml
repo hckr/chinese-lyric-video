@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  renderer:
+    build: .
+    volumes:
+      # Mount your project directory so edits on macOS are instantly updated in the container
+      - .:/app
+      # Anonymous volume: Prevents macOS 'node_modules' from overwriting Linux 'node_modules'
+      - /app/node_modules
+    # The default command to run when starting this service
+    command: npx remotion render LyricVideo out/video.mp4 --image-format=jpeg
