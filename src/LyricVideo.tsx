@@ -4,7 +4,7 @@ import { Video } from "@remotion/media";
 import lyricsData from "./Angela_Zhang_Keep_Walking";
 import { loadFont as loadNotoSansSC } from "@remotion/google-fonts/NotoSansSC";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { loadFont as loadLora } from "@remotion/google-fonts/Lora";
+import { loadFont as loadLexendDeca } from "@remotion/google-fonts/LexendDeca";
 
 const { fontFamily: notoSansSCFont } = loadNotoSansSC("normal", {
   weights: ["400"],
@@ -15,7 +15,7 @@ const { fontFamily: interFont } = loadInter("normal", {
   subsets: ["latin", "latin-ext"],
 });
 
-const { fontFamily: loraFont } = loadLora("italic", {
+const { fontFamily: lexendDecaFont } = loadLexendDeca("normal", {
   weights: ["400"],
   subsets: ["latin", "latin-ext"],
 });
@@ -59,14 +59,10 @@ export const LyricVideo: React.FC = () => {
                     <span style={styles.wordTranslationEn}>
                       {word.translation.en}
                     </span>
-                    <span style={styles.wordTranslationPl}>
-                      {word.translation.pl}
-                    </span>
                   </div>
                 ))}
               </div>
 
-              {/*
               <div style={styles.fullTranslationContainer}>
                 <div style={styles.fullTranslationEn}>
                   {line.translation.en}
@@ -74,7 +70,7 @@ export const LyricVideo: React.FC = () => {
                 <div style={styles.fullTranslationPl}>
                   {line.translation.pl}
                 </div>
-              </div>*/}
+              </div>
             </AbsoluteFill>
           </Sequence>
         );
@@ -83,88 +79,86 @@ export const LyricVideo: React.FC = () => {
   );
 };
 
-// --- STYLES ---
 const styles: Record<string, React.CSSProperties> = {
   gradientBackground: {
-    background:
-      "linear-gradient(to top, rgba(0,0,0,0.0) 4%, rgba(0,0,0,0.5) 4%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0) 35%)",
+    background: "rgba(0,0,0,0.5)",
+    // background: `linear-gradient(to top, rgba(0,0,0,0.0) 19%, rgba(0,0,0,0.5) 19%, rgba(0,0,0,0.5) 41.4%, rgba(0,0,0,0) 41.4%)`,
+    //    linear-gradient(to top, rgba(0,0,0,0.0) 4%, rgba(0,0,0,0.5) 4%, rgba(0,0,0,0.5) 16%, rgba(0,0,0,0) 16%)`,
   },
   screenContainer: {
-    justifyContent: "flex-end", // Pushes text to the bottom
+    justifyContent: "flex-end",
     alignItems: "center",
-    paddingBottom: "80px", // Margin from bottom of video
+    paddingBottom: "60px",
   },
   sentenceRow: {
     display: "flex",
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: "16px", // Space between each word block
+    gap: "16px",
   },
   wordBlock: {
     display: "flex",
-    flexDirection: "column", // Stacks Pinyin -> Hanzi -> English
-    alignItems: "center", // Centers them perfectly
+    flexDirection: "column",
+    alignItems: "center",
     justifyContent: "flex-end",
   },
   pinyin: {
-    fontSize: "32px",
-    letterSpacing: "3px",
-    textShadow:
-      "1px 1px 1px black, -1px -1px 1px black, -1px 1px 1px black, 1px -1px 1px black",
-    color: "#ffcc00", // Yellow
-    marginBottom: "4px",
+    fontSize: "42px",
+    letterSpacing: "5px",
+    textShadow: heavyTextShadow("#995500"),
+    color: "#ffcc00",
+    marginBottom: "32px",
     fontFamily: interFont,
   },
   chinese: {
-    fontSize: "92px",
+    fontSize: "150px",
     fontWeight: "normal",
-    color: "#ffffff",
-    textShadow:
-      "1px 1px 1px black, -1px -1px 1px black, -1px 1px 1px black, 1px -1px 1px black",
+    color: "white",
+    textShadow: heavyTextShadow("#111"),
     height: "100px",
     display: "flex",
     alignItems: "center",
     fontFamily: notoSansSCFont,
   },
   wordTranslationEn: {
-    fontSize: "32px",
+    fontSize: "42px",
     color: "#00eeff",
-    textShadow:
-      "1px 1px 1px black, -1px -1px 1px black, -1px 1px 1px black, 1px -1px 1px black",
+    textShadow: heavyTextShadow("#007788"),
     height: "40px",
-    marginTop: "24px",
-    fontFamily: interFont,
-  },
-  wordTranslationPl: {
-    fontSize: "32px",
-    color: "#d6b4fc",
-    textShadow:
-      "1px 1px 1px black, -1px -1px 1px black, -1px 1px 1px black, 1px -1px 1px black",
-    height: "40px",
-    marginTop: "24px",
+    marginTop: "48px",
     fontFamily: interFont,
   },
   fullTranslationContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    marginTop: "40px", // Space between word blocks and full translations
+    marginTop: "230px",
     textAlign: "center",
-    width: "80%",
   },
   fullTranslationEn: {
-    fontSize: "28px",
-    color: "#eeeeee",
-    fontStyle: "italic",
-    textShadow: "1px 1px 4px rgba(0,0,0,0.8)",
-    marginBottom: "6px",
-    fontFamily: loraFont,
+    fontSize: "42px",
+    color: "#eee",
+    textShadow: heavyTextShadow("#00109f"),
+    padding: "0 50px 8px",
+    fontFamily: lexendDecaFont,
   },
   fullTranslationPl: {
-    fontSize: "28px",
-    color: "#aaaaaa", // Slightly darker/smaller to distinguish from EN
-    textShadow: "1px 1px 4px rgba(0,0,0,0.8)",
-    fontFamily: loraFont,
+    fontSize: "42px",
+    color: "#eee",
+    textShadow: heavyTextShadow("#9f0b00"),
+    marginTop: "8px",
+    fontFamily: lexendDecaFont,
   },
 };
+
+function heavyTextShadow(color: string) {
+  return (
+    `1px 1px 3px ${color}, -1px -1px 3px ${color}, -1px 1px 3px ${color}, 1px -1px 3px ${color},` +
+    `1px 1px 3px ${color}, -1px -1px 3px ${color}, -1px 1px 3px ${color}, 1px -1px 3px ${color},` +
+    `1px 1px 3px ${color}, -1px -1px 3px ${color}, -1px 1px 3px ${color}, 1px -1px 3px ${color},` +
+    `1px 1px 2px ${color}, -1px -1px 2px ${color}, -1px 1px 2px ${color}, 1px -1px 2px ${color},` +
+    `1px 1px 2px ${color}, -1px -1px 2px ${color}, -1px 1px 2px ${color}, 1px -1px 2px ${color},` +
+    `1px 1px 1px ${color}, -1px -1px 1px ${color}, -1px 1px 1px ${color}, 1px -1px 1px ${color}`
+  );
+}
