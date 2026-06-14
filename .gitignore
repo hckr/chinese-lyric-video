@@ -8,3 +8,4 @@ out
 
 # Ignore video files in public
 public/*.mp4
+public/*.png

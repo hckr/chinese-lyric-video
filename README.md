@@ -1,3 +1,10 @@
+Save a frame from a video:
+```
+ffmpeg -i public/Angela_Zhang_Keep_Walking.mp4 -vf "select=eq(n\,369)" -vframes 1 public/thumbnail-bg-369.png
+```
+
+---
+
 # Remotion video
 
 <p align="center">
