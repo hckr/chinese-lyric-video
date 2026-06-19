@@ -5,6 +5,13 @@ ffmpeg -i public/Angela_Zhang_Keep_Walking.mp4 -vf "select=eq(n\,369)" -vframes 
 
 ---
 
+Animated emoji assets:
+
+curl -L -o public/heart-face-0.5x.webm "https://github.com/remotion-dev/animated-emoji/raw/main/public/heart-face-0.5x.webm"
+curl -L -o public/grin-sweat-0.5x.webm "https://github.com/remotion-dev/animated-emoji/raw/main/public/grin-sweat-0.5x.webm"
+
+---
+
 # Remotion video
 
 <p align="center">
