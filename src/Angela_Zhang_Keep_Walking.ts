@@ -452,7 +452,7 @@ const 人都应该有梦_words = [
   {
     hanzi: "人",
     pinyin: "rén",
-    translation: { en: "people" },
+    translation: { en: "person" },
   },
   { hanzi: "都", pinyin: "dōu", translation: { en: "all" } },
   {
@@ -486,7 +486,7 @@ const LYRICS_DICT = {
     },
     words: [
       { hanzi: "", pinyin: "", translation: { en: "[if]" } },
-      { hanzi: "有", pinyin: "yǒu", translation: { en: "have" } },
+      { hanzi: "有", pinyin: "yǒu", translation: { en: "to have" } },
       {
         hanzi: "梦",
         pinyin: "mèng",
@@ -854,7 +854,7 @@ const LYRICS_DICT = {
       {
         hanzi: "耳朵",
         pinyin: "ěrduo",
-        translation: { en: "ears" },
+        translation: { en: "ear" },
       },
       {
         hanzi: "用来",
@@ -1025,7 +1025,7 @@ const LYRICS_DICT = {
       {
         hanzi: "有",
         pinyin: "yǒu",
-        translation: { en: "there are" },
+        translation: { en: "there is/are" },
       },
       {
         hanzi: "背后",
@@ -1307,7 +1307,7 @@ const LYRICS_DICT = {
   我说希望无穷: {
     translation: {
       en: "I say that hope is boundless.",
-      pl: "Mówię, że nadzieja jest nieograniczona.",
+      pl: "Ja mówię, że nadzieja jest nieograniczona.",
     },
     words: [
       { hanzi: "我", pinyin: "wǒ", translation: { en: "I" } },
@@ -1327,7 +1327,7 @@ const LYRICS_DICT = {
   你猜美梦成空: {
     translation: {
       en: "You suppose sweet dreams will turn into nothing.",
-      pl: "Myślisz, że piękne marzenia obrócą się wniwecz.",
+      pl: "Ty myślisz, że piękne marzenia obrócą się wniwecz.",
     },
     words: [
       { hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
@@ -1339,7 +1339,7 @@ const LYRICS_DICT = {
       {
         hanzi: "美梦",
         pinyin: "měimèng",
-        translation: { en: "good dream\nwish, desire\nsweet dreams" },
+        translation: { en: "good dream\nwish, desire\nsweet dream" },
       },
       {
         hanzi: "成",
@@ -1375,7 +1375,7 @@ const LYRICS_DICT = {
   总要决斗: {
     translation: {
       en: "must always duel.",
-      pl: "zawsze toczą pojedynek.",
+      pl: "muszą toczyć pojedynek.",
     },
     words: [
       {
