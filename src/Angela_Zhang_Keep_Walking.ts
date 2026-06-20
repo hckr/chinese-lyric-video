@@ -16,30 +16,30 @@ const TIMELINE = [
   {
     id: "line-02",
     startMs: 19000,
-    endMs: 22500,
+    endMs: 22000,
     lyricKey: "有雷声在轰不停",
   },
   {
     id: "line-03",
-    startMs: 22500,
+    startMs: 22000,
     endMs: 24500,
     lyricKey: "雨泼进眼里看不清",
   },
   {
     id: "line-04",
-    startMs: 25000,
+    startMs: 24500,
     endMs: 26000,
     lyricKey: "谁急速狂飙",
   },
   {
     id: "line-04a",
     startMs: 26000,
-    endMs: 30000,
+    endMs: 29500,
     lyricKey: "溅我一身的泥泞",
   },
   {
     id: "line-05",
-    startMs: 30000,
+    startMs: 29500,
     endMs: 32000,
     lyricKey: "很确定我想去哪里",
   },
@@ -64,12 +64,12 @@ const TIMELINE = [
   {
     id: "line-08a",
     startMs: 41000,
-    endMs: 44500,
+    endMs: 44700,
     lyricKey: "是所谓志气(与勇气)",
   },
   {
     id: "line-09",
-    startMs: 44500,
+    startMs: 44700,
     endMs: 47000,
     lyricKey: "你能推我下悬崖",
   },
@@ -118,12 +118,12 @@ const TIMELINE = [
   {
     id: "line-13a",
     startMs: 67500,
-    endMs: 70000,
+    endMs: 69500,
     lyricKey: "有梦就别怕痛",
   },
   {
     id: "line-14",
-    startMs: 70000,
+    startMs: 69500,
     endMs: 72000,
     lyricKey: "淋雨一直走",
   },
@@ -147,7 +147,7 @@ const TIMELINE = [
   },
   {
     id: "line-16",
-    startMs: 82500,
+    startMs: 83000,
     endMs: 86000,
     lyricKey: "有前面盘旋的秃鹰",
   },
@@ -208,24 +208,24 @@ const TIMELINE = [
   {
     id: "line-23",
     startMs: 108500,
-    endMs: 110500,
+    endMs: 111000,
     lyricKey: "你能推我下悬崖",
   },
   {
     id: "line-23a",
-    startMs: 110500,
+    startMs: 111000,
     endMs: 113000,
     lyricKey: "我能学会飞行",
   },
   {
     id: "line-24",
     startMs: 113000,
-    endMs: 117000,
+    endMs: 117500,
     lyricKey: "从不听谁的命令",
   },
   {
     id: "line-24a",
-    startMs: 117000,
+    startMs: 117500,
     endMs: 118500,
     lyricKey: "(很独立)",
   },
@@ -244,12 +244,12 @@ const TIMELINE = [
   {
     id: "line-26a",
     startMs: 125500,
-    endMs: 128500,
+    endMs: 128800,
     lyricKey: "是一颗宝石就该闪烁",
   },
   {
     id: "line-27",
-    startMs: 128500,
+    startMs: 128800,
     endMs: 131000,
     lyricKey: "人都应该有梦Oh~",
   },
@@ -334,12 +334,12 @@ const TIMELINE = [
   {
     id: "line-33a",
     startMs: 161500,
-    endMs: 167000,
+    endMs: 166000,
     lyricKey: "总要决斗",
   },
   {
     id: "line-34",
-    startMs: 167000,
+    startMs: 166000,
     endMs: 169000,
     lyricKey: "淋雨一直走",
   },
@@ -388,12 +388,12 @@ const TIMELINE = [
   {
     id: "line-38",
     startMs: 186500,
-    endMs: 189000,
+    endMs: 189500,
     lyricKey: "淋雨一直走",
   },
   {
     id: "line-38a",
-    startMs: 189000,
+    startMs: 189500,
     endMs: 192500,
     lyricKey: "是一颗宝石就该闪烁",
   },
@@ -406,12 +406,12 @@ const TIMELINE = [
   {
     id: "line-39a",
     startMs: 195000,
-    endMs: 196500,
+    endMs: 197000,
     lyricKey: "有梦就别怕痛",
   },
   {
     id: "line-40",
-    startMs: 197500,
+    startMs: 197000,
     endMs: 200000,
     lyricKey: "淋雨一直走",
   },
@@ -448,65 +448,78 @@ export default {
   },
 };
 
+const 人都应该有梦_words = [
+  {
+    hanzi: "人",
+    pinyin: "rén",
+    translation: { en: "people" },
+  },
+  { hanzi: "都", pinyin: "dōu", translation: { en: "all" } },
+  {
+    hanzi: "应该",
+    pinyin: "yīnggāi",
+    translation: { en: "should" },
+  },
+  { hanzi: "有", pinyin: "yǒu", translation: { en: "to have" } },
+  {
+    hanzi: "梦",
+    pinyin: "mèng",
+    translation: { en: "dream" },
+  },
+];
+
 const LYRICS_DICT = {
   "Oh~人都应该有梦": {
     translation: {
-      en: "Oh, everyone should have dreams",
-      pl: "Ach, wszyscy powinni mieć marzenia",
+      en: "Oh, everyone should have dreams.",
+      pl: "Ach, wszyscy powinni mieć marzenia.",
     },
     words: [
       { hanzi: "", pinyin: "", translation: { en: "Oh~" } },
-      {
-        hanzi: "人",
-        pinyin: "rén",
-        translation: { en: "man" },
-      },
-      { hanzi: "都", pinyin: "dōu", translation: { en: "all" } },
-      {
-        hanzi: "应该",
-        pinyin: "yīnggāi",
-        translation: { en: "should" },
-      },
-      { hanzi: "有", pinyin: "yǒu", translation: { en: "have" } },
-      {
-        hanzi: "梦",
-        pinyin: "mèng",
-        translation: { en: "dream" },
-      },
+      ...人都应该有梦_words,
     ],
   },
   有梦就别怕痛: {
     translation: {
-      en: "if you have dreams, don't be afraid of pain.",
-      pl: "mając marzenia, nie bój się bólu.",
+      en: "Having dreams, don't be afraid of pain.",
+      pl: "Mając marzenia, nie bać się bólu.",
     },
     words: [
+      { hanzi: "", pinyin: "", translation: { en: "[if]" } },
       { hanzi: "有", pinyin: "yǒu", translation: { en: "have" } },
       {
         hanzi: "梦",
         pinyin: "mèng",
         translation: { en: "dream" },
       },
-      { hanzi: "就", pinyin: "jiù", translation: { en: "then" } },
+      {
+        hanzi: "就",
+        pinyin: "jiù",
+        translation: { en: "then" },
+      },
       {
         hanzi: "别",
         pinyin: "bié",
         translation: { en: "do not" },
       },
-      { hanzi: "怕", pinyin: "pà", translation: { en: "fear" } },
+      {
+        hanzi: "怕",
+        pinyin: "pà",
+        translation: { en: "to fear\nto be afraid" },
+      },
       { hanzi: "痛", pinyin: "tòng", translation: { en: "pain" } },
     ],
   },
   有雷声在轰不停: {
     translation: {
-      en: "There is the sound of thunder rumbling endlessly.",
-      pl: "Słychać nieustannie dudniące grzmoty.",
+      en: "The thunder rumbles constantly.",
+      pl: "Grzmoty dudnią bez przerwy.",
     },
     words: [
       {
         hanzi: "有",
         pinyin: "yǒu",
-        translation: { en: "be" },
+        translation: { en: "there is" },
       },
       {
         hanzi: "雷声",
@@ -521,7 +534,7 @@ const LYRICS_DICT = {
       {
         hanzi: "轰",
         pinyin: "hōng",
-        translation: { en: "rumble" },
+        translation: { en: "to rumble\nto boom" },
       },
       {
         hanzi: "不停",
@@ -532,26 +545,31 @@ const LYRICS_DICT = {
   },
   雨泼进眼里看不清: {
     translation: {
-      en: "Rain splashes into my eyes, making it impossible to see clearly.",
-      pl: "Deszcz pryska w oczy, przez co nie widzę wyraźnie.",
+      en: "Rain splashes into my eyes, I can't see clearly.",
+      pl: "Deszcz pryska mi w oczy, widzę niewyraźnie.",
     },
     words: [
       { hanzi: "雨", pinyin: "yǔ", translation: { en: "rain" } },
       {
         hanzi: "泼",
         pinyin: "pō",
-        translation: { en: "splash" },
+        translation: { en: "to pour\nto splash" },
       },
-      { hanzi: "进", pinyin: "jìn", translation: { en: "into" } },
+      { hanzi: "进", pinyin: "jìn", translation: { en: "into\nin" } },
       {
-        hanzi: "眼里",
-        pinyin: "yǎn lǐ",
-        translation: { en: "inside the eyes" },
+        hanzi: "眼",
+        pinyin: "yǎn",
+        translation: { en: "eye" },
+      },
+      {
+        hanzi: "里",
+        pinyin: "lǐ",
+        translation: { en: "inside" },
       },
       {
         hanzi: "看",
         pinyin: "kàn",
-        translation: { en: "look" },
+        translation: { en: "to look\nto see" },
       },
       {
         hanzi: "不清",
@@ -562,71 +580,76 @@ const LYRICS_DICT = {
   },
   谁急速狂飙: {
     translation: {
-      en: "Someone speeds by wildly, splashing mud all over my body.",
-      pl: "Ktoś pędzi z zawrotną prędkością, ochlapując całe moje ciało błotem.",
+      en: "Who is speeding so madly,",
+      pl: "Kto tak szaleńczo pędzi,",
     },
     words: [
       { hanzi: "谁", pinyin: "shéi", translation: { en: "who" } },
       {
         hanzi: "急速",
         pinyin: "jísù",
-        translation: { en: "rapidly" },
+        translation: { en: "rapid\nhigh-speed" },
       },
       {
-        hanzi: "狂飙",
-        pinyin: "kuángbiāo",
-        translation: { en: "speed wildly" },
+        hanzi: "狂",
+        pinyin: "kuáng",
+        translation: { en: "crazy\nwild" },
+      },
+      {
+        hanzi: "飙",
+        pinyin: "biāo",
+        translation: { en: "to speed\nwhirlwind" },
       },
     ],
   },
   溅我一身的泥泞: {
     translation: {
-      en: "Someone speeds by wildly, splashing mud all over my body.",
-      pl: "Ktoś pędzi z zawrotną prędkością, ochlapując całe moje ciało błotem.",
+      en: "splashing mud all over me?",
+      pl: "ochlapując mnie całą błotem?",
     },
     words: [
       {
         hanzi: "溅",
         pinyin: "jiàn",
-        translation: { en: "splash" },
+        translation: { en: "to splash\nto splatter" },
       },
       { hanzi: "我", pinyin: "wǒ", translation: { en: "me" } },
       {
         hanzi: "一身",
-        pinyin: "yìshēn",
+        pinyin: "yīshēn",
         translation: { en: "whole body" },
       },
       {
         hanzi: "的",
         pinyin: "de",
-        translation: { en: "" },
+        translation: { en: "(particle)" },
       },
       {
         hanzi: "泥泞",
         pinyin: "nínìng",
-        translation: { en: "mud" },
+        translation: { en: "mud\nmire" },
       },
     ],
   },
   很确定我想去哪里: {
     translation: {
-      en: "I am very sure of where I want to go.",
-      pl: "Jestem bardzo pewien, dokąd chcę pójść.",
+      en: "I'm very sure of where I want to go.",
+      pl: "Jestem bardzo pewna, dokąd chcę iść.",
     },
     words: [
       { hanzi: "很", pinyin: "hěn", translation: { en: "very" } },
       {
         hanzi: "确定",
         pinyin: "quèdìng",
-        translation: { en: "certain" },
+        translation: { en: "to be sure\nto determine\nsure" },
       },
       { hanzi: "我", pinyin: "wǒ", translation: { en: "I" } },
       {
         hanzi: "想",
         pinyin: "xiǎng",
-        translation: { en: "want" },
+        translation: { en: "to want" },
       },
-      { hanzi: "去", pinyin: "qù", translation: { en: "go" } },
+      { hanzi: "去", pinyin: "qù", translation: { en: "to go" } },
       {
         hanzi: "哪里",
         pinyin: "nǎlǐ",
@@ -636,14 +659,14 @@ const LYRICS_DICT = {
   },
   往天堂要跳过地狱: {
     translation: {
-      en: "To head towards heaven, one must jump over hell.",
-      pl: "Aby zmierzać do raju, trzeba przeskoczyć przez piekło.",
+      en: "Going towards heaven, one must jump over hell.",
+      pl: "Zmierzając do raju, trzeba przeskoczyć przez piekło.",
     },
     words: [
       {
         hanzi: "往",
         pinyin: "wǎng",
-        translation: { en: "towards" },
+        translation: { en: "to head for\ntowards" },
       },
       {
         hanzi: "天堂",
@@ -665,38 +688,38 @@ const LYRICS_DICT = {
   },
   也不恐惧不逃避: {
     translation: {
-      en: "I am neither afraid nor will I escape.",
+      en: "I'm neither afraid nor will I escape.",
       pl: "Nie boję się i nie uciekam.",
     },
     words: [
       {
         hanzi: "也",
         pinyin: "yě",
-        translation: { en: "nevertheless" },
+        translation: { en: "neither\nalso" },
       },
       { hanzi: "不", pinyin: "bù", translation: { en: "not" } },
       {
         hanzi: "恐惧",
         pinyin: "kǒngjù",
-        translation: { en: "fear" },
+        translation: { en: "to fear\nfear" },
       },
       { hanzi: "不", pinyin: "bù", translation: { en: "not" } },
       {
         hanzi: "逃避",
         pinyin: "táobì",
-        translation: { en: "escape" },
+        translation: { en: "to escape\nto avoid" },
       },
     ],
   },
   这不是脾气: {
     translation: {
-      en: "This is not a temper tantrum, it is the so-called ambition (and courage).",
-      pl: "To nie są kaprysy, to tak zwana ambicja (i odwaga).",
+      en: "This isn't temper.",
+      pl: "To nie charakterek.",
     },
     words: [
       { hanzi: "这", pinyin: "zhè", translation: { en: "this" } },
-      { hanzi: "不", pinyin: "bú", translation: { en: "not" } },
-      { hanzi: "是", pinyin: "shì", translation: { en: "is" } },
+      { hanzi: "不", pinyin: "bù", translation: { en: "not" } },
+      { hanzi: "是", pinyin: "shì", translation: { en: "to be" } },
       {
         hanzi: "脾气",
         pinyin: "píqì",
@@ -706,15 +729,15 @@ const LYRICS_DICT = {
   },
   "是所谓志气(与勇气)": {
     translation: {
-      en: "This is not a temper tantrum, it is the so-called ambition (and courage).",
-      pl: "To nie są kaprysy, to tak zwana ambicja (i odwaga).",
+      en: "It's called ambition (and courage).",
+      pl: "To się nazywa ambicja (i odwaga).",
     },
     words: [
-      { hanzi: "是", pinyin: "shì", translation: { en: "is" } },
+      { hanzi: "是", pinyin: "shì", translation: { en: "to be" } },
       {
         hanzi: "所谓",
         pinyin: "suǒwèi",
-        translation: { en: "so-called" },
+        translation: { en: "so-called\nwhat is known as" },
       },
       {
         hanzi: "志气",
@@ -731,50 +754,50 @@ const LYRICS_DICT = {
   },
   你能推我下悬崖: {
     translation: {
-      en: "You can push me off a cliff, but I can learn to fly.",
-      pl: "Możesz zepchnąć mnie w przepaść, a ja potrafię nauczyć się latać.",
+      en: "You can push me off a cliff.",
+      pl: "Możesz zepchnąć mnie w przepaść.",
     },
     words: [
       { hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
-      { hanzi: "能", pinyin: "néng", translation: { en: "can" } },
-      { hanzi: "推", pinyin: "tuī", translation: { en: "push" } },
+      { hanzi: "能", pinyin: "néng", translation: { en: "can\n(be able to)" } },
+      { hanzi: "推", pinyin: "tuī", translation: { en: "to push" } },
       { hanzi: "我", pinyin: "wǒ", translation: { en: "me" } },
       { hanzi: "下", pinyin: "xià", translation: { en: "down" } },
       {
         hanzi: "悬崖",
         pinyin: "xuányá",
-        translation: { en: "cliff" },
+        translation: { en: "cliff\nprecipice" },
       },
     ],
   },
   我能学会飞行: {
     translation: {
-      en: "You can push me off a cliff, but I can learn to fly.",
-      pl: "Możesz zepchnąć mnie w przepaść, a ja potrafię nauczyć się latać.",
+      en: "I can learn to fly.",
+      pl: "Mogę nauczyć się latać.",
     },
     words: [
       { hanzi: "我", pinyin: "wǒ", translation: { en: "I" } },
       {
         hanzi: "能",
         pinyin: "néng",
-        translation: { en: "can" },
+        translation: { en: "can\n(be able to)" },
       },
       {
         hanzi: "学会",
         pinyin: "xuéhuì",
-        translation: { en: "learn" },
+        translation: { en: "learn [how to]" },
       },
       {
         hanzi: "飞行",
         pinyin: "fēixíng",
-        translation: { en: "flying" },
+        translation: { en: "to fly" },
       },
     ],
   },
   从不听谁的命令: {
     translation: {
-      en: "I never listen to anyone's orders (very independent).",
-      pl: "Nigdy nie słucham czyichś rozkazów (bardzo niezależny).",
+      en: "I never listen to anyone's orders",
+      pl: "Nigdy nie słucham czyichś rozkazów",
     },
     words: [
       {
@@ -785,29 +808,29 @@ const LYRICS_DICT = {
       {
         hanzi: "听",
         pinyin: "tīng",
-        translation: { en: "listen" },
+        translation: { en: "to listen\nto obey" },
       },
       {
         hanzi: "谁",
         pinyin: "shéi",
-        translation: { en: "who" },
+        translation: { en: "anyone" },
       },
       {
         hanzi: "的",
         pinyin: "de",
-        translation: { en: "(particle)" },
+        translation: { en: "'s\n(particle)" },
       },
       {
         hanzi: "命令",
         pinyin: "mìnglìng",
-        translation: { en: "command" },
+        translation: { en: "order\ncommand" },
       },
     ],
   },
   "(很独立)": {
     translation: {
-      en: "I never listen to anyone's orders (very independent).",
-      pl: "Nigdy nie słucham czyichś rozkazów (bardzo niezależny).",
+      en: "(very independent).",
+      pl: "(bardzo niezależna).",
     },
     words: [
       {
@@ -824,7 +847,7 @@ const LYRICS_DICT = {
   },
   耳朵用来听自己的心灵: {
     translation: {
-      en: "Ears are used to listen to one's own soul.",
+      en: "Ears are for listening to one's own soul.",
       pl: "Uszy służą do słuchania własnej duszy.",
     },
     words: [
@@ -836,7 +859,7 @@ const LYRICS_DICT = {
       {
         hanzi: "用来",
         pinyin: "yònglái",
-        translation: { en: "used for" },
+        translation: { en: "to be used for\nto be used to" },
       },
       {
         hanzi: "听",
@@ -851,46 +874,47 @@ const LYRICS_DICT = {
       {
         hanzi: "的",
         pinyin: "de",
-        translation: { en: "(particle)" },
+        translation: { en: "'s\n(particle)" },
       },
       {
         hanzi: "心灵",
         pinyin: "xīnlíng",
-        translation: { en: "soul" },
+        translation: { en: "psyche\nmind" },
       },
     ],
   },
   淋雨一直走: {
     translation: {
-      en: "Keep walking in the rain; if you are a jewel, you should shine.",
-      pl: "Idę prosto przed siebie w deszczu; jeśli jesteś klejnotem, powinieneś lśnić.",
+      en: "Keep moving forward, getting wet in the rain.",
+      pl: "Iść wciąż naprzód, moknąc na deszczu.",
     },
     words: [
       {
         hanzi: "淋雨",
         pinyin: "línyǔ",
-        translation: { en: "walking in rain" },
+        translation: { en: "to get wet in the rain" },
       },
       {
         hanzi: "一直",
-        pinyin: "yìzhí",
-        translation: { en: "continuously" },
+        pinyin: "yīzhí",
+        translation: { en: "continuously\nalways" },
       },
-      { hanzi: "走", pinyin: "zǒu", translation: { en: "walk" } },
+      { hanzi: "走", pinyin: "zǒu", translation: { en: "to walk" } },
     ],
   },
   是一颗宝石就该闪烁: {
     translation: {
-      en: "Keep walking in the rain; if you are a jewel, you should shine.",
-      pl: "Idę prosto przed siebie w deszczu; jeśli jesteś klejnotem, powinieneś lśnić.",
+      en: "A gemstone ought to shine.",
+      pl: "Klejnot powinien lśnić.",
     },
     words: [
+      { hanzi: "", pinyin: "", translation: { en: "[if]" } },
       {
         hanzi: "是",
         pinyin: "shì",
-        translation: { en: "if one is" },
+        translation: { en: "to be" },
       },
-      { hanzi: "一", pinyin: "yì", translation: { en: "one" } },
+      { hanzi: "一", pinyin: "yī", translation: { en: "a\none" } },
       {
         hanzi: "颗",
         pinyin: "kē",
@@ -905,51 +929,36 @@ const LYRICS_DICT = {
       {
         hanzi: "该",
         pinyin: "gāi",
-        translation: { en: "should" },
+        translation: { en: "should\nought to" },
       },
       {
         hanzi: "闪烁",
         pinyin: "shǎnshuò",
-        translation: { en: "twinkle" },
+        translation: { en: "to glimmer\nto sparkle" },
       },
     ],
   },
   "人都应该有梦Oh~": {
     translation: {
-      en: "Everyone should have dreams; if you have dreams, don't be afraid of pain.",
-      pl: "Wszyscy ludzie powinni mieć marzenia; mając marzenia, nie bój się bólu.",
+      en: "Everyone should have dreams, oh.",
+      pl: "Wszyscy powinni mieć marzenia, ach.",
     },
     words: [
-      {
-        hanzi: "人",
-        pinyin: "rén",
-        translation: { en: "people" },
-      },
-      { hanzi: "都", pinyin: "dōu", translation: { en: "all" } },
-      {
-        hanzi: "应该",
-        pinyin: "yīnggāi",
-        translation: { en: "should" },
-      },
-      { hanzi: "有", pinyin: "yǒu", translation: { en: "have" } },
-      {
-        hanzi: "梦",
-        pinyin: "mèng",
-        translation: { en: "dream" },
-      },
+      ...人都应该有梦_words,
       { hanzi: "", pinyin: "", translation: { en: "Oh~" } },
     ],
   },
   是道阳光就该暖和: {
     translation: {
-      en: "Keep walking in the rain; if you are a ray of sunlight, you should give warmth.",
-      pl: "Idę prosto przed siebie w deszczu; jeśli jesteś promieniem słońca, powinieneś ogrzewać.",
+      en: "A ray of sunlight ought to give warmth.",
+      pl: "Promień słońca powinien dawać ciepło.",
     },
     words: [
+      { hanzi: "", pinyin: "", translation: { en: "[if]" } },
       {
         hanzi: "是",
         pinyin: "shì",
-        translation: { en: "if one is" },
+        translation: { en: "to be" },
       },
       {
         hanzi: "道",
@@ -965,35 +974,35 @@ const LYRICS_DICT = {
       {
         hanzi: "该",
         pinyin: "gāi",
-        translation: { en: "should" },
+        translation: { en: "should\nought to" },
       },
       {
         hanzi: "暖和",
         pinyin: "nuǎnhuo",
-        translation: { en: "warm" },
+        translation: { en: "to warm (up)\nwarm" },
       },
     ],
   },
   有前面盘旋的秃鹰: {
     translation: {
       en: "There are vultures circling ahead.",
-      pl: "Z przodu krążą sępy.",
+      pl: "Przede mną krążą sępy.",
     },
     words: [
       {
         hanzi: "有",
         pinyin: "yǒu",
-        translation: { en: "there are" },
+        translation: { en: "there is/are" },
       },
       {
         hanzi: "前面",
         pinyin: "qiánmiàn",
-        translation: { en: "in front" },
+        translation: { en: "in front\nahead" },
       },
       {
         hanzi: "盘旋",
         pinyin: "pánxuán",
-        translation: { en: "hovering" },
+        translation: { en: "to circle\nto hover" },
       },
       {
         hanzi: "的",
@@ -1003,14 +1012,14 @@ const LYRICS_DICT = {
       {
         hanzi: "秃鹰",
         pinyin: "tūyīng",
-        translation: { en: "vultures" },
+        translation: { en: "vulture" },
       },
     ],
   },
   有背后尖酸的耳语: {
     translation: {
       en: "There are caustic whispers behind my back.",
-      pl: "Za plecami słychać kąśliwe szepty.",
+      pl: "Za plecami kąśliwe szepty.",
     },
     words: [
       {
@@ -1021,12 +1030,12 @@ const LYRICS_DICT = {
       {
         hanzi: "背后",
         pinyin: "bèihòu",
-        translation: { en: "behind the back" },
+        translation: { en: "behind" },
       },
       {
         hanzi: "尖酸",
         pinyin: "jiānsuān",
-        translation: { en: "caustic" },
+        translation: { en: "caustic\nsarcastic" },
       },
       {
         hanzi: "的",
@@ -1036,20 +1045,20 @@ const LYRICS_DICT = {
       {
         hanzi: "耳语",
         pinyin: "ěryǔ",
-        translation: { en: "whispers" },
+        translation: { en: "whisper" },
       },
     ],
   },
   黑色的童话: {
     translation: {
-      en: "Dark fairy tales are the baptism for growing up.",
-      pl: "Mroczne baśnie to chrzest dorastania.",
+      en: "Dark fairy tales",
+      pl: "Mroczne baśnie",
     },
     words: [
       {
         hanzi: "黑色",
         pinyin: "hēisè",
-        translation: { en: "dark" },
+        translation: { en: "black" },
       },
       {
         hanzi: "的",
@@ -1059,26 +1068,26 @@ const LYRICS_DICT = {
       {
         hanzi: "童话",
         pinyin: "tónghuà",
-        translation: { en: "fairy tale" },
+        translation: { en: "children's story\nfairy tale" },
       },
     ],
   },
   是给长大的洗礼: {
     translation: {
-      en: "Dark fairy tales are the baptism for growing up.",
-      pl: "Mroczne baśnie to chrzest dorastania.",
+      en: "are the baptism for those who are growing up.",
+      pl: "to chrzest dla tych, co dorastają.",
     },
     words: [
-      { hanzi: "是", pinyin: "shì", translation: { en: "is" } },
+      { hanzi: "是", pinyin: "shì", translation: { en: "to be" } },
       {
         hanzi: "给",
         pinyin: "gěi",
-        translation: { en: "given to" },
+        translation: { en: "for" },
       },
       {
         hanzi: "长大",
         pinyin: "zhǎngdà",
-        translation: { en: "growing up" },
+        translation: { en: "to grow up" },
       },
       {
         hanzi: "的",
@@ -1088,43 +1097,43 @@ const LYRICS_DICT = {
       {
         hanzi: "洗礼",
         pinyin: "xǐlǐ",
-        translation: { en: "baptism" },
+        translation: { en: "baptism\nordeal" },
       },
     ],
   },
   要独特才是流行: {
     translation: {
-      en: "Being unique is what is truly in fashion.",
-      pl: "Bycie unikalnym to prawdziwa moda.",
+      en: "To be truly in fashion means being unique.",
+      pl: "Naprawdę modne jest to, co wyjątkowe.",
     },
     words: [
       {
         hanzi: "要",
         pinyin: "yào",
-        translation: { en: "must be" },
+        translation: { en: "must [be]" },
       },
       {
         hanzi: "独特",
         pinyin: "dútè",
-        translation: { en: "unique" },
+        translation: { en: "unique\ndistinctive" },
       },
       {
         hanzi: "才",
         pinyin: "cái",
-        translation: { en: "only then" },
+        translation: { en: "only then\nonly" },
       },
-      { hanzi: "是", pinyin: "shì", translation: { en: "is" } },
+      { hanzi: "是", pinyin: "shì", translation: { en: "to be" } },
       {
         hanzi: "流行",
         pinyin: "liúxíng",
-        translation: { en: "trendy" },
+        translation: { en: "fashionable\ntrendy\npopular" },
       },
     ],
   },
   无法复制的自己: {
     translation: {
-      en: "An uncopyable self.",
-      pl: 'Niemożliwe do skopiowania "ja".',
+      en: "A self that can't be duplicated",
+      pl: '"Ja", którego nie można skopiować',
     },
     words: [
       {
@@ -1135,7 +1144,7 @@ const LYRICS_DICT = {
       {
         hanzi: "复制",
         pinyin: "fùzhì",
-        translation: { en: "duplicate" },
+        translation: { en: "to duplicate" },
       },
       {
         hanzi: "的",
@@ -1145,45 +1154,48 @@ const LYRICS_DICT = {
       {
         hanzi: "自己",
         pinyin: "zìjǐ",
-        translation: { en: "oneself" },
+        translation: { en: "self\noneself" },
       },
     ],
   },
   让我连受伤: {
     translation: {
-      en: "Makes me stylish even when I am hurt.",
-      pl: "Sprawia, że nawet będąc rannym, mam styl.",
+      en: "makes me, even when I get hurt,",
+      pl: "sprawia, że nawet zraniona,",
     },
     words: [
       {
         hanzi: "让",
         pinyin: "ràng",
-        translation: { en: "makes" },
+        translation: { en: "to allow\nto let" },
       },
       { hanzi: "我", pinyin: "wǒ", translation: { en: "me" } },
       { hanzi: "连", pinyin: "lián", translation: { en: "even" } },
       {
         hanzi: "受伤",
         pinyin: "shòushāng",
-        translation: { en: "injured" },
+        translation: { en: "to be injured\nto get hurt" },
       },
     ],
   },
   也有型: {
     translation: {
-      en: "Makes me stylish even when I am hurt.",
-      pl: "Sprawia, że nawet będąc rannym, mam styl.",
+      en: "still have style.",
+      pl: "wciąż mam styl.",
     },
     words: [
-      { hanzi: "也", pinyin: "yě", translation: { en: "also" } },
-      { hanzi: "有", pinyin: "yǒu", translation: { en: "have" } },
-      { hanzi: "型", pinyin: "xíng", translation: { en: "style" } },
+      { hanzi: "也", pinyin: "yě", translation: { en: "also\ntoo" } },
+      {
+        hanzi: "有型",
+        pinyin: "yǒuxíng",
+        translation: { en: "stylish\nhave style" },
+      },
     ],
   },
   有时掉进黑洞: {
     translation: {
-      en: "Sometimes falling into a black hole, sometimes climbing onto a rainbow.",
-      pl: "Czasami wpadając do czarnej dziury, czasami wspinając się na tęczę.",
+      en: "Sometimes I fall into a black hole,",
+      pl: "Czasem wpadam w czarną dziurę,",
     },
     words: [
       {
@@ -1191,7 +1203,7 @@ const LYRICS_DICT = {
         pinyin: "yǒushí",
         translation: { en: "sometimes" },
       },
-      { hanzi: "掉", pinyin: "diào", translation: { en: "fall" } },
+      { hanzi: "掉", pinyin: "diào", translation: { en: "to fall" } },
       { hanzi: "进", pinyin: "jìn", translation: { en: "into" } },
       {
         hanzi: "黑洞",
@@ -1202,8 +1214,8 @@ const LYRICS_DICT = {
   },
   有时候爬上彩虹: {
     translation: {
-      en: "Sometimes falling into a black hole, sometimes climbing onto a rainbow.",
-      pl: "Czasami wpadając do czarnej dziury, czasami wspinając się na tęczę.",
+      en: "sometimes I climb up a rainbow.",
+      pl: "czasami wspinam się na tęczę.",
     },
     words: [
       {
@@ -1214,7 +1226,7 @@ const LYRICS_DICT = {
       {
         hanzi: "爬",
         pinyin: "pá",
-        translation: { en: "climb" },
+        translation: { en: "to climb" },
       },
       { hanzi: "上", pinyin: "shàng", translation: { en: "onto" } },
       {
@@ -1226,15 +1238,15 @@ const LYRICS_DICT = {
   },
   在下一秒钟: {
     translation: {
-      en: "In the very next second, how destiny will turn, nobody will know Oh~",
-      pl: "W następnej sekundzie, jak potoczy się los, nikt nie będzie wiedział Oh~",
+      en: "In the very next second,",
+      pl: "W następnej sekundzie,",
     },
     words: [
-      { hanzi: "在", pinyin: "zài", translation: { en: "in" } },
+      { hanzi: "在", pinyin: "zài", translation: { en: "in\nduring" } },
       {
         hanzi: "下",
         pinyin: "xià",
-        translation: { en: "next" },
+        translation: { en: "next\nfollowing" },
       },
       { hanzi: "一", pinyin: "yī", translation: { en: "one" } },
       {
@@ -1246,56 +1258,60 @@ const LYRICS_DICT = {
   },
   命运如何转动: {
     translation: {
-      en: "In the very next second, how destiny will turn, nobody will know Oh~",
-      pl: "W następnej sekundzie, jak potoczy się los, nikt nie będzie wiedział Oh~",
+      en: "how destiny will turn,",
+      pl: "jak potoczy się los,",
     },
     words: [
       {
         hanzi: "命运",
         pinyin: "mìngyùn",
-        translation: { en: "fate" },
+        translation: { en: "fate\ndestiny" },
       },
-      { hanzi: "如何", pinyin: "rúhé", translation: { en: "how" } },
+      {
+        hanzi: "如何",
+        pinyin: "rúhé",
+        translation: { en: "how\n(in what way)" },
+      },
       {
         hanzi: "转动",
         pinyin: "zhuǎndòng",
-        translation: { en: "turn" },
+        translation: { en: "to turn\nto rotate\nto swivel" },
       },
     ],
   },
   "没有人会晓得Oh~": {
     translation: {
-      en: "In the very next second, how destiny will turn, nobody will know Oh~",
-      pl: "W następnej sekundzie, jak potoczy się los, nikt nie będzie wiedział Oh~",
+      en: "nobody knows, oh.",
+      pl: "nikt nie wie, ach.",
     },
     words: [
       {
         hanzi: "没有",
         pinyin: "méiyǒu",
-        translation: { en: "no" },
+        translation: { en: "to not have\nthere is no" },
       },
       {
         hanzi: "人",
         pinyin: "rén",
         translation: { en: "person" },
       },
-      { hanzi: "会", pinyin: "huì", translation: { en: "will" } },
+      { hanzi: "会", pinyin: "huì", translation: { en: "will\ncan" } },
       {
         hanzi: "晓得",
         pinyin: "xiǎode",
-        translation: { en: "know" },
+        translation: { en: "to know" },
       },
       { hanzi: "", pinyin: "", translation: { en: "Oh~" } },
     ],
   },
   我说希望无穷: {
     translation: {
-      en: "I say hope is endless, you guess sweet dreams will come to nothing.",
-      pl: "Ja mówię, że nadzieja jest nieskończona, ty zgadujesz, że piękne marzenia obrócą się wniwecz.",
+      en: "I say that hope is boundless.",
+      pl: "Mówię, że nadzieja jest nieograniczona.",
     },
     words: [
       { hanzi: "我", pinyin: "wǒ", translation: { en: "I" } },
-      { hanzi: "说", pinyin: "shuō", translation: { en: "say" } },
+      { hanzi: "说", pinyin: "shuō", translation: { en: "to say" } },
       {
         hanzi: "希望",
         pinyin: "xīwàng",
@@ -1304,78 +1320,73 @@ const LYRICS_DICT = {
       {
         hanzi: "无穷",
         pinyin: "wúqióng",
-        translation: { en: "infinite" },
+        translation: { en: "to be endless\nto be boundless\ninfinite" },
       },
     ],
   },
   你猜美梦成空: {
     translation: {
-      en: "I say hope is endless, you guess sweet dreams will come to nothing.",
-      pl: "Ja mówię, że nadzieja jest nieskończona, ty zgadujesz, że piękne marzenia obrócą się wniwecz.",
+      en: "You suppose sweet dreams will turn into nothing.",
+      pl: "Myślisz, że piękne marzenia obrócą się wniwecz.",
     },
     words: [
       { hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
       {
         hanzi: "猜",
         pinyin: "cāi",
-        translation: { en: "guess" },
+        translation: { en: "to guess\nto suppose" },
       },
       {
         hanzi: "美梦",
         pinyin: "měimèng",
-        translation: { en: "sweet dreams" },
+        translation: { en: "good dream\nwish, desire\nsweet dreams" },
       },
       {
         hanzi: "成",
         pinyin: "chéng",
-        translation: { en: "become" },
+        translation: { en: "to become\nto turn into" },
       },
       {
         hanzi: "空",
         pinyin: "kōng",
-        translation: { en: "empty" },
+        translation: { en: "empty\nvoid" },
       },
     ],
   },
   相信和怀疑: {
     translation: {
-      en: "Belief and doubt will always have to duel.",
-      pl: "Wiara i zwątpienie zawsze będą musiały walczyć.",
+      en: "Belief and doubt",
+      pl: "Wiara i zwątpienie",
     },
     words: [
       {
         hanzi: "相信",
         pinyin: "xiāngxìn",
-        translation: { en: "belief" },
+        translation: { en: "belief\nto believe" },
       },
       { hanzi: "和", pinyin: "hé", translation: { en: "and" } },
       {
         hanzi: "怀疑",
         pinyin: "huáiyí",
-        translation: { en: "doubt" },
+        translation: { en: "doubt\nto doubt" },
       },
     ],
   },
   总要决斗: {
     translation: {
-      en: "Belief and doubt will always have to duel.",
-      pl: "Wiara i zwątpienie zawsze będą musiały walczyć.",
+      en: "must always duel.",
+      pl: "zawsze toczą pojedynek.",
     },
     words: [
       {
-        hanzi: "总",
-        pinyin: "zǒng",
-        translation: { en: "always" },
-      },
-      {
-        hanzi: "要",
-        pinyin: "yào",
-        translation: { en: "must" },
+        hanzi: "总要",
+        pinyin: "zǒngyào",
+        translation: { en: "always must\ninevitably will" },
       },
       {
         hanzi: "决斗",
         pinyin: "juédòu",
-        translation: { en: "duel" },
+        translation: { en: "to duel" },
       },
     ],
   },
