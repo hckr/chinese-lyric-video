@@ -5,10 +5,13 @@ ffmpeg -i public/Angela_Zhang_Keep_Walking.mp4 -vf "select=eq(n\,369)" -vframes 
 
 ---
 
-Animated emoji assets:
+Animated emoji: Google Noto Emoji Animation (CC BY 4.0) — https://googlefonts.github.io/noto-emoji-animation/
 
-curl -L -o public/heart-face-0.5x.webm "https://github.com/remotion-dev/animated-emoji/raw/main/public/heart-face-0.5x.webm"
-curl -L -o public/grin-sweat-0.5x.webm "https://github.com/remotion-dev/animated-emoji/raw/main/public/grin-sweat-0.5x.webm"
+Animated emoji assets:
+```
+curl -o public/grin-sweat.json "https://fonts.gstatic.com/s/e/notoemoji/latest/1f605/lottie.json"
+curl -o public/heart-face.json "https://fonts.gstatic.com/s/e/notoemoji/latest/1f970/lottie.json"
+```
 
 ---
 

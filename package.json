@@ -6,11 +6,12 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/animated-emoji": "^4.0.481",
     "@remotion/cli": "^4.0.481",
     "@remotion/google-fonts": "^4.0.481",
+    "@remotion/lottie": "^4.0.481",
     "@remotion/media": "^4.0.481",
     "@remotion/zod-types": "^4.0.481",
+    "lottie-web": "5.13.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "^4.0.481",

@@ -12,7 +12,9 @@ import lyricsData from "./Angela_Zhang_Keep_Walking";
 import { loadFont as loadNotoSansSC } from "@remotion/google-fonts/NotoSansSC";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 import { loadFont as loadLexendDeca } from "@remotion/google-fonts/LexendDeca";
-import { AnimatedEmoji } from "@remotion/animated-emoji";
+import { Lottie } from "@remotion/lottie";
+import grinSweatData from "../public/grin-sweat.json";
+import heartFaceData from "../public/heart-face.json";
 
 const { fontFamily: notoSansSCFont } = loadNotoSansSC("normal", {
   weights: ["400"],
@@ -55,45 +57,24 @@ const LyricLine: React.FC<{ line: LineData }> = React.memo(({ line }) => (
 ));
 
 const HeartBackground: React.FC = () => {
-  const { width, height } = useVideoConfig();
-
   const HEART_SIZE = 30;
-  const cells = React.useMemo(() => {
-    const cols = Math.ceil(width / HEART_SIZE);
-    const rows = Math.ceil(height / HEART_SIZE);
-    return Array.from({ length: rows * cols }, (_, i) => ({
-      row: Math.floor(i / cols),
-      col: i % cols,
-    }));
-  }, [width, height]);
+
+  const svgDataUri = `data:image/svg+xml,${encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${HEART_SIZE}" height="${HEART_SIZE}">
+      <path d="M50 88 C20 65, 5 50, 5 33 C5 18, 17 8, 30 8 C38 8, 45 12, 50 18 C55 12, 62 8, 70 8 C83 8, 95 18, 95 33 C95 50, 80 65, 50 88Z" fill="#dd3b43"/>
+    </svg>
+  `)}`;
 
   return (
-    <AbsoluteFill style={{ overflow: "hidden" }}>
-      {cells.map(({ row, col }) => (
-        <div
-          key={`${row}-${col}`}
-          style={{
-            position: "absolute",
-            left: col * HEART_SIZE,
-            top: row * HEART_SIZE,
-            width: HEART_SIZE,
-            height: HEART_SIZE,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "36px",
-            opacity: 0.15,
-          }}
-        >
-          <svg viewBox="0 0 100 100">
-            <path
-              d="M50 88 C20 65, 5 50, 5 33 C5 18, 17 8, 30 8 C38 8, 45 12, 50 18 C55 12, 62 8, 70 8 C83 8, 95 18, 95 33 C95 50, 80 65, 50 88Z"
-              fill="#dd3b43"
-            />
-          </svg>
-        </div>
-      ))}
-    </AbsoluteFill>
+    <AbsoluteFill
+      style={{
+        // eslint-disable-next-line @remotion/no-background-image
+        backgroundImage: `url("${svgDataUri}")`,
+        backgroundRepeat: "repeat",
+        backgroundSize: `${HEART_SIZE}px ${HEART_SIZE}px`,
+        opacity: 0.15,
+      }}
+    />
   );
 };
 
@@ -101,9 +82,9 @@ export const LyricVideo: React.FC = () => {
   const { isClientSideRendering } = useRemotionEnvironment();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const OUTRO_START = 5043;
-  const FIRST_LINE_END = 5097;
-  const SECOND_LINE_START = 5100;
+  const OUTRO_START = 5015;
+  const FIRST_LINE_END = 5098;
+  const SECOND_LINE_START = 5098;
   const HEART_START = 5043;
 
   return (
@@ -176,30 +157,24 @@ export const LyricVideo: React.FC = () => {
             },
           }}
         />
-        {!isClientSideRendering && (
-          <>
-            <AnimatedEmoji
-              emoji="heart-face"
-              scale="0.5"
-              style={{
-                position: "absolute",
-                left: 450,
-                bottom: 80,
-                width: 100,
-              }}
-            />
-            <AnimatedEmoji
-              emoji="heart-face"
-              scale="0.5"
-              style={{
-                position: "absolute",
-                right: 450,
-                bottom: 80,
-                width: 100,
-              }}
-            />
-          </>
-        )}
+        <Lottie
+          animationData={heartFaceData}
+          style={{
+            position: "absolute",
+            left: 450,
+            bottom: 80,
+            width: 100,
+          }}
+        />
+        <Lottie
+          animationData={heartFaceData}
+          style={{
+            position: "absolute",
+            right: 450,
+            bottom: 80,
+            width: 100,
+          }}
+        />
       </Sequence>
 
       <Sequence
@@ -237,15 +212,23 @@ export const LyricVideo: React.FC = () => {
             },
           }}
         />
-        <AnimatedEmoji
-          emoji="grin-sweat"
-          scale="0.5"
-          style={{ position: "absolute", left: 450, bottom: 80, width: 100 }}
+        <Lottie
+          animationData={grinSweatData}
+          style={{
+            position: "absolute",
+            left: 450,
+            bottom: 80,
+            width: 100,
+          }}
         />
-        <AnimatedEmoji
-          emoji="grin-sweat"
-          scale="0.5"
-          style={{ position: "absolute", right: 450, bottom: 80, width: 100 }}
+        <Lottie
+          animationData={grinSweatData}
+          style={{
+            position: "absolute",
+            right: 450,
+            bottom: 80,
+            width: 100,
+          }}
         />
       </Sequence>
 
@@ -332,7 +315,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: lexendDecaFont,
     fontSize: "32px",
     fontWeight: 600,
-    color: "#ccc",
+    color: "#fff",
     textShadow: heavyTextShadow("#009c9f"),
     letterSpacing: "0.1em",
     opacity: 0.5,
