@@ -1,8 +1,7 @@
 import { Composition, Still } from "remotion";
 import { LyricVideo } from "./LyricVideo";
 import { LyricVideoThumbnail } from "./LyricVideoThumbnail";
-
-// Each <Composition> is an entry in the sidebar!
+import { LyricVideoThumbnail2 } from "./LyricVideoThumbnail2";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -18,6 +17,12 @@ export const RemotionRoot: React.FC = () => {
       <Still
         id="Thumbnail"
         component={LyricVideoThumbnail}
+        width={1280}
+        height={720}
+      />
+      <Still
+        id="Thumbnail2"
+        component={LyricVideoThumbnail2}
         width={1280}
         height={720}
       />

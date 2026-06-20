@@ -38,35 +38,18 @@ function heavyTextShadow2(color: string) {
   );
 }
 
-const titleWords = [
-  {
-    hanzi: "淋雨",
-    pinyin: "línyǔ",
-    translation: "to get wet in the rain",
-  },
-  {
-    hanzi: "一直",
-    pinyin: "yīzhí",
-    translation: "continuously",
-  },
-  { hanzi: "走", pinyin: "zǒu", translation: "to walk" },
-];
-
-export const LyricVideoThumbnail: React.FC = () => {
+export const LyricVideoThumbnail2: React.FC = () => {
   return (
     <AbsoluteFill style={styles.root}>
-      <Img src={staticFile("thumbnail-bg-369.png")} style={styles.bgImage} />
+      <Img
+        src={staticFile("vlcsnap-2026-06-20-20h55m06s209.png")}
+        style={styles.bgImage}
+      />
 
-      <AbsoluteFill style={styles.emojiBackground}>♪♬</AbsoluteFill>
+      <AbsoluteFill style={styles.emojiBackground}>♪♪♪♪</AbsoluteFill>
 
       <AbsoluteFill style={styles.contentContainer}>
-        <div style={styles.label}>
-          Mandarin song lyrics
-          <br />
-          Pinyin · English · Polish
-        </div>
-
-        <div style={styles.sentenceRow}>
+        {/* <div style={styles.sentenceRow}>
           {titleWords.map((word, i) => (
             <div key={i} style={styles.wordBlock}>
               <span style={styles.pinyin}>{word.pinyin}</span>
@@ -74,10 +57,14 @@ export const LyricVideoThumbnail: React.FC = () => {
               <span style={styles.wordTranslationEn}>{word.translation}</span>
             </div>
           ))}
-        </div>
-
+        </div> */}
         <div style={styles.fullTranslationContainer}>
-          <div style={styles.titleEn}>Keep Walking in the Rain</div>
+          <div style={styles.titleEn}>Keep Walking</div>
+        </div>
+        <div style={styles.label}>
+          Mandarin song lyrics
+          <br />
+          Pinyin · English · Polish
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -94,7 +81,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    opacity: 0.6,
+    opacity: 0.9,
+    position: "relative",
+    // left: "-42%",
   },
 
   emojiBackground: {
@@ -102,8 +91,11 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.2,
     fontSize: 900,
     textAlign: "center",
-    marginTop: -350,
-    marginLeft: 0,
+    marginTop: -340,
+    marginLeft: -120,
+    letterSpacing: "-150px",
+    fontStyle: "italic",
+    paddingTop: 40,
   },
 
   contentContainer: {
@@ -121,8 +113,8 @@ const styles: Record<string, React.CSSProperties> = {
     textShadow: heavyTextShadow2("#00998f"),
     letterSpacing: "3px",
     textTransform: "uppercase",
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 120,
+    // marginBottom: 20,
     textAlign: "center",
   },
 
@@ -180,9 +172,10 @@ const styles: Record<string, React.CSSProperties> = {
 
   titleEn: {
     fontFamily: lexendDecaFont,
-    fontSize: "90px",
+    fontSize: "150px",
     color: "#d4a2ff",
     textShadow: heavyTextShadow2("#9f007a"),
-    letterSpacing: "6px",
+    letterSpacing: "10px",
+    marginTop: 20,
   },
 };
