@@ -82,6 +82,7 @@ const Visualizer: React.FC<{ audioData: ReturnType<typeof useAudioData> }> = ({
     justifyContent: "center",
     gap: 7,
     width: "100%",
+    opacity: 0.1,
   };
 
   const gradientString = (dir: "top" | "bottom") =>
@@ -93,7 +94,7 @@ const Visualizer: React.FC<{ audioData: ReturnType<typeof useAudioData> }> = ({
       rgba(255,255,255,0.2) 25%,
       transparent)`;
 
-  const heightVal = (v: number) => Math.min(50 + v * 570, 1080 / 2);
+  const heightVal = (v: number) => Math.min(220 + v * 390, 1080 / 2);
 
   return (
     <>
@@ -156,8 +157,8 @@ export const LyricVideo2: React.FC = () => {
   const audioData = useAudioData(staticFile(fileName));
 
   // --- heartbeat pulse from bass frequencies ---
-  const DECAY_FRAMES = 8;
-  const BASS_BINS = 6;
+  const DECAY_FRAMES = 5;
+  const BASS_BINS = 3;
   let peakValue = 0;
   let peakAge = 0;
 
@@ -227,6 +228,8 @@ export const LyricVideo2: React.FC = () => {
           </Sequence>
         );
       })}
+
+      <Visualizer audioData={audioData} />
 
       <div style={styles.watermark}>@SingInMandarin</div>
     </AbsoluteFill>
