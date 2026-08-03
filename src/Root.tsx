@@ -3,6 +3,8 @@ import { LyricVideo } from "./LyricVideo";
 import { LyricVideoThumbnail } from "./LyricVideoThumbnail";
 import { LyricVideoThumbnail2 } from "./LyricVideoThumbnail2";
 import { LyricVideo2 } from "./LyricVideo2";
+import { LyricVideo as LyricVideoOnlyPinin } from "./LyricVideoOnlyPinin";
+import { LyricVideoThumbnail as LyricVideoThumbnailOnlyPinyin } from "./LyricVideoThumbnailOnlyPinyin";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -10,6 +12,14 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="LyricVideo"
         component={LyricVideo}
+        durationInFrames={5196} // Exact length of the video
+        fps={23.976} // Exact frame rate of the video
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="LyricVideoOnlyPinin"
+        component={LyricVideoOnlyPinin}
         durationInFrames={5196} // Exact length of the video
         fps={23.976} // Exact frame rate of the video
         width={1920}
@@ -26,6 +36,12 @@ export const RemotionRoot: React.FC = () => {
       <Still
         id="Thumbnail"
         component={LyricVideoThumbnail}
+        width={1280}
+        height={720}
+      />
+      <Still
+        id="ThumbnailOnlyPinyin"
+        component={LyricVideoThumbnailOnlyPinyin}
         width={1280}
         height={720}
       />
