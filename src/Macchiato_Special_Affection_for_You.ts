@@ -3,8 +3,8 @@
 const TIMELINE = [
   {
     id: "line-00",
-    startMs: 1000,
-    endMs: 8500,
+    startMs: 0,
+    endMs: 8250,
     lyricKey: "对你专属的偏爱",
   },
   {
@@ -46,12 +46,12 @@ const TIMELINE = [
   {
     id: "line-07",
     startMs: 24000,
-    endMs: 26000,
+    endMs: 26200,
     lyricKey: "这默契太体贴",
   },
   {
     id: "line-08",
-    startMs: 26000,
+    startMs: 26200,
     endMs: 30000,
     lyricKey: "像专属的情节",
   },
@@ -241,91 +241,105 @@ export default {
 const LYRICS_DICT = {
   对你专属的偏爱: {
     translation: {
-      en: "Special affection exclusive to you",
-      pl: "Wyjątkowa sympatia zarezerwowana dla ciebie",
+      en: "Special affection just for you",
+      pl: "Wyjątkowe uczucie tylko dla Ciebie",
     },
     words: [
-      { hanzi: "对", pinyin: "duì", translation: { en: "towards\nto" } },
+      { hanzi: "对", pinyin: "duì", translation: { en: "toward\nto" } },
       { hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
-      { hanzi: "专属", pinyin: "zhuānshǔ", translation: { en: "exclusive" } },
+      {
+        hanzi: "专属",
+        pinyin: "zhuānshǔ",
+        translation: { en: "exclusive\nreserved" },
+      },
       {
         hanzi: "的",
         pinyin: "de",
-        translation: { en: "[attributive particle]" },
+        translation: { en: "(particle)" },
       },
       {
         hanzi: "偏爱",
         pinyin: "piān'ài",
-        translation: { en: "special affection\nfavoritism" },
+        translation: { en: "preference\nfavoritism" },
       },
     ],
   },
   你应付着周围: {
     translation: {
-      en: "You deal with your surroundings",
-      pl: "Radzisz sobie z otoczeniem",
+      en: "You're dealing with everything around you,",
+      pl: "Radzisz sobie ze wszystkim dookoła,",
     },
     words: [
       { hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
       {
         hanzi: "应付",
-        pinyin: "yìngfu",
-        translation: { en: "to deal with\nto cope" },
+        pinyin: "yìngfù",
+        translation: {
+          en: "to deal with\nto cope with\nto handle",
+        },
       },
       {
         hanzi: "着",
         pinyin: "zhe",
-        translation: { en: "[particle indicating continuous action]" },
+        translation: { en: "(ongoing action)" },
       },
       {
         hanzi: "周围",
         pinyin: "zhōuwéi",
-        translation: { en: "surroundings\naround" },
+        translation: { en: "surroundings\nvicinity" },
       },
     ],
   },
   礼貌又带着防备: {
     translation: {
-      en: "Polite yet with a touch of guardedness",
-      pl: "Uprzejmie, lecz z nutą rezerwy",
+      en: "polite yet guarded,",
+      pl: "uprzejmie, lecz z rezerwą,",
     },
     words: [
       {
         hanzi: "礼貌",
         pinyin: "lǐmào",
-        translation: { en: "polite\npoliteness" },
+        translation: { en: "politeness\npolite" },
       },
-      { hanzi: "又", pinyin: "yòu", translation: { en: "yet\nand" } },
-      { hanzi: "带", pinyin: "dài", translation: { en: "to bring\nto carry" } },
+      { hanzi: "又", pinyin: "yòu", translation: { en: "yet\nalso" } },
+      {
+        hanzi: "带",
+        pinyin: "dài",
+        translation: {
+          en: "to have\nto carry",
+        },
+      },
       {
         hanzi: "着",
         pinyin: "zhe",
-        translation: { en: "[particle indicating continuous action]" },
+        translation: {
+          en: "(ongoing state)",
+        },
       },
       {
         hanzi: "防备",
         pinyin: "fángbèi",
-        translation: { en: "guardedness\nprecaution" },
+        translation: { en: "guardedness\nto take precautions" },
       },
     ],
   },
   眼神却总在追: {
     translation: {
-      en: "But your eyes are always chasing",
-      pl: "Ale twoje spojrzenie zawsze podąża",
+      en: "but your gaze keeps chasing",
+      pl: "a jednak Twoje spojrzenie zawsze podąża",
     },
     words: [
       {
         hanzi: "眼神",
         pinyin: "yǎnshén",
-        translation: { en: "look\nexpression in the eyes" },
+        translation: { en: "gaze\nexpression\nin the eyes" },
       },
-      { hanzi: "却", pinyin: "què", translation: { en: "but\nhowever" } },
+      { hanzi: "却", pinyin: "què", translation: { en: "however\nyet" } },
       { hanzi: "总", pinyin: "zǒng", translation: { en: "always" } },
       {
         hanzi: "在",
         pinyin: "zài",
-        translation: { en: "[indicating an action in progress]" },
+        translation: { en: "(ongoing action)" },
       },
       {
         hanzi: "追",
@@ -336,20 +350,20 @@ const LYRICS_DICT = {
   },
   我所在的方位: {
     translation: {
-      en: "The direction where I am",
-      pl: "W kierunku, w którym się znajduję",
+      en: "for where I am.",
+      pl: "w moim kierunku.",
     },
     words: [
       { hanzi: "我", pinyin: "wǒ", translation: { en: "I\nme" } },
       {
         hanzi: "所在",
         pinyin: "suǒzài",
-        translation: { en: "place where something is\nlocation" },
+        translation: { en: "place\nlocation" },
       },
       {
         hanzi: "的",
         pinyin: "de",
-        translation: { en: "[possessive particle]" },
+        translation: { en: "(particle)" },
       },
       {
         hanzi: "方位",
@@ -618,4 +632,4 @@ const LYRICS_DICT = {
       { hanzi: "来", pinyin: "lái", translation: { en: "to come" } },
     ],
   },
-} as unknown; //satisfies { [K in (typeof TIMELINE)[number]["lyricKey"]]: unknown };
+} satisfies { [K in (typeof TIMELINE)[number]["lyricKey"]]: unknown };

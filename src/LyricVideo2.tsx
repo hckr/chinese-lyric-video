@@ -1,14 +1,13 @@
 import React, { CSSProperties } from "react";
 import {
   AbsoluteFill,
-  OffthreadVideo,
+  Html5Audio,
+  Img,
   Sequence,
   staticFile,
   useCurrentFrame,
-  useRemotionEnvironment,
   useVideoConfig,
 } from "remotion";
-import { Video } from "@remotion/media";
 import lyricsData from "./Macchiato_Special_Affection_for_You";
 import { loadFont as loadNotoSansSC } from "@remotion/google-fonts/NotoSansSC";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
@@ -89,12 +88,12 @@ const Visualizer: React.FC<{ audioData: ReturnType<typeof useAudioData> }> = ({
     `linear-gradient(
       to ${dir},
       white,
-      rgba(255,255,255,0.5) 10%,
-      rgba(255,255,255,0.3) 15%,
-      rgba(255,255,255,0.2) 25%,
+      rgba(255,255,255,0.2) 10%,
+      rgba(255,255,255,0.1) 15%,
+      rgba(255,255,255,0.3) 25%,
       transparent)`;
 
-  const heightVal = (v: number) => Math.min(220 + v * 390, 1080 / 2);
+  const heightVal = (v: number) => Math.min(80 + v * 500, 1080 / 2);
 
   return (
     <>
@@ -149,8 +148,7 @@ const LyricLine: React.FC<{ line: LineData }> = React.memo(({ line }) => (
 ));
 
 export const LyricVideo2: React.FC = () => {
-  const { isClientSideRendering } = useRemotionEnvironment();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
 
   const fileName = "Macchiato_Special_Affection_for_You.mp4";
@@ -186,30 +184,18 @@ export const LyricVideo2: React.FC = () => {
   const scale = 1 + pulse * 0.03;
   const blur = pulse * 10;
 
-  const videoStyle: React.CSSProperties = {
-    width: "110%",
-    position: "relative",
-    top: "-59%",
-    left: "-5%",
-    transform: `scale(${scale})`,
-    transformOrigin: "center center",
-    filter: `blur(${blur}px)`,
-  };
-
   return (
     <AbsoluteFill style={{ background: "black" }}>
-      {isClientSideRendering ? (
-        <Video
-          src={staticFile(fileName)}
-          style={videoStyle}
-          objectFit="cover"
-        />
-      ) : (
-        <OffthreadVideo
-          src={staticFile(fileName)}
-          style={{ ...videoStyle, objectFit: "cover" }}
-        />
-      )}
+      <Html5Audio src={staticFile(fileName)} />
+
+      <Img
+        src={staticFile("macchiato_cover.png")}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "center center",
+          filter: `blur(${blur}px)`,
+        }}
+      />
 
       <Visualizer audioData={audioData} />
 
@@ -238,7 +224,7 @@ export const LyricVideo2: React.FC = () => {
 
 const styles: Record<string, React.CSSProperties> = {
   backgroundContainer: {
-    background: "rgba(0,0,0,0.5)",
+    // background: "rgba(0,0,0,0.5)",
   },
   screenContainer: {
     justifyContent: "flex-end",
