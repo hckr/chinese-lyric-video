@@ -9,3 +9,11 @@ out
 # Ignore files in public
 public/*
 !public/.gitkeep
+
+workbench-projects/
+__pycache__/
+.pytest_cache/
+python-src/venv/
+
+.agents/skills/developing-with-streamlit
+.claude/skills/developing-with-streamlit
