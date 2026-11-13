@@ -397,3 +397,19 @@ To ensure changes are reliable, testable, and do not exceed context token limits
 ### Manual & Visual Verification
 1. **Remotion Studio**: Launch `npm run dev`, inspect each composition (`LyricVideo`, `LyricVideo2`, `LyricVideoShort`, `LyricVideoOnlyPinin`) and verify identical text placement, animations, and visualizer rendering.
 2. **Streamlit UI**: Run `streamlit run python-src/app.py`, test the 1-click Wiktionary links, edit line translations and word breakdowns, and export to a `.ts` file. Verify the exported file compiles without TypeScript errors.
+
+---
+
+## Reconciled local migration — 2026-11-12 (v2.1)
+
+The plan above is retained as historical design context, not a record of completed renderer refactors. The current checkout has an implemented, uncommitted Streamlit workbench and UI-independent `python-src/workbench/` backend. Preserve it. See [local audit](react-workbench/LOCAL_AUDIT.md) for composition/media contracts and corrections (notably LyricVideo2 is image + visualizer).
+
+The integrated [v2.1 proposal](react-workbench/ROADMAP.proposed.md) is merged through these ordered execution gates, superseding the old implementation order and speculative directory migration:
+
+1. **A / M1 — React file workflow:** separate `web/` command; safe static TS/raw import, shared phrase editing, stable occurrence/token IDs, undoable split/merge, explicit Pinyin spacing correction, review state; legacy TS and validated project JSON download. Gate: two actual song round trips and consumer type compatibility; keep renderer unchanged.
+2. **B / M2 — Timing:** local audio clock and waveform, one row per occurrence, seek/drag/trim/exact integer ms/tap/nudge/undo; no frame quantization. Gate: repeated chorus independently retimed and exported for old Studio.
+3. **C / M3 — Python bridge:** reuse current parsing/NLP/dictionary/prompts/transport/recovery; server-only secrets; opt-in generation proposals; manual segmentation protection. Update per-word Pinyin normalization/prompts/tests before completion. Gate: accepted draft preserves timing/manual edits and export.
+4. **D / M4 — Renderer:** capture reference frames for all seven actual IDs before extraction; distinct footage/image backgrounds, shared actual primitives, separate thumbnails, typed legacy defaults and safe compatibility wrappers. Gate: compared frames, unchanged IDs/FPS/durations/layout and one soundtrack. No premature src/songs migration or removal of old entrypoints.
+5. **E / M5 — Settings to renderer:** same presets/composition resolver in real preview and render, explicit media relinking, working color/background overrides, manual exports retained. Gate: actual render confirms UI changes and timebase.
+
+Optional M6 remains assisted sync, project library, explicit render queue and advanced presets. No automatic source writes, destructive Git actions, paid generation on input changes or new browser/runtime installs. Report files, decisions/dependencies, preserved Python work, executed tests/renders and remaining work at every checkpoint. Detailed acceptance is in [TEST_PLAN.md](react-workbench/TEST_PLAN.md); segmentation contract is [WORD_SEGMENTATION.md](react-workbench/WORD_SEGMENTATION.md). Checkpoint status/results are recorded separately in `react-workbench/CHECKPOINT_A.md` as work progresses.

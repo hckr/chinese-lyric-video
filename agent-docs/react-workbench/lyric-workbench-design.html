@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lyric Workbench – Dark UI Reference</title>
+<style>
+:root{--page:#f5f6fa;--surface:#fff;--ink:#222638;--muted:#7c8292;--subtle:#a2a7b3;--border:#e7e9f0;--violet:#6957cf;--violet-light:#f1eeff;--green:#218f78;--green-light:#e6f7f0;--amber:#bb782e;--amber-light:#fff5e8;--nav:#181c29;--nav2:#252a39;--shadow:0 4px 26px rgba(23,26,53,.035);--zh:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;min-width:320px;height:100%;background:var(--page);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:13px;line-height:1.48}button,input,textarea,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #ad9ef7;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.48}a{color:inherit}.app{display:flex;min-height:100vh}.sidebar{width:232px;flex:0 0 232px;background:var(--nav);color:#c6cad7;display:flex;flex-direction:column;padding:26px 14px 19px;position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:12px;padding:2px 12px 27px;color:#fff;font-size:17px;font-weight:780;letter-spacing:-.45px}.brandmark{width:34px;height:34px;border-radius:11px;background:#8271ec;display:grid;place-items:center;font-size:19px;font-family:var(--zh);font-weight:700;box-shadow:0 7px 18px rgba(120,106,226,.25)}.navcaption{font-size:10px;text-transform:uppercase;letter-spacing:1.55px;color:#747c94;font-weight:800;margin:13px 13px 9px}.navitem{width:100%;border:0;background:transparent;color:#adb3c7;text-align:left;border-radius:10px;display:flex;align-items:center;gap:12px;padding:11px 13px;font-size:13px;margin:2px 0}.navitem.active{background:#302c4a;color:#fff;font-weight:660}.navitem svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6}.navitem:not(.active):hover{background:var(--nav2);color:#fff}.navsep{height:1px;background:#303545;margin:19px 10px 5px}.projectlink{padding:12px 11px;border-radius:11px;display:flex;align-items:center;gap:10px;margin:3px 0;color:#f2f2fa;background:#242838}.projectlink .projecticon{width:34px;height:34px;border-radius:8px;background:#494766;display:grid;place-items:center;font-family:var(--zh);font-size:16px}.projectlink small{display:block;color:#939bb1;font-size:11px;margin-top:1px}.projectlink .dots{margin-left:auto;color:#9399ac}.sidebottom{margin-top:auto;padding:16px 11px 2px;border-top:1px solid #303545}.sidebottom .smalllabel{font-size:11px;color:#9ca3b8}.sidebottom .meter{height:5px;background:#363b4c;border-radius:10px;margin:11px 0 8px;overflow:hidden}.sidebottom .meter span{height:100%;display:block;width:47%;background:#8d7ff3}.sidebottom .more{color:#e3e4ee;font-size:11px;display:flex;justify-content:space-between}.user{display:flex;gap:10px;align-items:center;margin-top:19px}.avatar{width:32px;height:32px;border-radius:50%;background:#444c68;color:#fff;display:grid;place-items:center;font-weight:700}.user small{display:block;color:#858ea4}.main{flex:1;min-width:0;display:flex;flex-direction:column}.topbar{height:70px;flex:0 0 70px;background:#fff;border-bottom:1px solid var(--border);padding:0 33px;display:flex;align-items:center;justify-content:space-between;gap:20px}.breadcrumbs{display:flex;align-items:center;gap:10px;color:#8c92a2;font-size:12px}.breadcrumbs strong{color:#252b3e;font-weight:680}.topactions{display:flex;align-items:center;gap:12px}.saved{font-size:11px;color:#6d9b89;display:flex;align-items:center;gap:7px}.saved:before{content:"";width:6px;height:6px;border-radius:50%;background:#37af8c}.iconbtn{border:1px solid transparent;background:transparent;color:#848a99;width:31px;height:31px;border-radius:8px;display:grid;place-items:center;font-size:19px}.iconbtn:hover{background:#f4f3ff;color:var(--violet)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:9px;border:1px solid var(--border);background:#fff;color:#3c4151;font-weight:650;padding:10px 15px;font-size:12px;white-space:nowrap;transition:background .15s,border-color .15s}.btn:hover{background:#fafaff;border-color:#d4cff2}.btn.primary{background:var(--violet);color:#fff;border-color:var(--violet);box-shadow:0 4px 12px rgba(105,87,207,.16)}.btn.primary:hover{background:#5a46bf}.btn.small{padding:7px 10px;font-size:11px}.btn.ghost{border-color:transparent;background:transparent;color:#6655b7}.btn.ghost:hover{background:var(--violet-light)}.btn.success{border-color:#a7dccc;background:#e8f7f0;color:#218f78}.outline-icon{font-size:14px;line-height:1}.content{padding:25px 29px 29px;min-width:0;max-width:1900px;width:100%;margin:0 auto}.heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:23px}.eyebrow{display:flex;align-items:center;gap:9px;color:#8773cf;text-transform:uppercase;letter-spacing:1.45px;font-size:10px;font-weight:800;margin-bottom:7px}.eyebrow:before{content:"";width:16px;height:2px;background:#9b87f5}.title{font-size:27px;line-height:1.2;letter-spacing:-.9px;margin:0 0 6px;font-weight:790}.subtitle{color:var(--muted);font-size:12px}.headingstatus{display:flex;gap:14px;align-items:center;margin-bottom:4px}.stattext{white-space:nowrap;font-size:12px;color:#596174}.stattext strong{font-size:14px;color:#2f3447}.stattext em{font-style:normal;color:var(--subtle)}.progressbar{width:114px;height:7px;border-radius:10px;background:#e6e5ec;overflow:hidden}.progressbar span{display:block;height:100%;background:#36ae96;border-radius:10px;transition:width .2s}.steps{border:1px solid var(--border);background:#fff;border-radius:13px;display:flex;padding:5px;box-shadow:var(--shadow);margin-bottom:18px;max-width:760px}.step{flex:1;display:flex;align-items:center;gap:10px;background:transparent;border:0;border-radius:9px;color:#8e93a0;padding:10px 12px;text-align:left;min-width:0}.step+.step{position:relative}.step.active{background:#f0edff;color:#5442b7}.step.done:not(.active){color:#4f7c72}.stepnum{width:25px;height:25px;display:grid;place-items:center;border:1px solid #daddE5;border-radius:8px;font-size:11px;font-weight:800;background:#fff;flex:0 0 25px}.step.active .stepnum{background:var(--violet);color:white;border-color:var(--violet)}.step.done .stepnum{border-color:#b9e4d6;background:#eef9f4;color:#288a74}.steptxt b{display:block;font-size:12px;letter-spacing:-.1px}.steptxt span{display:block;font-size:10px;color:#a0a4af;font-weight:450;margin-top:1px}.step.active .steptxt span{color:#8c82c2}.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);min-width:0}.workspace{display:grid;grid-template-columns:minmax(244px,280px) minmax(450px,1fr) minmax(274px,322px);align-items:stretch;gap:14px;height:calc(100vh - 252px);min-height:650px;max-height:1050px}.linepanel{display:flex;flex-direction:column;overflow:hidden}.panehead{padding:18px 17px 12px;border-bottom:1px solid var(--border)}.panehead .row{display:flex;align-items:center;justify-content:space-between}.sectiontitle{font-weight:760;font-size:13px;letter-spacing:-.2px}.count{background:#f3f4f7;color:#8e94a4;border-radius:6px;font-size:10px;font-weight:750;padding:3px 6px}.searchbox{display:flex;gap:8px;align-items:center;padding:9px 10px;margin-top:13px;border:1px solid var(--border);border-radius:8px;background:#f9fafc;color:#9a9eab}.searchbox svg{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.7}.searchbox input{border:0;background:transparent;outline:0;width:100%;min-width:0;color:var(--ink);font-size:12px}.filters{padding:12px 14px 10px;border-bottom:1px solid var(--border);display:flex;gap:5px}.filter{background:transparent;color:#89909c;border:0;border-radius:7px;padding:6px 9px;font-size:11px;white-space:nowrap}.filter.active{background:#f0edff;color:#6752bd;font-weight:740}.scroll{overflow:auto;min-height:0;scrollbar-color:#d9dce8 transparent;scrollbar-width:thin}.phrase{border:0;border-bottom:1px solid #eef0f4;background:white;width:100%;display:flex;text-align:left;gap:10px;padding:15px 15px 14px;color:var(--ink);position:relative}.phrase:hover{background:#fbfaff}.phrase.active{background:#f5f3ff}.phrase.active:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--violet)}.number{width:23px;color:#9ca2af;font-size:10px;font-weight:700;padding-top:4px;flex:0 0 23px}.phrasebody{min-width:0;flex:1}.hanzi{font-family:var(--zh)}.phrasetitle{font-family:var(--zh);font-size:16px;font-weight:680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.1px}.phraseen{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px;font-size:11px;color:#959aa8}.phrasemeta{display:flex;gap:7px;margin-top:8px}.chip{font-size:9px;line-height:1.4;font-weight:760;border-radius:5px;padding:3px 6px}.chip.repeat{background:#f1f2f6;color:#858b9a}.chip.warn{background:#fff0db;color:#b67933}.chip.reviewed{background:var(--green-light);color:var(--green)}.statusdot{margin-top:6px;width:7px;height:7px;border-radius:50%;background:#e5ab5b;flex:0 0 7px}.statusdot.ok{background:#3cb58e}.leftfoot{border-top:1px solid var(--border);padding:12px 17px;color:#8b90a0;font-size:11px;display:flex;justify-content:space-between}.editor{display:flex;flex-direction:column;overflow:hidden}.editorhead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 15px;border-bottom:1px solid var(--border)}.minitag{font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:830;color:#a2a7b2}.headtools{display:flex;align-items:center;gap:8px}.editcontent{overflow:auto;min-height:0;flex:1;padding:19px 22px 23px;scrollbar-width:thin}.sourcehero{padding:18px 20px 16px;background:#f8f7fe;border:1px solid #ebe6ff;border-radius:11px;margin-bottom:22px}.source-label{color:#9790b4;text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.95px;display:flex;align-items:center;justify-content:space-between}.sourcehanzi{font-family:var(--zh);font-size:28px;line-height:1.45;letter-spacing:1px;margin:9px 0 8px;font-weight:600;color:#2b2a42}.sourcefoot{color:#82799d;font-size:11px}.sourcefoot b{font-weight:700}.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:20px}.field label{display:block;font-size:11px;font-weight:760;color:#666d7e;margin-bottom:8px}.field label .flag{margin-right:5px}.textinput{border:1px solid #e3e5eb;border-radius:9px;resize:vertical;min-height:82px;padding:12px 13px;line-height:1.58;outline:0;width:100%;font-size:12px;color:#35394a;background:#fff}.textinput:focus,.tokeninput:focus{border-color:#9d8be9;box-shadow:0 0 0 3px #f0edff;outline:none}.sectiondivider{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:8px}.sectiondivider span{font-size:11px;color:#9299a7}.tablehead{display:grid;grid-template-columns:20px minmax(55px,.75fr) minmax(77px,1fr) minmax(108px,1.6fr) 30px;gap:8px;color:#adb1be;font-size:10px;font-weight:750;padding:0 6px 10px}.tokens{display:flex;flex-direction:column;gap:6px}.tokenrow{display:grid;grid-template-columns:20px minmax(55px,.75fr) minmax(77px,1fr) minmax(108px,1.6fr) 30px;gap:8px;align-items:start;padding:6px;border:1px solid transparent;border-radius:9px}.tokenrow.selected{background:#faf8ff;border-color:#e6dfff}.tokenrow:hover{background:#fafbfe}.drag{display:flex;flex-direction:column;align-items:center;padding-top:8px;color:#b4b8c4;gap:1px}.move{border:0;background:transparent;color:#a1a6b5;padding:0;font-size:11px;line-height:1.05}.move:hover{color:var(--violet)}.tokeninput{width:100%;min-width:0;height:38px;border:1px solid #e6e7ee;border-radius:7px;background:white;padding:8px 9px;outline:none;color:#343848;font-size:12px}.tokeninput.char{font-family:var(--zh);font-size:15px}.tokeninput.gloss{resize:vertical;min-height:38px;height:38px;line-height:20px;padding:8px 9px;white-space:pre-wrap}.tokeninput.note{font-style:italic;color:#8d819c}.tokenaction{color:#aaaebe;width:28px;height:35px;background:transparent;border:0;border-radius:6px;font-size:17px}.tokenaction:hover{background:#ece9fc;color:#6c5db3}.tokenadd{display:flex;align-items:center;gap:7px;margin:10px 0 9px}.tokenadd button{padding:6px 9px;border:0;background:transparent;color:#7057c5;border-radius:7px;font-size:11px;font-weight:770}.tokenadd button:hover{background:var(--violet-light)}.hint{color:#a4a9b5;font-size:10px;line-height:1.55}.editorbottom{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 22px;border-top:1px solid var(--border);background:white;flex:0 0 auto}.editorbottom .lefthint{font-size:11px;color:#9499a8;display:flex;align-items:center;gap:8px}.okring{display:grid;place-items:center;width:18px;height:18px;border:1px solid #cad4d0;border-radius:50%;font-size:11px;color:#55aa8e}.bottomright{display:flex;align-items:center;gap:7px}.inspector{display:flex;flex-direction:column;overflow:hidden}.inspectortabs{display:flex;gap:21px;padding:0 17px;height:52px;align-items:stretch;border-bottom:1px solid var(--border)}.inspectortab{border:0;border-bottom:2px solid transparent;color:#a0a3b2;background:transparent;font-size:12px;font-weight:700;padding:0 2px}.inspectortab.active{color:#5c4ac3;border-color:#6957cf}.inspect-body{overflow:auto;flex:1;padding:17px;scrollbar-width:thin}.inspector-label{font-size:10px;text-transform:uppercase;color:#a2a6b2;letter-spacing:1px;font-weight:800;margin:4px 0 11px}.wordref{display:flex;justify-content:space-between;align-items:center;margin:0 0 11px}.wordref .ch{font-size:40px;font-family:var(--zh);font-weight:650;line-height:1.1}.wordref .py{font-size:13px;color:#7768b0;margin-top:6px}.tag{border-radius:6px;background:#f1eefc;color:#6a59ba;padding:5px 8px;font-size:10px;font-weight:750}.definition{border:1px solid #eeeaf8;background:#fbfaff;border-radius:10px;padding:13px 13px 11px;margin-bottom:17px}.definition .defsource{font-size:10px;color:#977cc6;font-weight:800;margin-bottom:7px}.deflist{margin:0;padding-left:17px;color:#555b6c;font-size:11px;line-height:1.95}.definition .defnote{color:#a0a2b1;font-size:10px;margin-top:7px}.reference-card{border:1px solid var(--border);border-radius:10px;padding:11px 12px;margin-bottom:10px}.reference-card .smallhead{font-size:10px;color:#a2a6b3;font-weight:770;letter-spacing:.25px;display:flex;justify-content:space-between}.reference-card p{margin:7px 0 0;font-size:11px;color:#646a7b;line-height:1.65}.ref-link{display:flex;align-items:center;justify-content:center;text-decoration:none;margin:17px 0 10px;padding:10px;border-radius:8px;background:#f4f3ff;color:#6856c0;font-size:11px;font-weight:770}.ref-link:hover{background:#ece8ff}.previewbox{background:linear-gradient(140deg,#2c2648 0%,#21253d 46%,#131d31 100%);border-radius:11px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:20px 9px;position:relative;overflow:hidden;text-align:center;color:#fff;box-shadow:inset 0 0 40px #1e274d}.previewbox:before{content:"";position:absolute;inset:-55%;background:radial-gradient(ellipse at 30% 15%,rgba(178,137,197,.26),transparent 45%),radial-gradient(ellipse at 90% 80%,rgba(93,130,201,.22),transparent 45%);filter:blur(10px)}.preview-inner{position:relative;width:100%}.previewtop{font-size:11px;color:#d5d1f6;font-weight:620;letter-spacing:.5px}.previewch{font-size:23px;font-weight:720;font-family:var(--zh);text-shadow:0 2px 8px rgba(0,0,0,.5);margin:5px 0 2px}.previewgloss{font-size:8px;color:#e4e2ef;margin-bottom:9px}.previewtr{font-size:8px;color:#fff;line-height:1.7}.previewtr.pl{color:#e4cfec}.watermark{position:absolute;right:11px;bottom:9px;font-size:7px;color:#cfc7db;opacity:.78}.previewcontrols{display:flex;gap:7px;align-items:center;justify-content:space-between;margin:11px 0 18px}.previewcontrols button{border:1px solid #e2e4eb;padding:7px 9px;border-radius:8px;background:white;color:#7b8090;font-size:10px}.previewdesc{font-size:11px;color:#858b9a;line-height:1.65}.callout{border:1px solid #e7e9ef;border-radius:10px;background:#fafbfe;padding:12px;font-size:11px;color:#72798a;line-height:1.7}.callout b{color:#464b5e}.muted{color:var(--muted)}.pagegrid{display:grid;grid-template-columns:minmax(390px,1fr) minmax(340px,1fr);gap:16px;min-height:570px}.pagepane{padding:22px;min-width:0}.pagepane h2{font-size:15px;margin:0 0 5px;letter-spacing:-.3px}.pagepane p{color:#89909d;font-size:12px;line-height:1.6;margin:0 0 18px}.raw{width:100%;border:1px solid #e2e4ea;background:#fbfcff;border-radius:10px;min-height:300px;padding:16px;font-family:var(--zh);font-size:14px;line-height:2;resize:vertical;outline:0}.raw:focus{border-color:#9e8eec}.option{display:flex;align-items:center;gap:9px;font-size:12px;color:#626879;margin:10px 0}.option input{accent-color:var(--violet)}.flexend{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.metricrow{display:flex;gap:8px;margin-bottom:18px}.metric{flex:1;border:1px solid var(--border);border-radius:9px;padding:12px 13px;background:#fcfcfe}.metric strong{font-size:21px;display:block;line-height:1.25;letter-spacing:-.7px}.metric span{font-size:10px;color:#8d93a2}.parsedlist{border:1px solid #eceef3;border-radius:9px;overflow:hidden}.parsedrow{padding:11px 14px;border-top:1px solid #eff0f5;display:flex;justify-content:space-between;gap:10px;align-items:center}.parsedrow:first-child{border-top:0}.parsedrow b{font-family:var(--zh);font-size:14px;font-weight:630}.parsedrow small{display:block;color:#9ca2ac;margin-top:4px}.codebox{background:#1c2030;color:#d4ddf2;border-radius:11px;min-height:352px;max-height:510px;overflow:auto;padding:20px;font:11px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas,monospace;white-space:pre;scrollbar-color:#58596b transparent}.format{display:flex;gap:7px;padding:4px;background:#f4f5fa;border-radius:9px;width:max-content;margin-bottom:14px}.format button{border:0;border-radius:7px;padding:7px 13px;color:#9499a7;background:transparent;font-weight:680;font-size:11px}.format button.active{color:#5845b3;background:white;box-shadow:0 2px 5px #25213a15}.small-note{color:#a4a8b5;font-size:10px;margin-top:12px}.hidden{display:none!important}.toast{position:fixed;bottom:24px;right:25px;background:#25273b;color:#fff;border-radius:10px;padding:11px 16px;box-shadow:0 8px 35px #0c102b39;font-weight:600;font-size:12px;z-index:99;opacity:0;pointer-events:none;transform:translateY(9px);transition:opacity .2s,transform .2s}.toast.visible{opacity:1;transform:translateY(0)}.empty{padding:29px 15px;text-align:center;color:#9fa3af;font-size:12px}.version{font-size:9px;color:#8790a4;margin-top:10px;letter-spacing:.4px}.separator{height:1px;background:var(--border);margin:18px 0}.flaggap{width:6px;height:6px;border-radius:50%;background:#d7a662;display:inline-block}
+@media(max-width:1350px){.sidebar{width:205px;flex-basis:205px}.workspace{grid-template-columns:235px minmax(380px,1fr) 260px}.content{padding-left:20px;padding-right:20px}.topbar{padding:0 21px}.editcontent{padding:17px}.editorhead,.editorbottom{padding-left:17px;padding-right:17px}.sourcehanzi{font-size:25px}.inspect-body{padding:12px}}
+@media(max-width:1130px){.workspace{grid-template-columns:225px minmax(390px,1fr)}.inspector{grid-column:1/-1;display:block}.inspect-body{display:grid;grid-template-columns:1fr 1fr;gap:18px}.inspect-body>div{min-width:0}.workspace{height:auto;min-height:0}.linepanel,.editor{height:670px}.inspector{min-height:300px}.sidebar{width:190px;flex-basis:190px}}
+@media(max-width:790px){.sidebar{display:none}.topbar{padding:0 15px}.content{padding:20px 12px}.heading{align-items:start;flex-wrap:wrap}.workspace{display:block}.linepanel{height:280px;margin-bottom:12px}.editor{height:690px;margin-bottom:12px}.inspector{min-height:280px}.inspect-body{display:block}.steps{max-width:none}.step{padding:9px 8px}.steptxt span{display:none}.fieldrow,.pagegrid{grid-template-columns:1fr}.headingstatus{width:100%}.title{font-size:23px}.saved{display:none}.topbar .btn{padding:8px 10px}}
+@media(max-width:450px){.steps .stepnum{display:none}.steptxt b{font-size:11px}.sourcehanzi{font-size:22px}.tablehead,.tokenrow{grid-template-columns:12px 60px 73px minmax(95px,1fr) 24px;gap:3px}.tokeninput{padding:8px 4px;font-size:11px}.editorbottom{align-items:stretch;flex-direction:column}.editorbottom .bottomright{justify-content:flex-end}}
+
+/* Dark, blue-accent design tokens derived from the user's reference image.
+   This is an override for the self-contained prototype, not the production stylesheet. */
+:root {
+  color-scheme: dark;
+  --page: #0c1119;
+  --surface: #171e29;
+  --surface-2: #1d2734;
+  --surface-3: #222f40;
+  --ink: #eaf3fd;
+  --muted: #9daec2;
+  --subtle: #7e91a7;
+  --border: #2d394a;
+  --violet: #4eaef8;
+  --violet-light: #172f46;
+  --green: #70d2b4;
+  --green-light: #16352f;
+  --amber: #e8af68;
+  --amber-light: #3b2c20;
+  --nav: #090e16;
+  --nav2: #172535;
+  --shadow: 0 7px 30px rgba(0,0,0,.15);
+}
+html,body { color:var(--ink); background:var(--page); }
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline-color:#4eaef8;}
+.sidebar{background:var(--nav);color:#b3c4d9;border-right:1px solid #1e2b38;}
+.brandmark{background:var(--violet);color:#0a1825;box-shadow:0 6px 20px rgba(78,174,248,.2);}
+.navcaption{color:#71869d;}
+.navitem{color:#9cadc2;}
+.navitem.active{background:#123451;color:#8cd0ff;box-shadow:inset 3px 0 #4eaef8;}
+.navitem:not(.active):hover{background:var(--nav2);color:#eef7ff;}
+.navsep,.sidebottom{border-color:#273548;}
+.navsep{background:#273548;}
+.projectlink{color:#dcecff;background:#172232;border:1px solid #2b3b4d;}
+.projectlink .projecticon{background:#204366;color:#80c8ff;}
+.projectlink small,.projectlink .dots,.sidebottom .smalllabel,.user small,.version{color:#8ba0b8;}
+.sidebottom .meter{background:#263445;}
+.sidebottom .meter span{background:var(--violet);}
+.sidebottom .more{color:#d8e6f6;}
+.avatar{background:#214260;color:#91d0ff;}
+.topbar{background:#121925;border-color:var(--border);}
+.breadcrumbs{color:#8e9eb3;}
+.breadcrumbs strong{color:#e8f1fb;}
+.saved{color:#86c9b9;}
+.saved:before{background:#69c9ad;}
+.iconbtn{color:#a0b1c6;}
+.iconbtn:hover{background:#203347;color:var(--violet);}
+.btn{background:#222e3c;color:#dceaf8;border-color:#35465a;}
+.btn:hover{background:#2b3b4b;border-color:#527493;}
+.btn.primary{background:var(--violet);border-color:var(--violet);color:#081522;box-shadow:0 4px 18px rgba(78,174,248,.18);}
+.btn.primary:hover{background:#72c0ff;border-color:#72c0ff;}
+.btn.ghost{background:transparent;color:#83caff;}
+.btn.ghost:hover{background:var(--violet-light);}
+.btn.success{background:#173a31;border-color:#386958;color:#85e3c2;}
+.eyebrow{color:#72bdf1;}
+.eyebrow:before{background:#4eaef8;}
+.title{color:#f1f7ff;}
+.stattext{color:#a7b6c9;}
+.stattext strong{color:#f1f8ff;}
+.progressbar{background:#273445;}
+.progressbar span{background:#4eaef8;}
+.steps{background:#161f2a;border-color:var(--border);}
+.step{color:#91a3b8;}
+.step.active{background:#163149;color:#91d5ff;}
+.step.done:not(.active){color:#82bfb3;}
+.stepnum{border-color:#405067;background:#202a37;color:#bacde0;}
+.step.active .stepnum{background:var(--violet);border-color:var(--violet);color:#091824;}
+.step.done .stepnum{background:#163a32;border-color:#326657;color:#85dbbc;}
+.steptxt span{color:#8294a9;}
+.step.active .steptxt span{color:#a1bfd4;}
+.panel{background:var(--surface);border-color:var(--border);}
+.count{background:#2a3848;color:#b4c8db;}
+.searchbox{background:#111b27;border-color:#354454;color:#8a9db2;}
+.searchbox input{color:var(--ink);}
+.searchbox:focus-within{border-color:#4eaef8;box-shadow:0 0 0 2px #4eaef826;}
+.filter{color:#95a6b9;}
+.filter.active{background:#15364e;color:#86cfff;}
+.scroll{scrollbar-color:#43546c transparent;}
+.phrase{background:#171e29;border-color:#273445;color:var(--ink);}
+.phrase:hover{background:#202b3a;}
+.phrase.active{background:#183047;}
+.phraseen{color:#9aaec3;}
+.chip.repeat{background:#2a3544;color:#aebfd2;}
+.chip.warn{background:#423020;color:#f2b96f;}
+.chip.reviewed{background:var(--green-light);color:var(--green);}
+.statusdot{background:#dca565;}
+.statusdot.ok{background:#61c4a3;}
+.leftfoot{color:#92a4b9;}
+.minitag{color:#91acc2;}
+.sourcehero{background:linear-gradient(132deg,#15293d 0%,#182d40 70%,#1d2737 100%);border-color:#345471;}
+.source-label{color:#9dcae7;}
+.sourcehanzi{color:#f6fbff;}
+.sourcefoot{color:#a8baca;}
+.field label{color:#c8d8e9;}
+.flag{background:#25384b;color:#92cbf4;}
+.textinput,.tokeninput{background:#101925;color:#e7f1fb;border-color:#344458;}
+.textinput:focus,.tokeninput:focus{border-color:#4eaef8;box-shadow:0 0 0 3px #4eaef82a;}
+.tablehead{color:#94a6ba;}
+.tokenrow.selected{background:#172d43;border-color:#365570;}
+.tokenrow:hover{background:#1b2939;}
+.drag,.move{color:#8098ae;}
+.move:hover{color:#83caff;}
+.tokeninput.note{color:#b2cbe0;}
+.tokenaction{color:#a8b6c8;}
+.tokenaction:hover{background:#263f55;color:#88cfff;}
+.tokenadd button{color:#83caff;}
+.tokenadd button:hover{background:#203b54;}
+.hint,.minitag,.leftfoot,.small-note,.previewdesc{color:#8fa4ba;}
+.editorbottom{background:#171f2b;}
+.editorbottom .lefthint{color:#a5b7ca;}
+.okring{border-color:#416658;color:#7dcaaf;}
+.inspectortab{color:#9aafc3;}
+.inspectortab.active{color:#81c9ff;border-color:#4eaef8;}
+.inspector-label{color:#94aac0;}
+.wordref .py{color:#88caff;}
+.tag{background:#193851;color:#8ccefb;}
+.definition{background:#152536;border-color:#304b63;}
+.definition .defsource{color:#7fcaff;}
+.deflist{color:#c7d7e7;}
+.definition .defnote{color:#91a9bf;}
+.reference-card{background:#182431;border-color:#344355;}
+.reference-card .smallhead{color:#9eb4ca;}
+.reference-card p{color:#c8d7e9;}
+.ref-link{background:#1d3b54;color:#a1d7ff;}
+.ref-link:hover{background:#295171;}
+.previewbox{background:linear-gradient(135deg,#17304f 0%,#101e34 53%,#10263e 100%);box-shadow:inset 0 0 40px #0c152e;}
+.previewbox:before{background:radial-gradient(ellipse at 32% 13%,rgba(51,155,240,.29),transparent 48%),radial-gradient(ellipse at 92% 80%,rgba(99,132,202,.23),transparent 43%);}
+.previewtop{color:#b6dfff;}
+.previewtr.pl{color:#c8ddf1;}
+.previewcontrols button{background:#233445;color:#c5daee;border-color:#344a5c;}
+.callout{background:#152536;border-color:#304255;color:#a9bbce;}
+.callout b{color:#d9eafb;}
+.pagepane p{color:#a1b2c6;}
+.raw{background:#101925;color:#eff7ff;border-color:#374a5f;}
+.raw:focus{border-color:#4eaef8;box-shadow:0 0 0 3px #4eaef826;}
+.option{color:#b9cadb;}
+.option input{accent-color:#4eaef8;}
+.metric{background:#1b2836;border-color:#324457;}
+.metric strong{color:#eaf5ff;}
+.metric span{color:#a2b5c8;}
+.parsedlist{border-color:#334153;}
+.parsedrow{border-color:#2d3a4b;}
+.parsedrow small{color:#91a7be;}
+.codebox{background:#0b1421;color:#dceaff;border:1px solid #263c51;}
+.format{background:#101a27;}
+.format button{color:#91a9bf;}
+.format button.active{background:#274a67;color:#a8dcff;box-shadow:none;}
+.toast{background:#21405b;border:1px solid #416b8a;color:#e9f5ff;}
+.empty{color:#9eb2c7;}
+.flangap,.flaggap{background:#4eaef8;}
+.separator{background:var(--border);}
+/* File-based, intentionally backend-free first iteration. */
+.import-methods{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap;}
+.import-method{border:1px solid #35485d;background:#1d2b39;color:#c0d4e8;border-radius:9px;padding:9px 12px;font-size:11px;font-weight:750;}
+.import-method.active{background:#173c59;border-color:#4eaef8;color:#95d3ff;}
+.file-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px;}
+.file-picker label{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #4eaef8;border-radius:9px;background:#19384f;color:#a3ddff;cursor:pointer;font-size:12px;font-weight:730;}
+.file-picker label:hover{background:#244f70;}
+.file-picker input{position:absolute;width:1px;height:1px;opacity:0;}
+.file-picker small{color:#a5b9cd;font-size:11px;}
+.import-help{font-size:11px;color:#aec2d6;line-height:1.6;margin-bottom:14px;}
+.import-warning{background:#34271b;border:1px solid #664a2c;color:#f1c591;border-radius:9px;padding:10px 12px;font-size:11px;margin:10px 0;}
+
+
+/* Integrated v2: timing and composition-settings concept screens. */
+.steps{max-width:1180px;overflow:auto}.step{padding:9px 10px;min-width:145px}.step .steptxt span{font-size:9px}
+.timing-stage,.visual-stage{width:100%;min-width:0}.timing-transport{padding:14px 17px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap}.timing-mainctrl,.timing-file{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.timing-play{height:39px;width:39px;border:none;border-radius:11px;background:#4eaef8;color:#071524;font-size:18px}.timing-clock{display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}.timing-clock strong{color:#eaf3fd;font-size:17px}.timing-clock small{color:#91a9bf}.timing-file #timingMediaLabel{color:#91abc4;font-size:11px}.timing-grid{display:grid;grid-template-columns:minmax(214px,255px) minmax(380px,1fr) minmax(230px,274px);gap:14px;min-height:620px;height:calc(100vh - 345px);max-height:980px}.timing-list-panel{display:flex;flex-direction:column;min-height:0;overflow:hidden}.timing-occ-list{flex:1}.timing-occ{width:100%;border:0;border-bottom:1px solid #2c3b4c;background:transparent;color:#b6cadf;text-align:left;padding:11px 13px;display:grid;grid-template-columns:24px 1fr;column-gap:9px}.timing-occ.active{background:#19384e;border-left:3px solid #4eaef8;padding-left:10px}.timing-occ:hover{background:#213142}.timing-occ-num{font-size:10px;color:#8ea6bb}.timing-occ-title{font-family:var(--zh);font-size:12px;color:#dcecff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.timing-occ-sub{font-variant-numeric:tabular-nums;color:#8fb0cb;font-size:10px;margin-top:4px}.timing-board{display:flex;flex-direction:column;overflow:hidden;min-width:0}.timing-board-head{padding:16px 17px;display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.timing-board-head b{font-size:12px}.timing-board-head small{display:block;margin-top:3px;color:#91a9bf;font-size:10px}.timing-tools{display:flex;gap:6px;align-items:center;white-space:nowrap}.timing-tools input{width:80px;accent-color:#4eaef8}.timing-tools span{color:#9eb4c8;font-size:10px}.timing-scroll{flex:1;overflow:auto;padding:28px 15px 20px;scrollbar-color:#38526b transparent}.timing-track{height:450px;position:relative;min-width:590px;user-select:none}.timing-ruler{height:40px;display:flex;justify-content:space-between;position:relative;font-variant-numeric:tabular-nums;color:#97b2c9;font-size:10px}.timing-ruler .tick{border-left:1px solid #324558;padding-left:6px;height:26px}.timing-wave{position:relative;height:126px;border-radius:9px;background:repeating-linear-gradient(90deg,#1a2735 0,#1a2735 74px,#233649 75px);overflow:hidden;cursor:crosshair}.timing-wavebars{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;gap:2px;padding:5px 8px}.wavebar{display:block;flex:1;max-width:8px;background:#365a77;border-radius:2px;opacity:.86}.timing-playhead{width:2px;background:#4eaef8;position:absolute;top:-4px;bottom:-260px;left:19%;z-index:4;box-shadow:0 0 8px #4eaef899;pointer-events:none}.timing-playhead:before{content:'▼';position:absolute;top:-18px;left:-6px;color:#4eaef8;font-size:13px}.timing-lanes{position:relative;height:270px;margin-top:12px;background:repeating-linear-gradient(0deg,#17212d 0,#17212d 82px,#27384a 83px);border-radius:9px;border:1px solid #28384a}.timing-block{position:absolute;height:57px;top:12px;border-radius:7px;border:1px solid #35658a;background:#1c4a69;color:#d9f0ff;overflow:hidden;cursor:grab;text-align:left;padding:8px 8px 8px 10px;font-family:var(--zh);font-size:11px;white-space:nowrap;text-overflow:ellipsis;min-width:5px}.timing-block:nth-child(3n+2){top:95px}.timing-block:nth-child(3n){top:178px}.timing-block.active{background:#326f9d;border-color:#83cdff;box-shadow:0 0 0 2px #4eaef84f;z-index:3}.timing-block b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.timing-block small{display:block;margin-top:5px;font-size:9px;color:#b8d7ef;font-variant-numeric:tabular-nums}.timing-handle{position:absolute;top:0;bottom:0;width:7px;background:#9cd9ff50;cursor:ew-resize}.timing-handle.left{left:0}.timing-handle.right{right:0}.timing-timeline-footer{border-top:1px solid #2e3e50;display:flex;justify-content:space-between;gap:10px;padding:12px 16px;color:#9ab0c7;font-size:10px}.timing-inspector{overflow:hidden;display:flex;flex-direction:column}.timing-inspector-zh{font-family:var(--zh);font-size:17px;font-weight:750;color:#f0f7ff;margin-top:10px}.subtle{color:#8fa6bc}.timing-inspector .subtle{font-size:10px}.timing-inside{padding:17px;overflow:auto}.timing-field{margin-bottom:13px}.timing-field label{display:flex;justify-content:space-between;color:#c1d5e9;font-size:11px;margin-bottom:6px}.timing-field small{color:#8da8bc}.timing-field input{width:100%;background:#101925;border:1px solid #385065;color:#e3f0ff;border-radius:8px;padding:10px 11px;font-size:14px;font-variant-numeric:tabular-nums}.timing-duration{font-size:11px;color:#90b8d2;margin-bottom:14px}.timing-mark{display:flex;flex-wrap:wrap;gap:8px}.timing-nudges{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.timing-shortcuts{font-size:11px;color:#8da9c1;margin:13px 4px}.timing-shortcuts kbd{border:1px solid #3e5770;background:#172638;color:#c6dff6;border-radius:4px;padding:2px 5px}
+.visual-columns{display:grid;grid-template-columns:minmax(310px,430px) minmax(450px,1fr);gap:17px;align-items:stretch}.visual-settings{padding:23px}.visual-settings h2,.visual-preview-panel h2{font-size:20px;letter-spacing:-.5px;margin:2px 0 7px;color:#eaf3fd}.visual-settings p,.visual-architecture-note p{font-size:11px;color:#9bafc5;line-height:1.6}.visual-mode-options{display:grid;gap:9px;margin:20px 0}.visual-mode{background:#152330;border:1px solid #2f455b;color:#d9eaf8;border-radius:11px;display:flex;text-align:left;align-items:center;gap:12px;padding:12px}.visual-mode.active{background:#1c3d56;border-color:#4eaef8}.visual-mode b{display:block;font-size:12px}.visual-mode small{display:block;color:#91abc0;margin-top:4px;font-size:10px}.mode-thumb{display:grid;place-items:center;flex:0 0 48px;width:48px;height:47px;border-radius:8px;font-size:20px}.image-mode{background:linear-gradient(135deg,#173b64,#436e91)}.video-mode{background:linear-gradient(135deg,#5b4c75,#b18372)}.mode-check{display:none;margin-left:auto;color:#89ceff}.visual-mode.active .mode-check{display:block}.visual-control{margin:12px 0 16px}.visual-control label{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:#b6cde1;font-size:12px}.visual-control select,.visual-color{width:100%;background:#111c29;border:1px solid #35485b;color:#d5e7fa;padding:10px;border-radius:8px}.visual-control input[type=range]{width:100%;accent-color:#4eaef8}.visual-color{display:flex;align-items:center;gap:11px}.visual-color input{border:0;background:transparent;width:44px;height:31px;padding:0}.visual-color span{font-variant-numeric:tabular-nums;color:#98bad8}.visual-preview-panel{padding:0;overflow:hidden}.visual-preview-header{display:flex;justify-content:space-between;align-items:center;padding:22px 25px 10px}.preview-demo-badge{border:1px solid #41627f;background:#1c3750;color:#a8d9ff;font-size:9px;border-radius:5px;padding:5px 9px;font-weight:800}.visual-preview-region{padding:12px 23px 18px;display:flex;justify-content:center;align-items:center;background:#101924}.visual-canvas{width:100%;max-width:730px;aspect-ratio:16 / 9;background:radial-gradient(ellipse at 48% 23%,#566990 0%,#29436a 35%,#0f2239 74%,#0c1726 100%);position:relative;overflow:hidden;border-radius:10px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;box-shadow:0 18px 36px #0005}.visual-art-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 72% 56%,#c0a1b139,transparent 45%),radial-gradient(ellipse at 21% 82%,#4b88bf45,transparent 40%)}.visual-canvas.video-theme{background:linear-gradient(120deg,#423e46,#795c5d 35%,#394c61 70%,#151e2b)}.visual-canvas.video-theme:before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(transparent,#0008);pointer-events:none}.visual-sample-top,.visual-sample-hanzi,.visual-sample-en,.visual-sample-pl{z-index:2;position:relative;text-align:center;text-shadow:0 2px 8px #09101eaa;padding:0 16px}.visual-sample-top{font-size:clamp(11px,1.3vw,19px);color:#c4e9fd}.visual-sample-hanzi{font-family:var(--zh);font-weight:800;letter-spacing:2px;font-size:clamp(25px,3vw,44px);color:white}.visual-sample-en{font-size:clamp(10px,1vw,14px);color:#edf4ff}.visual-sample-pl{font-size:clamp(9px,.95vw,13px);color:#d9ebfc}.visual-bars{position:absolute;bottom:12%;height:16%;display:flex;gap:4px;align-items:center;z-index:2}.visual-bars span{width:5px;background:var(--bar-color,#4eaef8);height:35%;border-radius:3px;opacity:.8}.visual-watermark{position:absolute;bottom:11px;right:17px;font-size:10px;letter-spacing:.5px;color:#aec0d3;z-index:2}.visual-preview-footer{display:flex;justify-content:space-between;gap:8px;padding:13px 23px;color:#8fa9c1;font-size:10px;border-top:1px solid #2c3b4c}.visual-architecture-note{margin:16px 23px 22px;padding:15px;border:1px solid #33475b;background:#152434;border-radius:9px}.visual-architecture-note b{font-size:12px;color:#e1efff}
+@media(max-width:1320px){.timing-grid{grid-template-columns:220px minmax(360px,1fr)}.timing-inspector{grid-column:1 / -1}.visual-columns{grid-template-columns:1fr 1.15fr}}
+@media(max-width:1000px){.timing-grid,.visual-columns{grid-template-columns:1fr;height:auto;max-height:none}.timing-list-panel{height:240px}.timing-board{height:470px}.timing-inspector{grid-column:auto}.visual-preview-region{min-height:280px}.timing-stage{min-width:0}}
+@media(max-width:650px){.timing-board-head{align-items:flex-start;flex-wrap:wrap}.timing-timeline-footer,.visual-preview-footer{flex-wrap:wrap}.timing-track{min-width:600px}.visual-settings{padding:18px}.visual-preview-header{padding:18px}}
+
+/* v2.1: explicit word split/merge controls, with a dark-mode confirmation dialog. */
+.wordoperations{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 6px}
+.wordoperations button{border:1px solid var(--border);border-radius:8px;background:var(--surface-raised);color:var(--ink);padding:7px 10px;font-weight:650;font-size:11px}
+.wordoperations button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.wordoperations button:disabled{opacity:.4;cursor:not-allowed}
+.pinrule{font-size:11px;color:var(--muted);line-height:1.4}.pinrule strong{color:var(--accent)}
+.pinwarning:not(:empty){font-size:11px;color:var(--warning);border:1px solid rgba(232,175,104,.4);border-radius:7px;padding:8px;margin-top:7px}
+.tokeninput.pinyin-invalid{border-color:var(--warning)!important;box-shadow:0 0 0 1px rgba(232,175,104,.3)}
+.worddialog{width:min(530px,calc(100vw - 30px));max-height:85vh;overflow:auto;border:1px solid var(--border);border-radius:15px;background:var(--surface);color:var(--ink);box-shadow:0 25px 100px rgba(0,0,0,.65);padding:0}
+.worddialog::backdrop{background:rgba(3,8,14,.78)}
+.worddialog form{padding:23px}.worddialog h2{font-size:20px;margin:6px 0}.worddialog p{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 17px}
+.worddialogfields{display:grid;gap:11px}.worddialogfields label{font-size:11px;font-weight:750;color:var(--muted);display:grid;gap:6px}
+.worddialogfields input,.worddialogfields select,.worddialogfields textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--field);color:var(--ink);font:inherit}
+.worddialogfields textarea{min-height:56px;resize:vertical}.dialogpreview{padding:11px;border-radius:9px;background:var(--field);color:var(--ink);font-size:14px;font-family:var(--zh)}
+.dialogpreview small{color:var(--muted);display:block;font-size:10px;font-family:inherit;margin-bottom:3px}
+.dialogcolumns{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dialogerror{color:var(--warning);font-size:11px;margin-top:10px;min-height:0}
+.dialogactions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:15px;margin-top:17px}
+@media(max-width:570px){.dialogcolumns{grid-template-columns:1fr}.wordoperations button{flex:1}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brandmark">词</span> Lyric Workbench</div>
+    <div class="navcaption">Workspace</div>
+    <button class="navitem active" data-stage="review"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg> Lyric editor</button>
+    <button class="navitem" data-stage="prepare"><svg viewBox="0 0 24 24"><path d="M7 3h8l5 5v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2Z"/><path d="M15 3v6h5M8 13h8M8 17h5"/></svg> Import lyrics</button>
+    <button class="navitem" data-stage="timing"><svg viewBox="0 0 24 24"><path d="M3 8v8M7 5v14M11 9v6M15 3v18M19 7v10"/></svg> Lyric timing</button>
+    <button class="navitem" data-stage="visual"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8" cy="9" r="1"/><path d="m4 17 5-5 4 3 3-5 5 6"/></svg> Video settings</button>
+    <button class="navitem" data-stage="export"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/></svg> Export data</button>
+    <div class="navsep"></div>
+    <div class="navcaption">Current project</div>
+    <div class="projectlink"><span class="projecticon">淋</span><div><b style="font-family:var(--zh);font-size:12px">淋雨一直走</b><small>Angela Zhang</small></div><span class="dots">···</span></div>
+    <div class="navcaption" style="margin-top:21px">Resources</div>
+    <button class="navitem" id="resourceNav"><svg viewBox="0 0 24 24"><path d="M4 6.5h7l2 2H20v11H4z"/><path d="M4 6.5V4h6l2 2"/></svg> Dictionary references</button>
+    <div class="sidebottom">
+      <div class="smalllabel">Project completion</div>
+      <div class="meter"><span id="sidebarProgress"></span></div>
+      <div class="more"><span id="sidebarProgressText">4 of 8 reviewed</span><span id="sidebarPct">50%</span></div>
+      <div class="user"><div class="avatar">L</div><div><b style="font-size:11px;color:#e7e8f3">Local workspace</b><small>Design prototype</small></div></div>
+      <div class="version">UI REFERENCE · NOV 2026</div>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumbs"><span>Projects</span><span>›</span><strong>淋雨一直走</strong><span class="muted">/</span><span id="crumbStage">Review</span></div>
+      <div class="topactions"><span class="saved" id="saveIndicator">Demo changes are local</span><button class="iconbtn" aria-label="Help" title="Design prototype: edits live only in memory" id="helpBtn">ⓘ</button><button class="btn primary" data-stage="export"><span class="outline-icon">↗</span> Export</button></div>
+    </header>
+    <div class="content">
+      <div class="heading"><div><div class="eyebrow">SONG WORKSPACE / 001</div><h1 class="title" id="pageTitle">Review translations</h1><div class="subtitle" id="pageSubtitle">Refine every phrase, verify vocabulary, and keep repeated lyrics in sync.</div></div><div class="headingstatus"><div class="stattext"><strong id="reviewedCount">4</strong> / <span id="totalCount">8</span> <em>phrases reviewed</em></div><div class="progressbar"><span id="headerProgress"></span></div></div></div>
+      <nav class="steps" aria-label="Workflow stages">
+        <button class="step done" data-stage="prepare"><span class="stepnum">✓</span><span class="steptxt"><b>Prepare lyrics</b><span>Clean &amp; deduplicate</span></span></button>
+        <button class="step active" data-stage="review"><span class="stepnum">02</span><span class="steptxt"><b>Translate &amp; review</b><span>Verify each unique phrase</span></span></button>
+        <button class="step" data-stage="timing"><span class="stepnum">03</span><span class="steptxt"><b>Timing</b><span>Sync occurrences</span></span></button>
+        <button class="step" data-stage="visual"><span class="stepnum">04</span><span class="steptxt"><b>Video</b><span>Mode &amp; presets</span></span></button>
+        <button class="step" data-stage="export"><span class="stepnum">05</span><span class="steptxt"><b>Export</b><span>TS &amp; project JSON</span></span></button>
+      </nav>
+      <div id="reviewStage" class="workspace">
+        <section class="panel linepanel" aria-label="Unique lyric phrases">
+          <div class="panehead"><div class="row"><span class="sectiontitle">Unique phrases</span><span class="count" id="phraseCount">8</span></div><label class="searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="searchInput" aria-label="Search phrases" placeholder="Search Hanzi or translations"></label></div>
+          <div class="filters" role="group" aria-label="Review status"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="pending">Needs review</button><button class="filter" data-filter="reviewed">Reviewed</button></div>
+          <div class="scroll" id="phraseList"></div>
+          <div class="leftfoot"><span id="occurrenceCount">23 timeline occurrences</span><span>↕ Scroll to browse</span></div>
+        </section>
+        <section class="panel editor" aria-label="Translation editor">
+          <div class="editorhead"><div><div class="minitag" id="lineLabel">PHRASE 02 OF 08</div><div style="font-size:11px;color:#848a9b;margin-top:4px" id="lineOccurrences">Used 4 times in timeline</div></div><div class="headtools"><button class="btn small" id="previousLine" title="Previous phrase">←</button><button class="btn small" id="nextLine" title="Next phrase">→</button></div></div>
+          <div class="editcontent">
+            <div class="sourcehero"><div class="source-label"><span>Original lyric · Simplified Chinese</span><span id="sourceChars">7 characters</span></div><div class="sourcehanzi" id="sourceHanzi">有梦就别怕痛</div><div class="sourcefoot"><span id="heroOccurrences">4 instances</span> <span style="padding:0 7px">·</span> <span id="heroCoverage">7 / 7 characters mapped</span></div></div>
+            <div class="fieldrow"><div class="field"><label for="enText"><span class="flag">EN</span>English translation</label><textarea id="enText" class="textinput" spellcheck="true"></textarea></div><div class="field"><label for="plText"><span class="flag">PL</span>Polish translation</label><textarea id="plText" class="textinput" spellcheck="true"></textarea></div></div>
+            <div class="sectiondivider"><span class="sectiontitle">Word breakdown</span><span id="tokenCount">7 tokens</span></div>
+            <div class="wordoperations" role="group" aria-label="Selected word editing actions">
+              <button id="splitToken" type="button">✂ Split selected word</button>
+              <button id="mergeToken" type="button">⇢ Merge with next</button>
+              <button id="reviewPinyin" type="button">Review Pinyin spacing</button>
+            </div>
+            <div class="pinrule">One word = contiguous Pinyin: <strong>漂亮 → piàoliang</strong> (not piào liang). Separate words retain spaces in the full line.</div>
+            <div class="pinwarning" id="pinyinWarning" role="status" aria-live="polite"></div>
+            <div class="tablehead"><span></span><span>Hanzi</span><span>Pinyin</span><span>English gloss</span><span></span></div>
+            <div class="tokens" id="tokens"></div>
+            <div class="tokenadd"><button id="addToken">＋ Add word</button><button id="addNote">＋ Grammar note</button></div>
+            <div class="hint">Split and merge change word boundaries within this phrase, not lyric occurrences or timing. Glosses may contain line breaks. Empty Hanzi and Pinyin are supported for contextual notes such as [if]. Select a row to inspect a dictionary entry. Editing reviewed content returns it to the review queue.</div>
+          </div>
+          <div class="editorbottom"><div class="lefthint"><span class="okring">✓</span><span id="validationText">Changes remain in this browser tab</span></div><div class="bottomright"><button class="btn small" id="undoBtn">↶ Reset phrase</button><button class="btn primary" id="reviewBtn">✓ Mark as reviewed</button></div></div>
+        </section>
+        <aside class="panel inspector" aria-label="Dictionary and video preview">
+          <div class="inspectortabs"><button class="inspectortab active" data-inspector="dictionary">Dictionary</button><button class="inspectortab" data-inspector="preview">Lyric preview</button></div>
+          <div id="dictionaryBody" class="inspect-body"></div>
+          <div id="previewBody" class="inspect-body hidden"></div>
+        </aside>
+      </div>
+      <div id="prepareStage" class="pagegrid hidden">
+        <section class="panel pagepane"><div class="eyebrow">01 / INPUT</div><h2>Import song data</h2><p>Start from raw lyric text or an existing TypeScript song module. For v1, export the finished file and add it to the Remotion project manually.</p><div class="import-methods"><button class="import-method active" id="rawMode" type="button">Raw lyrics</button><button class="import-method" id="tsMode" type="button">Existing song.ts</button></div><div class="file-picker"><label for="importFile">↑ Choose .txt or .ts file<input id="importFile" type="file" accept=".txt,.lrc,.ts,text/plain,text/typescript"></label><small id="importFilename">Or paste lyrics below</small></div><div class="import-help" id="importHelp">Raw text: paste or load a .txt file. The production React app will also import existing song .ts modules using safe static parsing.</div><textarea id="rawInput" class="raw" spellcheck="false">[Verse]
+人都应该有梦
+有梦就别怕痛
+有雷声在轰不停
+谁急速狂飙
+溅我一身的泥泞
+
+[Chorus]
+淋雨一直走
+有梦就别怕痛
+是一颗宝石就该闪烁
+淋雨一直走
+有梦就别怕痛
+是道阳光就该暖和</textarea><label class="option"><input type="checkbox" checked id="stripSections"> Remove [Verse] / [Chorus] headings</label><label class="option"><input type="checkbox" checked id="simplify"> Convert Traditional → Simplified</label><label class="option"><input type="checkbox" checked id="splitLong"> Flag phrases longer than 11 characters</label><div class="flexend"><button class="btn" id="resetSample">Restore sample</button><button class="btn primary" id="parseButton">Analyze lyrics →</button></div><div class="small-note">Prototype: .txt loading and the parsing preview work; TypeScript import is a visual specification only. Production will use a safe TypeScript parser. Review data remains a separate sample.</div></section>
+        <section class="panel pagepane"><div class="eyebrow">02 / PREVIEW</div><h2>Parsed phrases</h2><p>Repeated lines share one translation entry. The timeline still preserves every occurrence.</p><div class="metricrow"><div class="metric"><strong id="rawTotal">11</strong><span>Timeline lines</span></div><div class="metric"><strong id="rawUnique">8</strong><span>Unique phrases</span></div><div class="metric"><strong id="rawSaved">27%</strong><span>Duplicates removed</span></div></div><div class="parsedlist" id="parsedList"></div><div class="callout" style="margin-top:15px"><b>Next: AI draft generation</b><p style="margin:5px 0 0">Send unique phrases and CC-CEDICT context to the configured LLM. Repeated lines reuse the same response.</p></div><div class="flexend"><button class="btn primary" id="generateButton">✧ Generate draft translations →</button></div></section>
+      </div>
+
+      <div id="timingStage" class="timing-stage hidden">
+        <div class="timing-transport panel">
+          <div class="timing-mainctrl"><button class="timing-play" id="timingPlay" aria-label="Play or pause">▶</button><div class="timing-clock"><strong id="clockNow">00:07.100</strong><small> / <span id="clockEnd">00:37.000</span></small></div><button class="btn small" id="seekMinus">− 5s</button><button class="btn small" id="seekPlus">+ 5s</button></div>
+          <div class="timing-file"><label class="btn small" for="timingFile">♪ Choose local audio<input id="timingFile" type="file" accept="audio/*,video/mp4,video/webm" hidden></label><span id="timingMediaLabel">No audio loaded · demo timing only</span></div>
+          <audio id="timingAudio" preload="metadata"></audio>
+        </div>
+        <div class="timing-grid">
+          <section class="panel timing-list-panel"><div class="panehead"><div class="row"><span class="sectiontitle">Timeline occurrences</span><span class="count" id="timingCount">23</span></div><div class="subtle" style="font-size:11px;margin-top:7px">Every repeat has its own timing.</div></div><div class="timing-occ-list scroll" id="timingOccurrences"></div></section>
+          <section class="panel timing-board"><div class="timing-board-head"><div><b>Waveform &amp; lyric blocks</b><small id="timingWaveLabel">Illustrative waveform · load audio to listen</small></div><div class="timing-tools"><label for="timingZoom" class="muted">Zoom</label><input id="timingZoom" type="range" min="100" max="250" value="100"><span id="zoomText">100%</span></div></div><div class="timing-scroll" id="timingScroll"><div id="timingTrack" class="timing-track"><div class="timing-ruler" id="timingRuler"></div><div class="timing-wave" id="timingWave" title="Click to seek"><div class="timing-wavebars" id="waveBars"></div><div class="timing-playhead" id="timingPlayhead"></div></div><div class="timing-lanes" id="timingLanes"></div></div></div><div class="timing-timeline-footer"><span>Drag block to shift · drag edges to trim</span><span id="timingNotice">Import timing or adjust the demonstration</span></div></section>
+          <section class="panel timing-inspector"><div class="panehead"><div class="minitag">SELECTED OCCURRENCE</div><div class="timing-inspector-zh" id="cueHanzi">有梦就别怕痛</div><div class="subtle" id="cueSubtitle">Occurrence 02 · shared phrase ×4</div></div><div class="timing-inside"><div class="timing-field"><label for="cueStart">Start <small>milliseconds</small></label><input id="cueStart" type="number" step="1" min="0"></div><div class="timing-field"><label for="cueEnd">End <small>milliseconds</small></label><input id="cueEnd" type="number" step="1" min="0"></div><div class="timing-duration" id="cueDuration">Duration: 1.200s</div><div class="timing-mark"><button class="btn small" id="setCueStart">S · Set start at playhead</button><button class="btn small" id="setCueEnd">E · Set end at playhead</button></div><div class="separator"></div><div class="minitag">FINE ADJUSTMENT</div><div class="timing-nudges"><button class="btn small" data-nudge="-100">−100 ms</button><button class="btn small" data-nudge="-10">−10 ms</button><button class="btn small" data-nudge="10">+10 ms</button><button class="btn small" data-nudge="100">+100 ms</button></div><div class="timing-mark" style="margin-top:14px"><button id="timingReset" class="btn small">↶ Reset demo times</button><button id="timingToReview" class="btn small">Edit translation ↗</button></div><div class="callout" style="margin-top:19px"><b>Precision first</b><p>Playback uses your chosen local file. Timestamps stay in milliseconds; every repeated occurrence is edited independently. This prototype does not compute a real waveform.</p></div></div></section>
+        </div>
+        <div class="timing-shortcuts"><b>Keyboard:</b> <kbd>Space</kbd> play/pause · <kbd>S</kbd> capture start · <kbd>E</kbd> capture end · <kbd>[</kbd> / <kbd>]</kbd> previous/next occurrence. Shortcuts pause while typing.</div>
+      </div>
+      <div id="visualStage" class="visual-stage hidden">
+        <div class="visual-columns">
+          <section class="panel visual-settings"><div class="visual-settings-heading"><span class="eyebrow">VIDEO COMPOSITION</span><h2>Choose a background mode</h2><p>Share the lyric layout; keep backgrounds and thumbnails as separate variants.</p></div><div class="visual-mode-options"><button class="visual-mode active" data-vmode="image"><span class="mode-thumb image-mode">▥</span><span><b>Image + visualizer</b><small>Artwork, local soundtrack, reactive bars</small></span><span class="mode-check">✓</span></button><button class="visual-mode" data-vmode="video"><span class="mode-thumb video-mode">▶</span><span><b>Music video</b><small>Footage background, lyrics overlaid</small></span><span class="mode-check">✓</span></button></div><div class="separator"></div><div class="visual-control"><label for="videoPreset">Starting preset</label><select id="videoPreset"><option value="legacy-image">Legacy · image + visualizer</option><option value="legacy-video">Legacy · music video</option><option value="calm">Soft blue · example preset</option></select></div><div id="imageOptions"><div class="minitag" style="margin:14px 0">VISUALIZER</div><div class="visual-control"><label for="barColor">Primary color</label><div class="visual-color"><input id="barColor" type="color" value="#4eaef8"><span id="barHex">#4EAEF8</span></div></div><div class="visual-control"><label for="barIntensity">Intensity <span id="intensityValue">65%</span></label><input id="barIntensity" type="range" min="0" max="100" value="65"></div><div class="visual-control"><label for="barStyle">Style</label><select id="barStyle"><option>Bars</option><option>Waveform</option></select></div></div><div id="videoOptions" class="hidden"><div class="minitag" style="margin:14px 0">FOOTAGE BACKGROUND</div><div class="visual-control"><label for="footageFit">Fit</label><select id="footageFit"><option>Cover</option><option>Contain</option></select></div><div class="visual-control"><label for="footageDim">Dimming <span id="dimmingValue">30%</span></label><input id="footageDim" type="range" min="0" max="80" value="30"></div><p class="small-note">The real app must configure audio routing explicitly: video audio OR separate soundtrack, not both.</p></div><div class="separator"></div><div class="visual-control"><label for="lyricScale">Lyric scale <span id="lyricScaleValue">100%</span></label><input id="lyricScale" type="range" min="75" max="125" value="100"></div><div class="visual-control"><label for="ratioSelect">Output ratio</label><select id="ratioSelect"><option value="16/9">16:9 · YouTube</option><option value="9/16">9:16 · Shorts</option></select></div><div class="visual-control"><label for="outputVariant">Output variant</label><select id="outputVariant"><option value="full">Full lyrics</option><option value="pinyin">Pinyin-focused</option><option value="short">Short clip</option><option value="thumbnail">Thumbnail · standard</option><option value="thumbnail-pinyin">Thumbnail · pinyin</option></select></div><p class="small-note">The preview below is CSS-only. Real Remotion Player and thumbnail presets are a later integration milestone.</p></section>
+          <section class="panel visual-preview-panel"><div class="visual-preview-header"><div><span class="eyebrow">LOOK &amp; FEEL</span><h2>Composition preview</h2></div><span class="preview-demo-badge">LAYOUT DEMO</span></div><div class="visual-preview-region"><div id="visualCanvas" class="visual-canvas"><div class="visual-art-glow"></div><div class="visual-sample-top">yǒu mèng jiù bié pà tòng</div><div class="visual-sample-hanzi">有梦就别怕痛</div><div class="visual-sample-en">If you have a dream, don't fear the pain.</div><div class="visual-sample-pl">Jeśli masz marzenia, nie bój się bólu.</div><div class="visual-bars" id="visualBars"></div><div class="visual-watermark">@SingInMandarin</div></div></div><div class="visual-preview-footer"><span id="visualDescription">IMAGE + VISUALIZER · 16:9</span><span>Same visual settings should drive the final renderer</span></div><div class="visual-architecture-note"><b>Architecture note</b><p>Keep <code>LyricVideoScene</code> shared; choose a background strategy per mode. Thumbnails should reuse typography/layout primitives but remain separate compositions. Expose creator-facing props through presets and small override groups.</p></div></section>
+        </div>
+      </div>
+      <div id="exportStage" class="pagegrid hidden">
+        <section class="panel pagepane"><div class="eyebrow">03 / OUTPUT</div><h2>Ready for the lyric-video pipeline</h2><p>Download a workbench project JSON (including visual settings) or TypeScript lyric data compatible with existing Remotion components.</p><div class="metricrow"><div class="metric"><strong id="exportUnique">8</strong><span>Unique phrases</span></div><div class="metric"><strong id="exportOccurrences">23</strong><span>Timeline links</span></div><div class="metric"><strong id="exportReview">50%</strong><span>Reviewed</span></div></div><div class="callout"><b>Two linked structures, one source of truth.</b><p style="margin:6px 0 0">The timeline keeps independent occurrence timings; the phrase dictionary holds shared translations. Workbench JSON also retains visual settings, which the legacy .ts exporter does not yet pass to Remotion.</p></div><div class="separator"></div><div class="option"><span class="flaggap"></span><span>Draft export allowed; review status is retained in JSON.</span></div><div class="flexend" style="justify-content:flex-start;margin-top:26px"><button class="btn primary" id="downloadBtn">↓ Download file</button><button class="btn" id="copyBtn">⧉ Copy to clipboard</button></div><div class="small-note">This design prototype exports in-memory demo data. Production v1 should round-trip an imported .ts file, preserving original timings, IDs and repeated-line references.</div></section>
+        <section class="panel pagepane"><div class="eyebrow">OUTPUT PREVIEW</div><div class="format"><button data-format="json" class="active">JSON</button><button data-format="ts">TypeScript</button></div><pre class="codebox" id="exportCode"></pre><div class="small-note">Representative schema based on the linked project. TypeScript export uses <code>TIMELINE</code> and <code>LYRICS_DICT</code>.</div></section>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog id="wordDialog" class="worddialog" aria-labelledby="wordDialogTitle">
+  <form id="wordForm">
+    <div class="dialogtop"><span class="eyebrow">WORD BREAKDOWN</span><h2 id="wordDialogTitle">Edit word boundaries</h2><p id="wordDialogHelp"></p></div>
+    <div class="worddialogfields" id="wordDialogFields"></div>
+    <div class="dialogerror" id="wordDialogError" role="alert"></div>
+    <div class="dialogactions"><button class="btn" type="button" id="wordCancel">Cancel</button><button class="btn primary" type="submit" id="wordConfirm">Apply</button></div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(()=>{
+'use strict';
+const $=(s,root=document)=>root.querySelector(s), $$=(s,root=document)=>[...root.querySelectorAll(s)];
+const initial=[
+{key:'Oh~人都应该有梦',en:'Oh, everyone should have dreams.',pl:'Ach, wszyscy powinni mieć marzenia.',times:3,reviewed:true,words:[['','','Oh~'],['人','rén','person'],['都','dōu','all'],['应该','yīnggāi','should'],['有','yǒu','to have'],['梦','mèng','dream']]},
+{key:'有梦就别怕痛',en:"Having dreams, don't be afraid of pain.",pl:'Mając marzenia, nie bać się bólu.',times:4,reviewed:false,words:[['','','[if]'],['有','yǒu','to have'],['梦','mèng','dream'],['就','jiù','then'],['别','bié','do not'],['怕','pà','to fear\nto be afraid'],['痛','tòng','pain']]},
+{key:'有雷声在轰不停',en:'The thunder rumbles constantly.',pl:'Grzmoty dudnią bez przerwy.',times:2,reviewed:false,words:[['有','yǒu','there is'],['雷声','léishēng','sound of thunder'],['在','zài','(ongoing)'],['轰','hōng','to rumble'],['不停','bùtíng','without stopping']]},
+{key:'谁急速狂飙',en:'Who is speeding so madly,',pl:'Kto tak szaleńczo pędzi,',times:2,reviewed:true,words:[['谁','shéi','who'],['急速','jísù','rapid\nhigh-speed'],['狂','kuáng','crazy\nwild'],['飙','biāo','to speed\nwhirlwind']]},
+{key:'溅我一身的泥泞',en:'splashing mud all over me?',pl:'ochlapując mnie całą błotem?',times:2,reviewed:false,words:[['溅','jiàn','to splash'],['我','wǒ','me'],['一身','yīshēn','whole body'],['的','de','(particle)'],['泥泞','nínìng','mud\nmire']]},
+{key:'淋雨一直走',en:'Keep moving forward, getting wet in the rain.',pl:'Iść wciąż naprzód, moknąc na deszczu.',times:6,reviewed:true,words:[['淋雨','línyǔ','to get wet in the rain'],['一直','yīzhí','continuously\nalways'],['走','zǒu','to walk']]},
+{key:'是一颗宝石就该闪烁',en:'A gemstone ought to shine.',pl:'Klejnot powinien lśnić.',times:2,reviewed:false,words:[['','','[if]'],['是','shì','to be'],['一','yī','one\na'],['颗','kē','(measure word)'],['宝石','bǎoshí','gemstone'],['就','jiù','then'],['该','gāi','should'],['闪烁','shǎnshuò','to sparkle']]},
+{key:'是道阳光就该暖和',en:'A ray of sunlight ought to give warmth.',pl:'Promień słońca powinien dawać ciepło.',times:2,reviewed:true,words:[['','','[if]'],['是','shì','to be'],['道','dào','(measure word)'],['阳光','yángguāng','sunlight'],['就','jiù','then'],['该','gāi','should'],['暖和','nuǎnhuo','warm']]},
+];
+const clone=o=>JSON.parse(JSON.stringify(o));
+let data=clone(initial).map((x,i)=>({...x,id:`phrase-${String(i+1).padStart(2,'0')}`,words:x.words.map((w,j)=>({id:`t${i}-${j}`,hanzi:w[0],pinyin:w[1],en:w[2]}))}));
+let active=2,selectedToken=1,stage='review',filter='all',inspector='dictionary',format='json',nextTokenId=100;
+let wordEditMode=null;
+// Concept data: demo occurrence times; separate from shared phrase annotations.
+const demoOrder=[0,1,2,3,4,5,6,7,5,1,0,4,3,5,7,1,6,5,0,2,1,5,5];
+let timingEvents=demoOrder.map((phraseIndex,i)=>({id:`cue-${String(i+1).padStart(2,'0')}`,phraseIndex,startMs:Math.round(650+i*1530),endMs:Math.round(650+i*1530+1120+(i%3)*130)}));
+const initialTiming=clone(timingEvents);
+let selectedCue=4,playheadMs=7100,audioLoaded=false,audioDurationMs=37000,dragTiming=null,videoMode='image';
+const dictionary={
+'有':{pinyin:'yǒu',defs:['to have; to possess','there is; there are','to exist'],grammar:'Verb'},
+'梦':{pinyin:'mèng',defs:['dream (noun)','to dream'],grammar:'Noun · verb'},
+'就':{pinyin:'jiù',defs:['then; in that case','right away; immediately','precisely; only'],grammar:'Adverb · conjunction'},
+'别':{pinyin:'bié',defs:["don't; do not",'other; another'],grammar:'Adverb'},
+'怕':{pinyin:'pà',defs:['to fear; to be afraid of','to dread'],grammar:'Verb'},
+'痛':{pinyin:'tòng',defs:['pain; ache','painful; sore'],grammar:'Noun · adjective'},
+'的':{pinyin:'de',defs:['attributive particle','possessive particle'],grammar:'Particle'},
+'淋雨':{pinyin:'línyǔ',defs:['to get wet in the rain'],grammar:'Verb phrase'},
+'一直':{pinyin:'yīzhí',defs:['straight; directly','continuously; always'],grammar:'Adverb'},
+'走':{pinyin:'zǒu',defs:['to walk','to go; to leave'],grammar:'Verb'}
+};
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function charLength(s){return [...s.matchAll(/\p{Script=Han}/gu)].length;}
+function coverage(x){return x.words.reduce((s,w)=>s+charLength(w.hanzi),0);}
+function counts(){return {reviewed:data.filter(x=>x.reviewed).length,total:data.length,occ:data.reduce((s,x)=>s+x.times,0)};}
+function notify(s){const t=$('#toast');t.textContent=s;t.classList.add('visible');clearTimeout(notify.timer);notify.timer=setTimeout(()=>t.classList.remove('visible'),2600);}
+function progress(){const c=counts(),pct=Math.round(c.reviewed/c.total*100);$('#reviewedCount').textContent=c.reviewed;$('#totalCount').textContent=c.total;$('#headerProgress').style.width=pct+'%';$('#sidebarProgress').style.width=pct+'%';$('#sidebarPct').textContent=pct+'%';$('#sidebarProgressText').textContent=`${c.reviewed} of ${c.total} reviewed`;$('#occurrenceCount').textContent=c.occ+' timeline occurrences';$('#phraseCount').textContent=c.total;}
+function setStage(name){stage=name;const stages=['prepare','review','timing','visual','export'];$$('[data-stage]').forEach(el=>el.classList.toggle('active',el.matches('.navitem')&&el.dataset.stage===name));$$('.step').forEach((el,i)=>{const isActive=el.dataset.stage===name;el.classList.toggle('active',isActive);el.classList.toggle('done',i<stages.indexOf(name));el.querySelector('.stepnum').textContent=isActive?'0'+(i+1):i<stages.indexOf(name)?'✓':'0'+(i+1)});stages.forEach(id=>$('#'+id+'Stage').classList.toggle('hidden',name!==id));const titles={prepare:['Prepare lyrics','Clean, segment, and deduplicate lyrics before translation.'],review:['Review translations','Refine every phrase, verify vocabulary, and keep repeated lyrics in sync.'],timing:['Synchronize lyrics','Edit timestamps per occurrence against a local audio track.'],visual:['Video settings','Choose background mode, presets, and visualizer styling.'],export:['Export project data','Generate a compatible song file and portable project state.']};$('#pageTitle').textContent=titles[name][0];$('#pageSubtitle').textContent=titles[name][1];$('#crumbStage').textContent=name[0].toUpperCase()+name.slice(1);if(name==='export')renderExport();if(name==='prepare')parseRaw(false);if(name==='timing')renderTiming();if(name==='visual')renderVisual();}
+function renderList(){const q=$('#searchInput').value.trim().toLowerCase();const items=data.map((x,i)=>({x,i})).filter(({x})=>(filter==='all'||(filter==='reviewed')===x.reviewed)&&(x.key.toLowerCase().includes(q)||x.en.toLowerCase().includes(q)||x.pl.toLowerCase().includes(q)));$('#phraseList').innerHTML=items.length?items.map(({x,i})=>`<button class="phrase ${i===active?'active':''}" data-index="${i}" aria-pressed="${i===active}"><span class="number">${String(i+1).padStart(2,'0')}</span><span class="phrasebody"><span class="phrasetitle">${escapeHtml(x.key)}</span><span class="phraseen">${escapeHtml(x.en)}</span><span class="phrasemeta"><span class="chip repeat">×${x.times} uses</span>${charLength(x.key)>11?'<span class="chip warn">Long line</span>':''}${x.reviewed?'<span class="chip reviewed">Reviewed</span>':''}</span></span><span class="statusdot ${x.reviewed?'ok':''}"></span></button>`).join(''):'<div class="empty">No phrases match this filter.</div>';progress();}
+function renderEditor(){const x=data[active];selectedToken=Math.max(0,Math.min(selectedToken,x.words.length-1));$('#lineLabel').textContent=`PHRASE ${String(active+1).padStart(2,'0')} OF ${String(data.length).padStart(2,'0')}`;$('#lineOccurrences').textContent=`Used ${x.times} times in timeline`;$('#sourceHanzi').textContent=x.key;$('#sourceChars').textContent=charLength(x.key)+' characters';$('#heroOccurrences').textContent=x.times+' instances';const mapped=coverage(x),expected=charLength(x.key);$('#heroCoverage').textContent=`${mapped} / ${expected} characters mapped`;$('#heroCoverage').style.color=mapped===expected?'#70d2b4':'#e8af68';$('#enText').value=x.en;$('#plText').value=x.pl;$('#tokenCount').textContent=x.words.length+' tokens';$('#reviewBtn').textContent=x.reviewed?'✓ Reviewed · Undo':'✓ Mark as reviewed';$('#reviewBtn').className='btn '+(x.reviewed?'success':'primary');$('#validationText').textContent=mapped!==expected?'Review segmentation / source coverage':wordSpacingIssues().length?'Fix Pinyin spacing before marking reviewed':'All source characters mapped';renderTokens();renderList();renderInspector();}
+function renderTokens(){const x=data[active];$('#tokens').innerHTML=x.words.map((w,i)=>`<div class="tokenrow ${selectedToken===i?'selected':''}" data-token="${i}"><span class="drag"><button class="move" aria-label="Move token up" data-move="-1" data-token="${i}" ${i===0?'disabled':''}>⌃</button><button class="move" aria-label="Move token down" data-move="1" data-token="${i}" ${i===x.words.length-1?'disabled':''}>⌄</button></span><input class="tokeninput char" data-field="hanzi" data-token="${i}" aria-label="Token ${i+1} Hanzi" value="${escapeHtml(w.hanzi)}" placeholder="∅"><input class="tokeninput" data-field="pinyin" data-token="${i}" aria-label="Token ${i+1} Pinyin" value="${escapeHtml(w.pinyin)}" placeholder="—"><textarea class="tokeninput gloss ${w.hanzi?'':'note'}" data-field="en" data-token="${i}" aria-label="Token ${i+1} English gloss" rows="1">${escapeHtml(w.en)}</textarea><button class="tokenaction" data-remove="${i}" aria-label="Remove token" title="Remove token">×</button></div>`).join('');updateWordOperations();}
+function wordSpacingIssues(){return data[active].words.filter(w=>w.hanzi&&/\s/u.test(w.pinyin));}
+function updateWordOperations(){
+  const words=data[active].words,selected=words[selectedToken];
+  $('#splitToken').disabled=!selected?.hanzi||Array.from(selected.hanzi).length<2;
+  $('#mergeToken').disabled=!selected?.hanzi||!words[selectedToken+1]?.hanzi;
+  const invalid=wordSpacingIssues();$('#reviewPinyin').disabled=!invalid.length;
+  $('#pinyinWarning').textContent=invalid.length?`${invalid.length} word(s) have spaces inside their Pinyin field. Review each spelling before export.`:'';
+  $$('#tokens [data-field="pinyin"]').forEach(input=>{const i=Number(input.dataset.token);input.classList.toggle('pinyin-invalid',Boolean(words[i]?.hanzi&&/\s/u.test(words[i].pinyin)));});
+}
+function wordField(label,name,value='',type='input'){
+  const control=type==='textarea'?`<textarea name="${name}">${escapeHtml(value)}</textarea>`:`<input name="${name}" value="${escapeHtml(value)}" required>`;
+  return `<label>${label}${control}</label>`;
+}
+function openWordDialog(mode){
+  const a=data[active].words[selectedToken],b=data[active].words[selectedToken+1];
+  if(!a?.hanzi||mode==='merge'&&!b?.hanzi||mode==='split'&&Array.from(a.hanzi).length<2)return;
+  wordEditMode={mode,phraseIndex:active,tokenIndex:selectedToken};
+  $('#wordDialogError').textContent='';
+  if(mode==='merge'){
+    $('#wordDialogTitle').textContent='Merge adjacent words';
+    $('#wordDialogHelp').textContent='The combined Pinyin is a draft. Confirm its spelling (including any required apostrophe) and edit the gloss before applying.';
+    $('#wordDialogFields').innerHTML=`<div class="dialogpreview"><small>SOURCE TOKENS</small>${escapeHtml(a.hanzi)} + ${escapeHtml(b.hanzi)}</div>`+
+      wordField('Combined Hanzi','hanzi',a.hanzi+b.hanzi)+wordField('Combined Pinyin (no spaces)','pinyin',a.pinyin+b.pinyin)+wordField('Combined English gloss','gloss',a.en+' / '+b.en,'textarea');
+    $('#wordConfirm').textContent='Merge words';
+  }else{
+    const chars=Array.from(a.hanzi);
+    $('#wordDialogTitle').textContent='Split word';
+    $('#wordDialogHelp').textContent='Choose the Hanzi boundary, then supply each word’s own Pinyin and English gloss. Pinyin boundaries cannot safely be guessed from character offsets.';
+    const opts=chars.slice(1).map((_,n)=>`<option value="${n+1}">${escapeHtml(chars.slice(0,n+1).join(''))} | ${escapeHtml(chars.slice(n+1).join(''))}</option>`).join('');
+    $('#wordDialogFields').innerHTML=`<div class="dialogpreview"><small>ORIGINAL WORD · REFERENCE PINYIN</small>${escapeHtml(a.hanzi)} · ${escapeHtml(a.pinyin)}</div><label>Split Hanzi after character<select id="splitBoundary" name="boundary">${opts}</select></label><div class="dialogcolumns">`+
+      `<div>${wordField('Left word Pinyin','leftPinyin')}${wordField('Left English gloss','leftGloss','','textarea')}</div>`+
+      `<div>${wordField('Right word Pinyin','rightPinyin')}${wordField('Right English gloss','rightGloss','','textarea')}</div></div>`;
+    $('#wordConfirm').textContent='Split word';
+  }
+  $('#wordDialog').showModal();
+}
+function renderInspector(){const x=data[active];const w=x.words[selectedToken]||{hanzi:'',pinyin:'',en:'[if]'};const ref=dictionary[w.hanzi]||{pinyin:w.pinyin,defs:w.hanzi?[w.en.replaceAll('\n',' / ')||'No local definition – open Wiktionary.']:['Contextual note added for translation clarity.'],grammar:w.hanzi?'Dictionary lookup':'Grammar annotation'};const url=w.hanzi?`https://en.wiktionary.org/wiki/${encodeURIComponent(w.hanzi)}#Chinese`:'';
+$('#dictionaryBody').innerHTML=`<div><div class="inspector-label">Selected token · ${String(selectedToken+1).padStart(2,'0')}</div><div class="wordref"><div><div class="ch">${escapeHtml(w.hanzi||'∅')}</div><div class="py">${escapeHtml(w.pinyin||'No pinyin')}</div></div><span class="tag">${escapeHtml(ref.grammar)}</span></div><div class="definition"><div class="defsource">REFERENCE DEFINITIONS</div><ol class="deflist">${ref.defs.map(d=>`<li>${escapeHtml(d)}</li>`).join('')}</ol><div class="defnote">Illustrative reference content for this UI prototype.</div></div><div class="inspector-label">Translation context</div><div class="reference-card"><div class="smallhead"><span>Current gloss</span><span>EN</span></div><p style="white-space:pre-line">${escapeHtml(w.en||'—')}</p></div><div class="reference-card"><div class="smallhead"><span>Phrase context</span><span>ZH</span></div><p class="hanzi">${escapeHtml(x.key)}</p><p style="margin-top:5px">${escapeHtml(x.en)}</p></div>${url?`<a class="ref-link" href="${url}" target="_blank" rel="noopener noreferrer">Open on Wiktionary ↗</a>`:'<div class="callout" style="margin-top:14px">This row has no Hanzi. It is a context or grammar note rather than a dictionary headword.</div>'}<div class="small-note">Production: show the exact CC-CEDICT definitions passed to the LLM, with source and match type.</div></div>`;
+const pin=x.words.filter(w=>w.pinyin).map(w=>w.pinyin).join(' ');const gloss=x.words.filter(w=>w.en).map(w=>w.en.split('\n')[0]).join(' · ');$('#previewBody').innerHTML=`<div><div class="inspector-label">Remotion-style visual check</div><div class="previewbox"><div class="preview-inner"><div class="previewtop">${escapeHtml(pin)}</div><div class="previewch">${escapeHtml(x.key)}</div><div class="previewgloss">${escapeHtml(gloss)}</div><div class="previewtr">${escapeHtml(x.en)}</div><div class="previewtr pl">${escapeHtml(x.pl)}</div></div><span class="watermark">@SingInMandarin</span></div><div class="previewcontrols"><span class="muted" style="font-size:10px">Full breakdown · 16:9</span><button id="portraitButton">Switch to 9:16 ↗</button></div><div class="inspector-label">Preview notes</div><div class="callout"><b>Layout-only mock preview</b><br>The real app can use your Remotion renderer here. This small panel previews text hierarchy and wrapping only, not frames or timing.</div><div class="reference-card" style="margin-top:13px"><div class="smallhead">TIMELINE REFERENCES <span>×${x.times}</span></div><p>All occurrences use this shared phrase entry. Timing is edited separately from translation.</p></div></div>`;
+}
+function changePhrase(n){active=(n+data.length)%data.length;selectedToken=data[active].words.findIndex(x=>x.hanzi!=='');if(selectedToken<0)selectedToken=0;renderEditor();}
+function invalidateReview(x){if(x.reviewed){x.reviewed=false;$('#reviewBtn').textContent='✓ Mark as reviewed';$('#reviewBtn').className='btn primary';renderList();}}
+function updatePhrase(){const x=data[active];if(x.en!==$('#enText').value||x.pl!==$('#plText').value)invalidateReview(x);x.en=$('#enText').value;x.pl=$('#plText').value;renderList();renderInspector();}
+function setInspector(name){inspector=name;$$('[data-inspector]').forEach(b=>b.classList.toggle('active',b.dataset.inspector===name));$('#dictionaryBody').classList.toggle('hidden',name!=='dictionary');$('#previewBody').classList.toggle('hidden',name!=='preview');}
+function parseRaw(showToast=true){const text=$('#rawInput').value;const rows=text.split(/\r?\n/).map(s=>s.trim()).filter(s=>s&&(!$('#stripSections').checked||!/^\[.*\]$/.test(s)));const counts=new Map();for(const line of rows)counts.set(line,(counts.get(line)||0)+1);$('#rawTotal').textContent=rows.length;$('#rawUnique').textContent=counts.size;$('#rawSaved').textContent=rows.length?Math.round((rows.length-counts.size)/rows.length*100)+'%':'0%';$('#parsedList').innerHTML=[...counts].slice(0,10).map(([k,n])=>`<div class="parsedrow"><div><b>${escapeHtml(k)}</b><small>${charLength(k)} characters${charLength(k)>11&&$('#splitLong').checked?' · Long line – consider splitting':''}</small></div><span class="chip ${charLength(k)>11?'warn':'repeat'}">×${n}</span></div>`).join('')||'<div class="empty">Paste lyrics to see the parsing preview.</div>';if(showToast)notify('Parsed preview updated. Demo data in Review is unchanged.');}
+function schema(){const lyricsDict=Object.fromEntries(data.map(x=>[x.key,{translation:{en:x.en,pl:x.pl},words:x.words.map(w=>({hanzi:w.hanzi,pinyin:w.pinyin,translation:{en:w.en}}))}]));const timeline=timingEvents.map(ev=>({id:ev.id,startMs:ev.startMs,endMs:ev.endMs,lyricKey:data[ev.phraseIndex].key}));return {schemaVersion:1,title:'淋雨一直走',artist:'Angela Zhang',timeline,lyricsDict,reviewed:Object.fromEntries(data.map(x=>[x.key,x.reviewed])),visuals:{presetId:$('#videoPreset').value,background:videoMode==='video'?{kind:'music-video',fit:$('#footageFit').value.toLowerCase(),dim:Number($('#footageDim').value)/100}:{kind:'image-visualizer',visualizer:{style:$('#barStyle').value.toLowerCase(),primaryColor:$('#barColor').value,intensity:Number($('#barIntensity').value)/100}},ratio:$('#ratioSelect').value,variant:$('#outputVariant').value,lyricScale:Number($('#lyricScale').value)/100}};}
+function tsOutput(){const d=schema();const ts=`// These demo timings are illustrative, not synchronized to any recording.\nconst TIMELINE = ${JSON.stringify(d.timeline,null,2)} as const;\n\nconst LYRICS_DICT = ${JSON.stringify(d.lyricsDict,null,2)};\n\nexport default {\n  title: ${JSON.stringify(d.title)},\n  artist: ${JSON.stringify(d.artist)},\n  get lines() {\n    return TIMELINE.map(item => ({\n      id: item.id, startMs: item.startMs, endMs: item.endMs,\n      ...LYRICS_DICT[item.lyricKey as keyof typeof LYRICS_DICT],\n    }));\n  },\n};`;return ts;}
+function exportString(){return format==='json'?JSON.stringify(schema(),null,2):tsOutput();}
+function renderExport(){const c=counts();$('#exportUnique').textContent=c.total;$('#exportOccurrences').textContent=c.occ;$('#exportReview').textContent=Math.round(c.reviewed/c.total*100)+'%';$('#exportCode').textContent=exportString();}
+function download(){const content=exportString(),mime=format==='json'?'application/json':'text/plain',blob=new Blob([content],{type:mime+';charset=utf-8'}),a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=`keep-walking-demo.${format==='json'?'json':'ts'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);notify('Demo export downloaded.');}
+function prettyTime(ms){const n=Math.max(0,Math.round(ms)),m=Math.floor(n/60000),sec=Math.floor(n%60000/1000),sub=n%1000;return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(sub).padStart(3,'0')}`;}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function duration(){return audioLoaded?audioDurationMs:37000;}
+function renderTiming(){const max=duration(),c=timingEvents[selectedCue];$('#timingCount').textContent=timingEvents.length;$('#clockEnd').textContent=prettyTime(max);$('#clockNow').textContent=prettyTime(playheadMs);$('#timingOccurrences').innerHTML=timingEvents.map((ev,i)=>`<button class="timing-occ ${i===selectedCue?'active':''}" data-cue="${i}"><span class="timing-occ-num">${String(i+1).padStart(2,'0')}</span><span><span class="timing-occ-title">${escapeHtml(data[ev.phraseIndex].key)}</span><div class="timing-occ-sub">${prettyTime(ev.startMs)} → ${prettyTime(ev.endMs)}</div></span></button>`).join('');const zoom=Number($('#timingZoom').value)/100;$('#timingTrack').style.width=`${zoom*100}%`;$('#zoomText').textContent=Math.round(zoom*100)+'%';$('#timingRuler').innerHTML=Array.from({length:6},(_,i)=>`<span class="tick">${prettyTime(max*i/5).slice(0,5)}</span>`).join('');$('#timingLanes').innerHTML=timingEvents.map((ev,i)=>{const left=ev.startMs/max*100,width=(ev.endMs-ev.startMs)/max*100;return `<button class="timing-block ${i===selectedCue?'active':''}" data-cue="${i}" style="left:${left}%;width:${width}%"><span class="timing-handle left" data-handle="start"></span><b>${escapeHtml(data[ev.phraseIndex].key)}</b><small>${prettyTime(ev.startMs)}</small><span class="timing-handle right" data-handle="end"></span></button>`}).join('');$('#timingPlayhead').style.left=clamp(playheadMs/max*100,0,100)+'%';$('#cueHanzi').textContent=data[c.phraseIndex].key;$('#cueSubtitle').textContent=`Occurrence ${String(selectedCue+1).padStart(2,'0')} · shared phrase ×${data[c.phraseIndex].times}`;$('#cueStart').value=c.startMs;$('#cueEnd').value=c.endMs;$('#cueDuration').textContent=`Duration: ${((c.endMs-c.startMs)/1000).toFixed(3)}s`;}
+function updatePlayhead(t){playheadMs=clamp(Math.round(t),0,duration());$('#clockNow').textContent=prettyTime(playheadMs);$('#timingPlayhead').style.left=playheadMs/duration()*100+'%';}
+function setCueTiming(start,end){const max=duration();start=Math.round(start);end=Math.round(end);if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<=start||end>max){notify('Invalid cue: require 0 ≤ start < end ≤ audio duration.');return false;}timingEvents[selectedCue]={...timingEvents[selectedCue],startMs:start,endMs:end};renderTiming();return true;}
+function selectedCueGo(i){selectedCue=clamp(i,0,timingEvents.length-1);renderTiming();}
+function audioClockLoop(){if($('#timingAudio').paused)return;updatePlayhead($('#timingAudio').currentTime*1000);requestAnimationFrame(audioClockLoop);}
+function toggleAudio(){const audio=$('#timingAudio');if(!audioLoaded){notify('Choose a local audio file to play. The waveform is illustrative.');return;}if(audio.paused){audio.play().then(()=>{$('#timingPlay').textContent='❚❚';audioClockLoop()}).catch(()=>notify('Audio playback was blocked.'))}else{audio.pause();$('#timingPlay').textContent='▶';}}
+function renderVisual(){const video=videoMode==='video';$$('[data-vmode]').forEach(btn=>btn.classList.toggle('active',(btn.dataset.vmode==='video')===video));$('#imageOptions').classList.toggle('hidden',video);$('#videoOptions').classList.toggle('hidden',!video);$('#visualCanvas').classList.toggle('video-theme',video);const variant=$('#outputVariant').value,thumbnail=variant.startsWith('thumbnail');$('#visualBars').style.display=video||thumbnail?'none':'flex';$('.visual-sample-top').textContent=thumbnail?'SING IN MANDARIN':'yǒu mèng jiù bié pà tòng';$('.visual-sample-hanzi').textContent=thumbnail?'淋雨一直走':'有梦就别怕痛';$('.visual-sample-en').textContent=thumbnail?'Angela Zhang':"If you have a dream, don't fear the pain.";$('.visual-sample-pl').style.display=thumbnail||variant==='pinyin'?'none':'block';$('#visualCanvas').style.aspectRatio=$('#ratioSelect').value==='9/16'?'9 / 16':'16 / 9';$('#visualCanvas').style.maxWidth=$('#ratioSelect').value==='9/16'?'300px':'730px';$('#visualCanvas').style.setProperty('--bar-color',$('#barColor').value);$('#barHex').textContent=$('#barColor').value.toUpperCase();$('#intensityValue').textContent=$('#barIntensity').value+'%';$('#lyricScaleValue').textContent=$('#lyricScale').value+'%';$('#dimmingValue').textContent=$('#footageDim').value+'%';$('#visualCanvas').querySelector('.visual-sample-hanzi').style.transform=`scale(${$('#lyricScale').value/100})`;$('#visualBars').style.opacity=String(Number($('#barIntensity').value)/100);$('#visualCanvas').querySelector('.visual-art-glow').style.opacity=video?String(1-Number($('#footageDim').value)/100):'1';$('#visualDescription').textContent=(thumbnail?'THUMBNAIL':video?'MUSIC VIDEO':'IMAGE + VISUALIZER')+' · '+($('#ratioSelect').value==='9/16'?'9:16':'16:9');}
+// The synthetic waveform is labeled as design-only; real implementation must analyze the selected media.
+$('#waveBars').innerHTML=Array.from({length:200},(_,i)=>`<span class="wavebar" style="height:${Math.round(14+74*Math.abs(Math.sin(i*.51)*Math.sin(i*.093+1.8)))}%"></span>`).join('');
+$('#visualBars').innerHTML=Array.from({length:38},(_,i)=>`<span style="height:${20+65*Math.abs(Math.sin(i*.6)*Math.sin(i*.17+1))}%"></span>`).join('');
+$('#timingOccurrences').addEventListener('click',e=>{const b=e.target.closest('[data-cue]');if(b){selectedCue=Number(b.dataset.cue);renderTiming();updatePlayhead(timingEvents[selectedCue].startMs);if(audioLoaded)$('#timingAudio').currentTime=playheadMs/1000;}});
+$('#timingPlay').addEventListener('click',toggleAudio);
+$('#timingAudio').addEventListener('pause',()=>$('#timingPlay').textContent='▶');
+$('#timingAudio').addEventListener('ended',()=>$('#timingPlay').textContent='▶');
+$('#timingFile').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const a=$('#timingAudio');if(a.dataset.url)URL.revokeObjectURL(a.dataset.url);a.dataset.url=URL.createObjectURL(f);a.src=a.dataset.url;$('#timingMediaLabel').textContent=f.name;a.onloadedmetadata=()=>{audioLoaded=true;audioDurationMs=Math.round(a.duration*1000);$('#timingWaveLabel').textContent='Illustrative waveform (not analyzed) · real audio playback active';updatePlayhead(0);renderTiming();};a.onerror=()=>notify('Unsupported or unreadable media file.');});
+$('#seekMinus').addEventListener('click',()=>{updatePlayhead(playheadMs-5000);if(audioLoaded)$('#timingAudio').currentTime=playheadMs/1000});
+$('#seekPlus').addEventListener('click',()=>{updatePlayhead(playheadMs+5000);if(audioLoaded)$('#timingAudio').currentTime=playheadMs/1000});
+$('#timingZoom').addEventListener('input',renderTiming);
+$('#timingWave').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();updatePlayhead((e.clientX-r.left)/r.width*duration());if(audioLoaded)$('#timingAudio').currentTime=playheadMs/1000;});
+$('#cueStart').addEventListener('change',()=>{if(!setCueTiming(Number($('#cueStart').value),timingEvents[selectedCue].endMs))renderTiming();});
+$('#cueEnd').addEventListener('change',()=>{if(!setCueTiming(timingEvents[selectedCue].startMs,Number($('#cueEnd').value)))renderTiming();});
+$('#setCueStart').addEventListener('click',()=>setCueTiming(playheadMs,timingEvents[selectedCue].endMs));
+$('#setCueEnd').addEventListener('click',()=>setCueTiming(timingEvents[selectedCue].startMs,playheadMs));
+$$('[data-nudge]').forEach(b=>b.addEventListener('click',()=>{const x=timingEvents[selectedCue],d=Number(b.dataset.nudge);setCueTiming(x.startMs+d,x.endMs+d);}));
+$('#timingReset').addEventListener('click',()=>{timingEvents=clone(initialTiming);renderTiming();notify('Demo timing restored.');});
+$('#timingToReview').addEventListener('click',()=>{changePhrase(timingEvents[selectedCue].phraseIndex);setStage('review');});
+$('#timingLanes').addEventListener('pointerdown',e=>{const b=e.target.closest('.timing-block');if(!b)return;e.preventDefault();selectedCue=Number(b.dataset.cue);const x=timingEvents[selectedCue];dragTiming={mode:e.target.dataset.handle||'move',x:e.clientX,start:x.startMs,end:x.endMs,width:$('#timingLanes').getBoundingClientRect().width};$('#timingLanes').setPointerCapture(e.pointerId);renderTiming();});
+$('#timingLanes').addEventListener('pointermove',e=>{if(!dragTiming)return;const d=Math.round((e.clientX-dragTiming.x)/dragTiming.width*duration());let start=dragTiming.start,end=dragTiming.end;if(dragTiming.mode==='start')start=clamp(start+d,0,end-1);else if(dragTiming.mode==='end')end=clamp(end+d,start+1,duration());else{const len=end-start;start=clamp(start+d,0,duration()-len);end=start+len;}timingEvents[selectedCue]={...timingEvents[selectedCue],startMs:start,endMs:end};renderTiming();});
+$('#timingLanes').addEventListener('pointerup',()=>{dragTiming=null;});
+$('#timingLanes').addEventListener('pointercancel',()=>{dragTiming=null;});
+$$('[data-vmode]').forEach(b=>b.addEventListener('click',()=>{videoMode=b.dataset.vmode;$('#videoPreset').value=videoMode==='video'?'legacy-video':'legacy-image';renderVisual();}));
+$$('#visualStage input, #visualStage select').forEach(x=>x.addEventListener('input',renderVisual));
+$('#videoPreset').addEventListener('change',e=>{const p=e.target.value;if(p==='legacy-video')videoMode='video';else videoMode='image';if(p==='calm'){$('#barColor').value='#7ebde7';$('#barIntensity').value='38';}renderVisual();});
+document.addEventListener('keydown',e=>{if(stage!=='timing'||e.target.matches('input,textarea,select,button')||e.ctrlKey||e.metaKey||e.altKey)return;switch(e.key.toLowerCase()){case ' ':e.preventDefault();toggleAudio();break;case 's':e.preventDefault();setCueTiming(playheadMs,timingEvents[selectedCue].endMs);break;case 'e':e.preventDefault();setCueTiming(timingEvents[selectedCue].startMs,playheadMs);break;case '[':e.preventDefault();selectedCueGo(selectedCue-1);break;case ']':e.preventDefault();selectedCueGo(selectedCue+1);break;}});
+$$('[data-stage]').forEach(b=>b.addEventListener('click',()=>setStage(b.dataset.stage)));
+$$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;$$('[data-filter]').forEach(el=>el.classList.toggle('active',el===b));renderList();}));
+$$('[data-inspector]').forEach(b=>b.addEventListener('click',()=>setInspector(b.dataset.inspector)));
+$('#phraseList').addEventListener('click',e=>{const b=e.target.closest('[data-index]');if(b)changePhrase(Number(b.dataset.index));});
+$('#searchInput').addEventListener('input',renderList);
+$('#previousLine').addEventListener('click',()=>changePhrase(active-1));$('#nextLine').addEventListener('click',()=>changePhrase(active+1));
+$('#enText').addEventListener('input',updatePhrase);$('#plText').addEventListener('input',updatePhrase);
+$('#tokens').addEventListener('focusin',e=>{const row=e.target.closest('[data-token]');if(!row)return;selectedToken=Number(row.dataset.token);$$('.tokenrow').forEach((el,i)=>el.classList.toggle('selected',i===selectedToken));updateWordOperations();renderInspector();});
+$('#tokens').addEventListener('input',e=>{const field=e.target.dataset.field;if(!field)return;const i=Number(e.target.dataset.token);if(data[active].words[i][field]!==e.target.value)invalidateReview(data[active]);data[active].words[i][field]=e.target.value;if(field==='hanzi'){const x=data[active];$('#heroCoverage').textContent=coverage(x)+' / '+charLength(x.key)+' characters mapped';}updateWordOperations();$('#validationText').textContent=wordSpacingIssues().length?'Fix Pinyin spacing before marking reviewed':'All source characters mapped';renderInspector();});
+$('#tokens').addEventListener('click',e=>{const rm=e.target.closest('[data-remove]');if(rm){const i=Number(rm.dataset.remove);invalidateReview(data[active]);data[active].words.splice(i,1);selectedToken=Math.min(i,data[active].words.length-1);renderEditor();return;}const mv=e.target.closest('[data-move]');if(mv){const i=Number(mv.dataset.token),j=i+Number(mv.dataset.move),arr=data[active].words;[arr[i],arr[j]]=[arr[j],arr[i]];invalidateReview(data[active]);selectedToken=j;renderEditor();}});
+$('#splitToken').addEventListener('click',()=>openWordDialog('split'));
+$('#mergeToken').addEventListener('click',()=>openWordDialog('merge'));
+$('#reviewPinyin').addEventListener('click',()=>{const i=data[active].words.findIndex(w=>w.hanzi&&/\s/u.test(w.pinyin));if(i<0)return;selectedToken=i;renderTokens();renderInspector();const target=$(`#tokens input[data-field="pinyin"][data-token="${i}"]`);target?.focus();notify('Remove spaces within this word; keep any required Pinyin apostrophe.');});
+$('#wordCancel').addEventListener('click',()=>$('#wordDialog').close());
+$('#wordForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  if(!wordEditMode)return;
+  const {mode,phraseIndex,tokenIndex}=wordEditMode;
+  if(phraseIndex!==active){$('#wordDialogError').textContent='The active phrase changed. Please reopen the editor.';return;}
+  const words=data[active].words,first=words[tokenIndex],second=words[tokenIndex+1];
+  const form=new FormData(e.currentTarget);const get=k=>String(form.get(k)||'').trim();
+  if(mode==='merge'){
+    const pinyin=get('pinyin');
+    if(get('hanzi')!==first.hanzi+second.hanzi){$('#wordDialogError').textContent='The combined Hanzi must preserve both words in order.';return;}
+    if(!pinyin||/\s/u.test(pinyin)){$('#wordDialogError').textContent='Use a single contiguous Pinyin spelling for the merged word.';return;}
+    words.splice(tokenIndex,2,{...first,hanzi:get('hanzi'),pinyin,en:get('gloss')});
+  }else{
+    const chars=Array.from(first.hanzi),boundary=Number(get('boundary'));
+    const leftPinyin=get('leftPinyin'),rightPinyin=get('rightPinyin');
+    if(!Number.isInteger(boundary)||boundary<1||boundary>=chars.length){$('#wordDialogError').textContent='Choose a valid Hanzi boundary.';return;}
+    if(!leftPinyin||!rightPinyin||/\s/u.test(leftPinyin)||/\s/u.test(rightPinyin)){$('#wordDialogError').textContent='Enter contiguous Pinyin for each resulting word (no spaces within a word).';return;}
+    words.splice(tokenIndex,1,{...first,hanzi:chars.slice(0,boundary).join(''),pinyin:leftPinyin,en:get('leftGloss')},{id:'split-'+nextTokenId++,hanzi:chars.slice(boundary).join(''),pinyin:rightPinyin,en:get('rightGloss')});
+  }
+  invalidateReview(data[active]);selectedToken=tokenIndex;wordEditMode=null;$('#wordDialog').close();renderEditor();notify(mode==='merge'?'Words merged. Review their combined meaning.':'Word split. Review the new glosses.');
+});
+$('#addToken').addEventListener('click',()=>{invalidateReview(data[active]);data[active].words.push({id:'new-'+nextTokenId++,hanzi:'',pinyin:'',en:''});selectedToken=data[active].words.length-1;renderEditor();$('#tokens input[data-token="'+selectedToken+'"]').focus();});
+$('#addNote').addEventListener('click',()=>{invalidateReview(data[active]);data[active].words.unshift({id:'note-'+nextTokenId++,hanzi:'',pinyin:'',en:'[if]'});selectedToken=0;renderEditor();notify('Added a non-Hanzi grammar annotation.');});
+$('#reviewBtn').addEventListener('click',()=>{const x=data[active];if(!x.reviewed&&wordSpacingIssues().length){notify('Fix internal Pinyin spaces before marking this phrase reviewed.');return;}x.reviewed=!x.reviewed;renderEditor();notify(x.reviewed?'Phrase marked as reviewed.':'Phrase returned to review queue.');});
+$('#undoBtn').addEventListener('click',()=>{const i=active,orig=initial[i];data[i]={...data[i],en:orig.en,pl:orig.pl,reviewed:orig.reviewed,words:orig.words.map((w,j)=>({id:`t${i}-${j}`,hanzi:w[0],pinyin:w[1],en:w[2]}))};selectedToken=0;renderEditor();notify('Phrase reset to sample values.');});
+$('#resourceNav').addEventListener('click',()=>{setStage('review');setInspector('dictionary');notify('Select a word in the breakdown to inspect it.');});$('#helpBtn').addEventListener('click',()=>notify('This is a local design prototype. .txt loading works; .ts parsing and project persistence are requirements for the React implementation.'));
+$('#rawMode').addEventListener('click',()=>{ $('#rawMode').classList.add('active'); $('#tsMode').classList.remove('active'); $('#importHelp').textContent='Raw text: paste lyrics below or choose a .txt/.lrc file. This demo parses a preview; it does not overwrite the Review sample.'; $('#rawInput').focus(); });
+$('#tsMode').addEventListener('click',()=>{ $('#tsMode').classList.add('active'); $('#rawMode').classList.remove('active'); $('#importHelp').textContent='Existing TypeScript: choose a .ts file. Safe static parsing and round-trip editing will be implemented in the React app; this design reference cannot parse executable TS modules.'; $('#importFile').click(); });
+$('#importFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;$('#importFilename').textContent=f.name;if(/\.(txt|lrc)$/i.test(f.name)){ $('#rawInput').value=await f.text(); $('#rawMode').classList.add('active'); $('#tsMode').classList.remove('active'); parseRaw(); notify('Text loaded. Review sample data is unchanged.'); }else if(/\.ts$/i.test(f.name)){ $('#tsMode').classList.add('active'); $('#rawMode').classList.remove('active'); $('#importHelp').textContent='Selected: '+f.name+'. Production React app will statically parse TIMELINE, LYRICS_DICT, spreads and metadata, then export a compatible .ts file. This HTML demo does not parse it.'; notify('TypeScript selected — parser is a production requirement, not part of this demo.'); } });
+$('#parseButton').addEventListener('click',()=>parseRaw());$('#generateButton').addEventListener('click',()=>{setStage('review');notify('Loaded demo translations. No AI request was made.');});$('#resetSample').addEventListener('click',()=>{location.reload();});$$('#prepareStage input[type="checkbox"]').forEach(x=>x.addEventListener('change',()=>parseRaw(false)));
+$$('[data-format]').forEach(b=>b.addEventListener('click',()=>{format=b.dataset.format;$$('[data-format]').forEach(el=>el.classList.toggle('active',el===b));renderExport();}));$('#downloadBtn').addEventListener('click',download);$('#copyBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(exportString());notify('Copied export to clipboard.');}catch{notify('Clipboard blocked in this browser. Use Download instead.');}});
+$('#previewBody').addEventListener('click',e=>{if(e.target.id==='portraitButton'){const box=$('.previewbox');box.style.aspectRatio=box.style.aspectRatio==='9 / 16'?'16 / 9':'9 / 16';box.style.maxWidth=box.style.aspectRatio==='9 / 16'?'175px':'';e.target.textContent=box.style.aspectRatio==='9 / 16'?'Switch to 16:9 ↗':'Switch to 9:16 ↗';}});
+document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowDown'){e.preventDefault();changePhrase(active+1);}else if(e.altKey&&e.key==='ArrowUp'){e.preventDefault();changePhrase(active-1);}});
+renderEditor();parseRaw(false);renderVisual();renderTiming();setStage('review');
+})();
+</script>
+</body>
+</html>
