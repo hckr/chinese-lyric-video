@@ -1,0 +1,22 @@
+# Dependencies, generated output, local data and editor/tool environments.
+node_modules/
+dist/
+out/
+public/
+workbench-projects/
+python-src/venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.agents/
+.claude/
+.env
+.env.*
+
+# Published, manually authored song data: keep these source files untouched.
+src/Angela_Zhang_Keep_Walking.ts
+src/Macchiato_Special_Affection_for_You.ts
+
+# Supplied visual prototype snapshots are design inputs, not application source.
+agent-docs/react-workbench/lyric-workbench-design.html
+agent-docs/react-workbench/THEME.css

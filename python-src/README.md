@@ -1,6 +1,6 @@
 # Chinese lyric workbench
 
-Run from the repository root with Python 3.11+ and Node 18.18+ (Node 22 recommended for repository lint):
+Run from the repository root with Python 3.11+ and Node 22.20.0+ (the repository pin is in .n-node-version):
 
 ```sh
 python3 -m venv python-src/venv
@@ -9,11 +9,13 @@ npm install
 python-src/venv/bin/streamlit run python-src/app.py
 ```
 
+With `n`, launch as `n exec auto python-src/venv/bin/streamlit run python-src/app.py` so the TypeScript song helper inherits the pinned Node runtime. The helper is executed directly by Node, with no runtime loader.
+
 The app starts without opening a browser window. Open the local URL printed in the terminal when you want to use it. This is configured in `python-src/.streamlit/config.toml` and works whether you launch from the repository root or `python-src`. Watchdog is included in the requirements for efficient file watching and reloads when code changes. Restart an already running Streamlit process after installing it.
 
 The existing `python-src/translate.py` remains a separate proof of concept. No renderer files are changed.
 
-All Python code lives in `python-src`: `app.py` is the Streamlit entry point, `workbench/` contains the backend modules, `tests/` contains offline tests, and `evaluate_translation.py` is the opt-in live evaluation. The Node parser remains in `scripts/import-song.cjs`. The `pytest.ini` at the repository root configures the Python import path.
+All Python code lives in `python-src`: `app.py` is the Streamlit entry point, `workbench/` contains the backend modules, `tests/` contains offline tests, and `evaluate_translation.py` is the opt-in live evaluation. The Node parser remains in `scripts/import-song.mts`. The `pytest.ini` at the repository root configures the Python import path.
 
 Dependencies are pinned to the current direct releases checked on 2026-11-12, including Streamlit 1.67.0 and Google Gen AI 3.2.0. Install updates with:
 
@@ -74,3 +76,7 @@ python-src/venv/bin/python python-src/evaluate_translation.py lyrics.txt --live 
 ```
 
 It compares whole-song requests with batches of four (configurable), saving both projects, request/token usage, errors and elapsed time under `workbench-projects/evaluation`. Review both outputs for meaning, literal glosses, dictionary pronunciation, contextual gender and natural English/Polish; record scores and phrase examples in the report. Add `--no-schema` for models without constrained JSON support. Live quality is not inferred from offline tests.
+
+## Formatting
+
+Install `requirements-dev.txt` to get the pinned Ruff formatter. From the repository root, run `npm run format:python` to apply formatting or `npm run format:python:check` to check it. Ruff reads root `ruff.toml`; the original `translate.py` and virtualenv are excluded. Formatting changes are separate from linting and type checking.

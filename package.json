@@ -21,15 +21,42 @@
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.484",
     "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "@types/web": "0.0.166",
     "eslint": "^9.39.4",
     "prettier": "3.8.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "esbuild": "0.28.1",
+    "@types/node": "26.0.1"
   },
   "scripts": {
     "dev": "remotion studio --no-open",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "workbench": "node web/dev.ts",
+    "workbench:build": "node web/dev.ts --build",
+    "workbench:check": "tsc -p web/tsconfig.json && tsc -p web/tsconfig.tools.json",
+    "workbench:test": "node web/tests/run.ts",
+    "workbench:test:browser": "node web/tests/browser.ts",
+    "workbench:test:reference": "node web/tests/reference.ts",
+    "workbench:test:export": "node web/tests/render-export.ts",
+    "format": "npm run format:web && npm run format:python",
+    "format:check": "npm run format:web:check && npm run format:python:check",
+    "format:web": "prettier --write .",
+    "format:web:check": "prettier --check .",
+    "format:python": "python-src/venv/bin/python -m ruff format python-src",
+    "format:python:check": "python-src/venv/bin/python -m ruff format --check --output-format concise python-src",
+    "format:changed": "node scripts/format-changes.mts",
+    "format:staged": "node scripts/format-changes.mts --staged",
+    "format:changed:check": "node scripts/format-changes.mts --check",
+    "format:staged:check": "node scripts/format-changes.mts --staged --check",
+    "hooks:install": "node scripts/install-hooks.mts",
+    "format:index:check": "node scripts/check-staged-format.mts",
+    "workbench:test:reload": "node web/tests/live-reload.ts",
+    "workbench:clean": "node scripts/clean-test-output.mts"
+  },
+  "engines": {
+    "node": ">=22.20.0"
   }
 }

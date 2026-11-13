@@ -1,0 +1,14 @@
+# Python formatting only; lint policy stays separate.
+target-version = "py311"
+line-length = 88
+indent-width = 4
+required-version = "==0.17.5"
+force-exclude = true
+include = ["*.py", "*.pyi"]
+extend-exclude = ["python-src/venv", "python-src/translate.py", "out"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false

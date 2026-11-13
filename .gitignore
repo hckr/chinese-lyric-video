@@ -17,3 +17,9 @@ python-src/venv/
 
 .agents/skills/developing-with-streamlit
 .claude/skills/developing-with-streamlit
+
+# React workbench build output
+web/dist/
+
+# Python formatter cache
+.ruff_cache/
