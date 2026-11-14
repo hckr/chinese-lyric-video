@@ -1,6 +1,6 @@
 # Future experiment — automatic lyric alignment and timing proposals
 
-Status: planned investigation, not implemented or an acceptance requirement for checkpoint B. The user reports that a previous Whisper attempt produced poor results. The objective is to reduce repetitive manual timing, starting with a song whose lyrics are already supplied to the workbench. Checkpoint C remains next; an alignment spike can follow the Python bridge without waiting for renderer consolidation, subject to a separate implementation decision.
+Status: **proposed experiment, not implemented** or required for checkpoint B. The owner would like to investigate this **before checkpoints C and D**, if the existing Python code allows a useful standalone spike. Check any API-bridge dependencies before committing to an implementation sequence; this is not approval to install models or execute inference. A prior Whisper attempt had poor results. The objective remains to reduce repetitive manual timing for a song whose lyrics are already supplied.
 
 ## Working hypothesis
 

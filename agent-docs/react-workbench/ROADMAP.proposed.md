@@ -1,4 +1,6 @@
-# Chinese Lyric Video — Proposed integrated roadmap (v2.1)
+> **Historical proposal.** Superseded as the active work queue by [../ROADMAP.md](../ROADMAP.md). Preserved unchanged below pending reviewed consolidation.
+
+# Chinese Lyric Video — Proposed integrated roadmap
 
 > **Proposal, 2026-11-12.** Merge with the **actual local** `agent-docs/ROADMAP.md`. The local uncommitted Streamlit implementation and the currently registered Remotion files were not available to this document's author. Codex must inspect them before finalizing the roadmap or deleting/moving anything. This file replaces the previous workbench-only roadmap proposal.
 

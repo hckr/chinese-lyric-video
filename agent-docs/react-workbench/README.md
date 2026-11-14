@@ -1,52 +1,29 @@
-# Chinese Lyric Video — Integrated Workbench Plan (v2.1)
+# React Lyric Workbench — documentation map
 
-**Status:** Original architecture/design brief with checkpoints A and B implemented locally. See [checkpoint B](CHECKPOINT_B.md) for current behavior, accepted manual testing and final verification. The HTML mockups remain conceptual references; later Python AI and renderer integration are pending.
-**Date:** 2026-11-12
-**Target:** `hckr/chinese-lyric-video`, with _local uncommitted Streamlit work_ that must be inventoried before modifying anything.
+**Current work priorities:** [../ROADMAP.md](../ROADMAP.md). This directory contains domain contracts, UI guidance, experiments and historical migration reports.
 
-## What changed in v2.1
+## What the workbench does
 
-The translation editor must support **splitting a word into two word tokens and merging adjacent tokens into one**. The canonical `words[].pinyin` value is **contiguous within a word** (`漂亮` → `piàoliang`, not `piào liang`); rendering multiple distinct words still inserts spaces between their Pinyin values. These requirements belong in the **first React MVP**, with matching corrections in the existing Python AI pipeline during backend integration. See `WORD_SEGMENTATION.md` for behavior, guards, user-confirmed gloss/Pinyin edits, and regression tests.
+Local-first React UI for importing raw lyrics or compatible legacy song `.ts` files; reviewing shared Chinese/EN/PL lyric phrases and word glosses; assigning independently editable timing to repeated occurrences; and exporting legacy `.ts` plus workbench project JSON. Python remains the source of existing NLP/dictionary/AI logic; Remotion remains the video renderer. Actual React–Python AI generation and real renderer preview are planned, not established by the supplied reports.
 
-The HTML reference now includes working **Split selected word** and **Merge with next** dialogs and a Pinyin-spacing warning. `review-dark-v2.1.png`, `split-word-dialog.png`, and `merge-words-dialog.png` show the new controls. The existing timing/video screenshots remain valid and unchanged. The prototype is still a UI reference, not production TS parsing or AI logic.
+**Important invariant:** per-word Pinyin is contiguous (`漂亮` → `piàoliang`), with spaces _between_ lexical words in full-line display. Imported authored readings must not be rewritten silently. See [WORD_SEGMENTATION.md](WORD_SEGMENTATION.md).
 
-## Intended product
+## Current reference documents
 
-A local-first React workbench for:
+- [ARCHITECTURE.md](ARCHITECTURE.md) — contracts, boundaries, import/export and stable IDs.
+- [UI_SPEC.md](UI_SPEC.md) — screen organization and visual language; mockups are references, not current-state evidence.
+- [WORD_SEGMENTATION.md](WORD_SEGMENTATION.md) — lexical split/merge, Pinyin and validation behavior.
+- [TIMING_EDITOR.md](TIMING_EDITOR.md) — timing workflow and constraints.
+- [features/lyrics-grouping/SPEC.md](features/lyrics-grouping/SPEC.md) — grouping behavior and UI references.
+- [ASSISTED_TIMING.md](ASSISTED_TIMING.md) — proposal for an experiment; not implemented.
+- [REMOTION_REFACTOR.md](REMOTION_REFACTOR.md) — requirements for checkpoint D.
+- [TEST_PLAN.md](TEST_PLAN.md) — verification gates, including items still open from early checkpoints.
+- [THEME.css](THEME.css), [lyric-workbench-design.html](lyric-workbench-design.html) and sibling images — retained visual/design references; inspect the real app for current UI.
 
-1. **Import** — raw Chinese lyrics or existing Remotion song `.ts` modules.
-2. **Translation** — edit unique phrases once, including EN/PL, **merge/split word tokens**, contiguous per-word Pinyin (`piàoliang`, not `piào liang`), glosses and notes; later reuse the existing Python AI/NLP backend.
-3. **Timing** — synchronize each _occurrence_ against a local audio track, with waveform, scrub/play, drag/trim, precise time inputs and keyboard nudging.
-4. **Video settings** — choose either music-video footage or an image + audio visualizer, configure sensible visual parameters, choose layout/presets, eventually drive the real Remotion preview.
-5. **Export** — first download a backward-compatible song `.ts` for manual placement in `src/`; keep a separate workbench project JSON for timing, media and visual settings.
+## Transitional documents — do not follow as a fresh kickoff
 
-The workbench **is not a video-rendering replacement**. Remotion remains the render engine. Python keeps existing AI and dictionary logic. React is the UI and canonical editing surface.
+`ROADMAP.proposed.md`, `CODEX_TASK.md` and `CODEX_PROMPT.md` describe the _original migration kickoff_, including already completed checkpoints. `CHECKPOINT_A.md`, `CHECKPOINT_B.md` and `LOCAL_AUDIT.md` record historical observations and evidence; they are not guaranteed to reflect current Git status. `DECISIONS.md` includes older investigation prompts. These files remain intact until a separate, reviewed consolidation preserves all relevant constraints. See [the parent documentation index](../README.md).
 
-## Start here
+## How to work with these documents
 
-- **`CODEX_TASK.md`** — authoritative execution brief for Codex, staged milestones, safe handling of uncommitted work, acceptance criteria.
-- **`ROADMAP.proposed.md`** — roadmap to _merge_ with the real local `agent-docs/ROADMAP.md` (do not blindly overwrite).
-- **`ARCHITECTURE.md`** — data model, import/export compatibility and boundaries between React, Python, Remotion.
-- **`WORD_SEGMENTATION.md`** — required word merge/split controls, Pinyin orthography, validation and export/AI invariants.
-- **`TIMING_EDITOR.md`** — precise timing UI, interactions, timing invariants, and audio synchronization.
-- **`REMOTION_REFACTOR.md`** — audit-first extraction plan, background modes, thumbnail reuse, prop/preset policy.
-- **`UI_SPEC.md`** — screen structure and dark/blue design tokens.
-- **`TEST_PLAN.md`** — regression gates, round-trip checks and visual comparisons.
-- **`ASSISTED_TIMING.md`** — future tone-free Pinyin/audio alignment experiment, reviewable timing proposals and evaluation gate.
-- **`DECISIONS.md`** — settled choices vs details Codex must discover during the local audit.
-- **`CODEX_PROMPT.md`** — short, copyable kickoff prompt.
-- **`lyric-workbench-design.html`** — self-contained clickable _design prototype_; review/import/export screens plus newly added timing and video-settings mockups. Not production logic.
-
-## Handoff to Codex
-
-Unzip into the **repository root**, so the files land at `agent-docs/react-workbench/`. Then, from the local checkout, instruct Codex:
-
-> Read `agent-docs/react-workbench/CODEX_TASK.md` and all referenced documents. First inspect and protect all uncommitted Streamlit/Python work, inventory the current Remotion compositions and assets, and reconcile `ROADMAP.proposed.md` with the local roadmap. Implement the plan in gated milestones; keep existing video outputs, composition IDs and file compatibility. Start with the file-based React editor, then timing, Python AI integration, Remotion consolidation, and settings-to-renderer integration. Report each completed milestone, changes, tests and remaining work. Avoid unnecessary dependencies.
-
-**Do not ask Codex to implement all milestones as one giant unreviewed diff.** Use checkpoints and accept each stage once it passes the relevant tests.
-
-## Important qualifications
-
-- The original roadmap and song example were previously consulted. In preparing this iteration, the GitHub repository's current files were **not accessible for a fresh full audit**, and your local uncommitted changes cannot be inspected remotely. All suggested names/layouts are _proposals_, not claims about the checked-out tree. Codex must inspect reality and adjust.
-- The timing demo contains **illustrative waveform/timestamps** and local UI interaction mockups. Real media-backed synchronization, safe TS parsing, AI requests, waveform generation and Remotion preview are _implementation requirements_, not delivered by the HTML reference.
-- Manual `.ts` download/copy remains the first operational workflow. Do not move visual config fields into existing song modules until compatibility and the actual Remotion consumer types are verified.
+Follow the small root `AGENTS.md` rules and [active roadmap](../ROADMAP.md). For a substantial implementation task, propose a full plan first and track steps in Codex's native task tracker. Only read domain documents relevant to that task. Update verified behavior and remaining work in place; do not turn every checkpoint into a permanent progress diary.

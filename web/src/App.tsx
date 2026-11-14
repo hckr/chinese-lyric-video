@@ -433,10 +433,7 @@ export function App() {
     <div className="app">
       <aside className="navigation">
         <div className="brand">
-          字{" "}
-          <span>
-            Lyric Workbench<small>LOCAL EDITOR · v2.1</small>
-          </span>
+          字 <span>Lyric Workbench</span>
         </div>
         <nav aria-label="Workspaces">
           {[

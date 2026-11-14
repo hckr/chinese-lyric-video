@@ -1,3 +1,5 @@
+> **Historical kickoff brief.** For current priorities read [../ROADMAP.md](../ROADMAP.md) and root `AGENTS.md`. The requirements below remain available until they are fully reconciled; do not start at checkpoint A.
+
 # Codex task — integrated React / Python / Remotion migration
 
 ## Mandate
@@ -5,6 +7,7 @@
 Implement `agent-docs/react-workbench/ROADMAP.proposed.md` as a **gated migration** to a React lyric editing and timing workbench, reusing the local Python AI pipeline and consolidating Remotion compositions only after baselining. The HTML is a UI reference, **not** application code. Preserve manual TypeScript export and the existing Remotion pipeline for the first operational milestone.
 
 Read in order:
+
 1. `README.md`
 2. `ARCHITECTURE.md`
 3. `TIMING_EDITOR.md`
@@ -21,7 +24,7 @@ Read in order:
 2. Read repository README, package scripts, Remotion root/registered compositions, existing song TS modules (especially `src/Angela_Zhang_Keep_Walking.ts`), Python scripts, Streamlit UI and tests. Inspect exact current dependency versions and audio/visualizer implementation.
 3. Produce a short **inventory report** `agent-docs/react-workbench/LOCAL_AUDIT.md` with: existing modes/composition IDs/dimensions/FPS, assets and audio source; named duplicated blocks and genuine behavioral differences; Python functions worth reusing; local files at risk; relevant changes to the roadmap proposal.
 4. Merge—not replace blindly—`ROADMAP.proposed.md` into the local `agent-docs/ROADMAP.md`, preserving existing completed work/notes and accounting for code that exists locally but not on GitHub.
-5. Identify a baseline render or screenshot capture strategy using *existing* commands/tools. Do not install Chrome or other browser just to capture samples. A small representative frame set per mode and thumbnail is enough to begin.
+5. Identify a baseline render or screenshot capture strategy using _existing_ commands/tools. Do not install Chrome or other browser just to capture samples. A small representative frame set per mode and thumbnail is enough to begin.
 
 **If a requirement conflicts with current local code, prefer preserving behavior and note a specific decision in `LOCAL_AUDIT.md`, rather than silently redesigning it.**
 
@@ -47,13 +50,13 @@ Read in order:
 ### Checkpoint C: Python AI/NLP integration
 
 - Reuse the locally implemented Streamlit/backend parsing, OpenCC, Jieba, CC-CEDICT, prompting and LLM code; identify its actual structure first. Separate backend logic from Streamlit widgets, introduce a minimal local API if required (prefer existing dependencies).
-- Add per-unique-phrase generation, dictionary evidence and assisted revision to React. Store provider/model/prompt provenance, preserve edits on failures, keep secrets server-only. Update the *existing* AI prompts/postprocessing to return **one contiguous tone-marked Pinyin string per word**; accept/review AI segmentation suggestions without silently replacing manual merge/split decisions. Add server-side validation for Pinyin whitespace and regressions against previous manually translated files. API calls are opt-in and should not happen on every keystroke.
+- Add per-unique-phrase generation, dictionary evidence and assisted revision to React. Store provider/model/prompt provenance, preserve edits on failures, keep secrets server-only. Update the _existing_ AI prompts/postprocessing to return **one contiguous tone-marked Pinyin string per word**; accept/review AI segmentation suggestions without silently replacing manual merge/split decisions. Add server-side validation for Pinyin whitespace and regressions against previous manually translated files. API calls are opt-in and should not happen on every keystroke.
 
 **Checkpoint C done when:** user can generate a draft, correct it, preserve occurrence timing, and export; Streamlit's useful backend logic is retained.
 
 ### Checkpoint D: Remotion cleanup and configuration model
 
-- First capture reference frames/behavior for *all actual* music-video, still-image/visualizer and thumbnail variants. Keep each registered ID, duration logic, FPS, ratio, audio behavior and text layout.
+- First capture reference frames/behavior for _all actual_ music-video, still-image/visualizer and thumbnail variants. Keep each registered ID, duration logic, FPS, ratio, audio behavior and text layout.
 - Refactor in small stages under `REMOTION_REFACTOR.md`: extract text/timing and style primitives, then background strategies, overlays/outro, thumbnail helpers. Use compatibility entrypoints and typed preset defaults to avoid visual regression.
 - Expose meaningful config: background mode, media refs, visualizer style/colors/opacity/intensity, fit/blur, lyric size/visibility, overlay/outro where justified. Keep internal animation math and FPS configuration controlled. Do **not** force thumbnails into a video abstraction.
 - Verify no doubled audio in music-video case and no silent change in visualizer behavior. Use render comparisons with documented acceptable nondeterminism.

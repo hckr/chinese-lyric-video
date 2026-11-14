@@ -1,4 +1,4 @@
-# Word segmentation editor and Pinyin contract (v2.1)
+# Word segmentation editor and Pinyin contract
 
 **Status:** Required for the **first functional React translation-editor milestone**, not an optional future enhancement. This document takes precedence if older references only mention add/remove/reorder. Reconcile these rules with the existing `src/Angela_Zhang_Keep_Walking.ts` schema and the local, uncommitted Python/Streamlit implementation.
 
@@ -20,19 +20,19 @@ A **phrase** is a unique complete lyric line with shared EN/PL translations; rep
 
 **Per-token `words[].pinyin` must not contain spaces between syllables of one word.** Use lowercase, tone-marked Hanyu Pinyin unless the current project's conventions explicitly require otherwise.
 
-| Hanzi token | Correct `pinyin` field | Incorrect |
-|---|---|---|
-| 漂亮 | `piàoliang` | `piào liang` |
-| 喜欢 | `xǐhuan` | `xǐ huan` |
-| 应该 | `yīnggāi` | `yīng gāi` |
-| 女儿 | `nǚ'ér` | `nǚ ér` |
+| Hanzi token | Correct `pinyin` field | Incorrect    |
+| ----------- | ---------------------- | ------------ |
+| 漂亮        | `piàoliang`            | `piào liang` |
+| 喜欢        | `xǐhuan`               | `xǐ huan`    |
+| 应该        | `yīnggāi`              | `yīng gāi`   |
+| 女儿        | `nǚ'ér`                | `nǚ ér`      |
 
 - An apostrophe required by Pinyin spelling rules is **not** a space: `xī'ān` and `nǚ'ér` must keep the apostrophe. Don't simply strip punctuation or tone marks.
 - **Different lexical tokens** are separated when rendering a full sentence's word-by-word Pinyin, e.g. `我` (`wǒ`) + `喜欢` (`xǐhuan`) → `wǒ xǐhuan`. The rule is about individual word fields, **not** removing all spaces from displayed lyric lines.
 - Contextual annotations with empty Hanzi (such as `[if]`) may have empty Pinyin; do not force a fabricated reading for them. Do not infer lexical boundaries from Pinyin spaces alone.
 - AI generation and revision prompts, the Python postprocessing pipeline, API response validation, editor validation, and exported files must all use this invariant. Prefer returning structured word tokens over a single unsegmented Pinyin string.
 - **New AI drafts** with internal Pinyin whitespace must be normalized **only when the word boundary is already known and the change is safe**, otherwise flagged for correction. Do not silently rewrite preexisting **manually authored** Pinyin on import; display a warning and provide an explicit “Fix spacing” action. Never change the number of word tokens just to eliminate spaces.
-- When **merging**, concatenating the two token Pinyin strings without a space is a useful *draft*, but verify required apostrophes and the correct lexical reading/tone sandhi conventions. When **splitting**, ask for both new readings explicitly unless a reliable aligned segmentation already exists. The user can revise everything before confirming.
+- When **merging**, concatenating the two token Pinyin strings without a space is a useful _draft_, but verify required apostrophes and the correct lexical reading/tone sandhi conventions. When **splitting**, ask for both new readings explicitly unless a reliable aligned segmentation already exists. The user can revise everything before confirming.
 
 ## Pure domain operations (React UI should call these)
 

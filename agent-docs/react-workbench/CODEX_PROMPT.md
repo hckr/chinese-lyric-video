@@ -1,3 +1,5 @@
+> **Historical kickoff prompt; do not reuse for ongoing work.** See [../ROADMAP.md](../ROADMAP.md) and root `AGENTS.md`.
+
 # Prompt to give Codex from the repository root
 
 Read `agent-docs/react-workbench/README.md`, `CODEX_TASK.md` and `WORD_SEGMENTATION.md`, then follow their linked specs. The goal is an integrated React Lyric Workbench with import, translation editing, per-occurrence timing, video presets, AI integration via the existing Python code, and a backward-compatible Remotion rendering workflow.
