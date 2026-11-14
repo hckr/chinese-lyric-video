@@ -23,3 +23,6 @@ web/dist/
 
 # Python formatter cache
 .ruff_cache/
+
+# Local Playwright traces, screenshots and downloaded test fixtures
+output/playwright/

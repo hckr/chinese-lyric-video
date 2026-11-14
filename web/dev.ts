@@ -1,3 +1,5 @@
+import http from "node:http";
+import { importLyrics } from "./import-api.ts";
 // Separate loopback-only file editor. Uses the explicitly declared esbuild development dependency.
 import * as esbuild from "esbuild";
 import fs from "node:fs/promises";
@@ -28,7 +30,10 @@ import fs from "node:fs/promises";
     await ctx.rebuild();
     await ctx.dispose();
   } else {
+    const frontend: { server?: http.Server } = {};
     const shutdown = () => {
+      frontend.server?.close();
+      frontend.server?.closeAllConnections();
       void ctx.dispose().then(() => process.exit(0));
     };
     process.once("SIGTERM", shutdown);
@@ -37,10 +42,53 @@ import fs from "node:fs/promises";
     const server = await ctx.serve({
       servedir: "web/dist",
       host: "127.0.0.1",
-      port,
+      port: 0,
     });
+    frontend.server = http.createServer((req, res) => {
+      if (req.url === "/api/import-lyrics" || req.url === "/api/dictionary") {
+        void importLyrics(
+          req,
+          res,
+          process.cwd(),
+          req.url === "/api/dictionary" ? "dictionary" : "import",
+        ).catch(() => {
+          if (!res.writableEnded)
+            res.writeHead(500).end(
+              JSON.stringify({
+                error: "Local import failed. Existing project retained.",
+              }),
+            );
+        });
+        return;
+      }
+      const proxy = http.request(
+        {
+          hostname: "127.0.0.1",
+          port: server.port,
+          path: req.url,
+          method: req.method,
+          headers: { ...req.headers, host: `127.0.0.1:${server.port}` },
+        },
+        (upstream) => {
+          res.writeHead(upstream.statusCode ?? 502, upstream.headers);
+          upstream.pipe(res);
+        },
+      );
+      proxy.on("error", () => {
+        if (!res.writableEnded) res.writeHead(502).end();
+      });
+      req.pipe(proxy);
+      res.on("close", () => proxy.destroy());
+    });
+    await new Promise<void>((resolve, reject) => {
+      frontend.server!.once("error", reject);
+      frontend.server!.listen(port, "127.0.0.1", resolve);
+    });
+    const address = frontend.server.address();
+    if (!address || typeof address === "string")
+      throw Error("Missing workbench address");
     console.log(
-      `Lyric Workbench: http://127.0.0.1:${server.port} (no browser opened)`,
+      `Lyric Workbench: http://127.0.0.1:${address.port} (no browser opened)`,
     );
   }
 })().catch((e) => {

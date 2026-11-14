@@ -4,32 +4,34 @@ Apply the tests at the checkpoint they first become relevant. Use tests that fit
 
 ## M0 — baseline / preservation
 
-- [ ] `git status --short`, `git diff`, staged changes and untracked Streamlit/Python files examined and documented.
-- [ ] Current song files and all registered Remotion composition IDs, FPS, durations, dimensions, aspect ratios, audio origins, backgrounds, thumbnails inventoried.
+- [x] `git status --short`, `git diff`, staged changes and untracked Streamlit/Python files examined and documented.
+- [x] Current song files and all registered Remotion composition IDs, FPS, durations, dimensions, aspect ratios, audio origins, backgrounds, thumbnails inventoried.
 - [ ] Reference frames or still captures saved for at least one **music-video**, **image + visualizer** and each **thumbnail family** at representative timestamps; originals retained.
-- [ ] Existing CLI Remotion render and Python tests documented; no local user work discarded.
+- [x] Existing CLI Remotion render and Python tests documented; no local user work discarded.
 
 ## M1 — editor/import/export
 
-- [ ] Import at least two real existing song TS modules; support consts/references/spreads/`as const`/Hanzi keys/known getter; unsupported expressions fail visibly without mutating editor state.
-- [ ] Export/re-import preserving normalized metadata, occurrence IDs/order/keys/times, translations, Pinyin, multiline glosses, empty-Hanzi grammar tokens.
-- [ ] UI can **merge adjacent lexical tokens** and **split a lexical token** at a chosen Hanzi boundary, with editable Pinyin/gloss, note preservation, review invalidation and undo/redo. Verify export/reimport; see `WORD_SEGMENTATION.md`.
+- [x] Import at least two real existing song TS modules; support consts/references/spreads/`as const`/Hanzi keys/known getter; unsupported expressions fail visibly without mutating editor state.
+- [x] Export/re-import preserving normalized metadata, occurrence IDs/order/keys/times, translations, Pinyin, multiline glosses, empty-Hanzi grammar tokens.
+- [x] UI can **merge adjacent lexical tokens** and **split a lexical token** at a chosen Hanzi boundary, with editable Pinyin/gloss, note preservation, review invalidation and undo/redo. Verify export/reimport; see `WORD_SEGMENTATION.md`.
 - [ ] A single `漂亮` word uses `piàoliang` in editor, Python output and TS export (never `piào liang`); distinct tokens appear separated in full-line Pinyin (`wǒ xǐhuan`); apostrophes (`nǚ'ér`), accents and contextual-note tokens remain intact. Imported manual spacing errors are flagged without silent rewrites.
-- [ ] Split/merge changes do not alter phrase translation, repeated occurrences, timestamps or unrelated word tokens.
-- [ ] Repeat chorus appears N times in timeline but one unique phrase is edited; modifying the phrase updates every displayed instance.
-- [ ] Raw lyrics with repeated line and section heading preserve occurrence order, report unassigned timings.
+- [x] Split/merge changes do not alter phrase translation, repeated occurrences, timestamps or unrelated word tokens.
+- [x] Repeat chorus appears N times in timeline but one unique phrase is edited; modifying the phrase updates every displayed instance.
+- [x] Raw lyrics with repeated line and section heading preserve occurrence order, report unassigned timings.
 - [ ] Legacy TS output typechecks against actual Remotion song consumers; old renderer can render a manually copied file.
 
 ## M2 — timing
 
-- [ ] Import `startMs=12345`, `endMs=12789`; exact values survive save/reload/export/re-import (unless user edits them).
-- [ ] Select the second of three occurrences referring to one phrase; change its start/end; no other occurrence changes.
-- [ ] Load local audio; playhead uses actual media currentTime, pauses/stops correctly, scrubs and seeks accurately enough for human sync.
-- [ ] Press `S`/`E` at known audio times; exported milliseconds match selected position within appropriate media clock precision.
-- [ ] Drag/trim and exact numeric edit work; undo/redo works; invalid `end<=start` rejected with intelligible feedback.
-- [ ] Gap/overlap allowed but labelled; unsynchronized entries block/warn depending on export target; no silent auto-correction.
-- [ ] Timeline not flattened to unique phrases; keep consecutive and repeated occurrences.
-- [ ] Keyboard shortcuts do not activate while editing text; touch or keyboard users can perform key timing adjustments.
+- [x] Import `startMs=12345`, `endMs=12789`; exact values survive save/reload/export/re-import (unless user edits them).
+- [x] Select the second of three occurrences referring to one phrase; change its start/end; no other occurrence changes.
+- [x] Load local audio; playhead uses actual media currentTime, pauses/stops correctly, scrubs and seeks to the requested media position in the browser tests.
+- [x] Press `S`/`E` at known audio times; exported milliseconds match selected position within appropriate media clock precision.
+- [x] Drag/trim and exact numeric edit work; undo/redo works; invalid `end<=start` rejected with intelligible feedback.
+- [x] User-reviewed timing policy: normal gaps are allowed without warnings; imported overlaps are flagged without changing data. Draft overlaps are allowed both during previews and after final edits, with warnings; unsynchronized exports warn.
+- [x] Timeline not flattened to unique phrases; keep consecutive and repeated occurrences.
+- [x] Keyboard shortcuts do not activate while editing text; keyboard timing adjustments are covered by browser tests.
+
+The user accepted manual testing as sufficient on 2026-11-14. M2 is accepted within the executed checks above; actual touch interaction and perceptual synchronization quality have not been independently verified. Evidence and limits: [CHECKPOINT_B.md](CHECKPOINT_B.md). M0/M1 results and remaining partial gates are detailed in [CHECKPOINT_A.md](CHECKPOINT_A.md); the open footage-reference and Python generation gates are not closed by M2 acceptance.
 
 ## M3 — Python AI
 
@@ -59,3 +61,7 @@ Apply the tests at the checkpoint they first become relevant. Use tests that fit
 ## Review policy
 
 Always report real executed checks separately from planned checks. Compare deterministic frames where possible; document font/render/hardware nondeterminism, and never claim pixel identity without actually measuring it. If an old composition's aesthetic changes intentionally, get explicit approval or document it as a breaking design change rather than quietly treating it as refactoring.
+
+## Future assisted timing experiment
+
+Not part of the current checkpoint B gate. Follow [ASSISTED_TIMING.md](ASSISTED_TIMING.md): compare character matching, tone-free syllable matching and anchored/approximate alignment; assess repeated sections, uncertainty and correction-time savings. Preserve all manual text/segmentation/timing until explicit proposal acceptance, with cancellation and undo. No automatic uploads, downloads or paid inference on ordinary edits.

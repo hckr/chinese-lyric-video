@@ -65,6 +65,11 @@ button:disabled {
   min-height: 100vh;
 }
 .navigation {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100dvh;
+  overflow-y: auto;
   width: 220px;
   flex-shrink: 0;
   background: var(--nav);
@@ -188,6 +193,15 @@ textarea {
   gap: 16px;
   align-items: start;
 }
+@media (min-width: 1351px) {
+  .workspace > .inspector {
+    position: sticky;
+    top: calc(var(--workbench-header-height, 80px) + 16px);
+    max-height: calc(100dvh - var(--workbench-header-height, 80px) - 32px);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
 .phrases {
   padding: 18px 0;
 }
@@ -213,6 +227,15 @@ textarea {
 .phrase span {
   display: block;
 }
+.phrase:hover:not(:disabled),
+.phrase:focus-visible {
+  background: #202e3e;
+  border-color: var(--border);
+}
+.phrase.selected:hover,
+.phrase.selected:focus-visible {
+  background: #20445e !important;
+}
 .phrase strong {
   font-size: 18px;
   margin: 5px 0;
@@ -223,21 +246,6 @@ textarea {
 }
 .selected {
   background: #172f46 !important;
-}
-.hero {
-  padding: 18px;
-  background: var(--field);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 22px;
-}
-.hero h2 {
-  font-size: 28px;
-  margin: 10px 0;
-}
-.hero p {
-  margin: 0;
-  color: var(--accent);
 }
 .sectionhead {
   display: flex;
@@ -308,23 +316,6 @@ textarea {
 }
 a {
   color: var(--accent);
-}
-.preview {
-  padding: 18px;
-  border: 1px solid var(--border);
-  background: var(--field);
-  border-radius: 10px;
-  text-align: center;
-}
-.preview small {
-  font-size: 11px;
-}
-.preview p {
-  font-size: 16px;
-  line-height: 1.6;
-}
-.preview h3 {
-  font-size: 26px;
 }
 .inspector h2 {
   margin-top: 22px;
@@ -420,6 +411,9 @@ th {
   .navigation {
     width: auto;
     padding: 16px;
+    position: static;
+    height: auto;
+    overflow-y: visible;
   }
   .brand {
     margin: 0 0 12px;
@@ -491,30 +485,17 @@ th {
 .review-warnings summary {
   cursor: pointer;
 }
-.personal-notes {
-  margin: 16px 0 24px;
-  color: var(--muted);
-}
-.personal-notes summary {
-  cursor: pointer;
-}
-.personal-notes label {
-  margin-top: 12px;
-}
 /* Explicit disclosure marker spacing is consistent across browser engines. */
-.review-warnings > summary,
-.personal-notes > summary {
+.review-warnings > summary {
   display: flex;
   align-items: center;
   gap: 10px;
   list-style: none;
 }
-.review-warnings > summary::-webkit-details-marker,
-.personal-notes > summary::-webkit-details-marker {
+.review-warnings > summary::-webkit-details-marker {
   display: none;
 }
-.review-warnings > summary::before,
-.personal-notes > summary::before {
+.review-warnings > summary::before {
   content: "▸";
   display: inline-block;
   flex: 0 0 auto;
@@ -529,15 +510,8 @@ th {
   clip-path: polygon(30% 20%, 90% 50%, 30% 80%);
   transform-origin: center;
 }
-.review-warnings[open] > summary::before,
-.personal-notes[open] > summary::before {
+.review-warnings[open] > summary::before {
   transform: rotate(90deg);
-}
-.hero {
-  padding: 10px 12px;
-}
-.hero h2 {
-  margin: 0 0 6px;
 }
 .phrase span + span {
   margin-top: 4px;
@@ -606,18 +580,996 @@ th {
   font-size: 16px;
   min-height: 46px;
 }
-.lookup-word {
+/* Timing workspace */
+.timing-workspace {
+  min-width: 0;
+}
+.timing-transport {
+  margin-bottom: 18px;
+  padding: 18px;
+  display: flex;
+  gap: 14px 24px;
+  align-items: stretch;
+  flex-direction: column;
+}
+.timing-transport audio {
+  display: none;
+}
+.timing-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.timing-clock {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.timing-controls label {
+  margin: 0;
+}
+.timing-controls select {
+  width: auto;
+}
+.timing-file {
+  max-width: 520px;
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+.timing-media-status {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.timing-scrub {
+  display: grid;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  width: 100%;
+}
+.timing-scrub input {
+  padding: 0;
+  accent-color: var(--accent);
+  width: 100%;
+  margin: 0;
+}
+.timing-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(
+      250px,
+      300px
+    );
+  gap: 16px;
+  align-items: start;
+}
+.timing-grid > section {
+  min-width: 0;
+  padding: 18px;
+}
+.timing-grid h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+}
+.timing-occurrence-list {
+  max-height: 680px;
+  overflow: auto;
+}
+.timing-occurrence-list button {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  gap: 5px;
+  border-radius: 0;
+  border-width: 0 0 1px;
+  padding: 15px;
+  background: transparent;
+}
+.timing-occurrence-list button:hover:not(:disabled),
+.timing-occurrence-list button:focus-visible {
+  background: #202e3e;
+  border-color: var(--border);
+}
+.timing-occurrence-list button.selected {
+  background: #172f46;
+}
+.timing-occurrence-list button.selected:hover,
+.timing-occurrence-list button.selected:focus-visible {
+  background: #20445e !important;
+}
+.timing-occurrence-list strong {
+  font-size: 18px;
+}
+.timing-occurrence-list span {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.timing-notice,
+.timing-notices {
+  color: var(--warning);
+}
+.timing-board-toolbar {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.timing-board-toolbar > div {
+  flex: 1 1 170px;
+}
+.timing-board-toolbar p {
+  margin: 0 0 14px;
+}
+.timing-board-toolbar label {
+  font-size: 13px;
+}
+.timing-board-toolbar select {
+  padding: 6px;
+}
+.timing-scroll {
+  overflow: auto;
+  width: 100%;
+  max-height: 600px;
+  padding: 14px 0;
+}
+.timing-track {
+  position: relative;
+  user-select: none;
+}
+.timing-ruler {
+  position: relative;
+  height: 44px;
+  cursor: crosshair;
+}
+.timing-ruler span {
+  position: absolute;
+  top: 0;
+  font-size: 12px;
+  border-left: 1px solid var(--border);
+  padding: 0 4px;
+  height: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.timing-ruler span:last-child {
+  transform: translateX(-100%);
+  border-left: 0;
+  border-right: 1px solid var(--border);
+}
+.timing-wave {
+  height: 100px;
+  background: var(--field);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: crosshair;
+  position: relative;
+}
+.timing-wave svg {
+  width: 100%;
+  height: 100%;
+  stroke: #4d84aa;
+  stroke-width: 1;
+}
+.timing-lanes {
+  margin-top: 12px;
+  position: relative;
+  min-height: 100px;
+  background: var(--field);
+}
+.timing-block {
+  position: absolute;
+  display: flex;
+  height: 70px;
+  min-width: 12px;
+  border: 1px solid #426c89;
+  border-radius: 6px;
+  background: #193346;
+  touch-action: none;
+}
+.timing-block.selected {
+  background: #1b4667;
+  border-color: var(--accent);
+}
+.timing-block button {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  touch-action: none;
+}
+.timing-block .timing-handle {
+  width: clamp(2px, 12%, 14px);
+  min-width: 0;
+  flex-shrink: 0;
+  cursor: ew-resize;
+  background: #4eaef833;
+  border-radius: 4px;
+}
+.timing-block .timing-block-label {
+  min-width: 0;
+  flex: 1;
+  cursor: grab;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+.timing-block-label strong {
+  font-size: 16px;
+}
+.timing-block-label span {
+  font-size: 12px;
+}
+.timing-playhead {
+  position: absolute;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.timing-playhead::before {
+  content: "";
+  color: var(--accent);
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 9px solid var(--accent);
+  transform: translateX(-50%);
+}
+.timing-help,
+.timing-shortcuts {
+  margin-top: 18px;
+  line-height: 1.7;
+}
+.timing-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+.timing-fields label {
+  min-width: 0;
+  margin: 0;
+}
+.timing-fields button {
+  grid-column: 1 / -1;
+}
+.timing-notices {
+  margin: 20px 0;
+  padding-left: 22px;
+}
+.timing-reset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.timing-text-preview {
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 22px;
+  padding: 16px;
+  text-align: center;
+}
+.timing-text-preview strong {
+  font-size: 23px;
+}
+.timing-text-preview small {
+  font-size: 12px;
+}
+.timing-wave > span {
+  padding: 12px;
+}
+.timing-block-label > * {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 4px;
+}
+.timing-file-button {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #1d2734;
+  padding: 10px 16px;
+  color: var(--ink);
+}
+.timing-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.timing-file:focus-within .timing-file-button {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.timing-seek-labels {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--muted);
+}
+.timing-inspector > .timing-controls {
+  margin-bottom: 16px;
+}
+.timing-inspector .timing-text-preview {
+  height: 270px;
+  overflow: auto;
+  margin: 0 0 20px;
+  display: grid;
+  align-content: safe center;
+  gap: 12px;
+}
+.timing-text-preview p {
+  margin: 0;
+}
+.timing-help-last {
+  display: block;
+  margin-top: 8px;
+}
+.timing-block-pinyin {
+  color: #94d2ff;
+}
+.timing-source {
+  order: -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.timing-source .timing-media-status {
+  margin: 0;
+  flex: 0 1 auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.timing-source .timing-file {
+  margin: 0;
+  flex-shrink: 0;
+}
+.timing-file-primary .timing-file-button {
+  background: var(--accent);
+  color: #081522;
+  border-color: var(--accent);
+  font-weight: 650;
+}
+.timing-controls .timing-speed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timing-speed select {
+  margin: 0;
+}
+.timing-follow-hint {
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+main > header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.timing-scroll:not(.is-playing),
+.timing-scroll:not(.is-playing) .timing-wave,
+.timing-scroll:not(.is-playing) .timing-ruler {
+  cursor: grab;
+}
+.timing-scroll.is-panning,
+.timing-scroll.is-panning * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+html {
+  scroll-behavior: smooth;
+}
+.timing-cue-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.timing-cue-nav button {
+  padding: 8px 4px;
+  min-width: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.timing-reset > button {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 6px;
+}
+.lyric-timing-list {
+  padding-left: 24px;
+}
+.lyric-timing-list li {
+  padding-left: 6px;
+  margin: 14px 0;
+}
+.lyric-timing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lyric-timing-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
+}
+.lyric-timing-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.lyric-timing-range {
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.lyric-timing-link svg {
+  flex-shrink: 0;
+}
+.lyric-timing-remove {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 26px;
+  line-height: 1;
+}
+@media (max-width: 1350px) {
+  .timing-grid {
+    grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+  }
+  .timing-inspector {
+    grid-column: 1 / -1;
+  }
+  .timing-fields {
+    max-width: 520px;
+  }
+}
+@media (max-width: 800px) {
+  .timing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .timing-occurrence-list {
+    max-height: 240px;
+  }
+  .timing-clock {
+    font-size: 16px;
+  }
+  .timing-transport,
+  .timing-grid > section {
+    padding: 14px;
+  }
+  .timing-controls {
+    gap: 8px;
+  }
+  .timing-board-toolbar select {
+    max-width: 160px;
+  }
+}
+@media (max-width: 800px) {
+  .timing-seek-labels span:nth-child(2),
+  .timing-seek-labels span:nth-child(4) {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+.lyric-structure-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 16px 0;
+}
+.lyric-structure-panel {
+  margin-bottom: 20px;
+}
+.lyric-structure-panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+.lyric-structure-panel form > button {
+  width: 100%;
+  min-height: 48px;
+}
+.lyric-structure-panel select {
+  font-size: 1.05rem;
+}
+@media (max-width: 650px) {
+  .lyric-structure-panel form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.lyric-structure-panel label {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+}
+.remove-appearance {
+  margin: 8px 0;
+}
+
+.remove-dialog {
+  width: min(520px, calc(100vw - 40px));
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.remove-dialog::backdrop {
+  background: #0009;
+}
+.remove-dialog p {
+  line-height: 1.6;
+}
+.remove-lyric {
+  font-size: 22px;
+}
+.remove-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+/* Dictionary reference card follows the selected word, independently of edited glosses. */
+.dictionary-lookup {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.dictionary-lookup-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 12px;
+  align-items: center;
+}
+.dictionary-source {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+.dictionary-source a {
+  color: inherit;
+}
+.dictionary-word {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 12px;
-  margin: 12px 0 18px;
+  gap: 8px 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-.lookup-word strong {
-  font-size: 30px;
+.dictionary-word strong {
+  font-size: 48px;
   line-height: 1.3;
 }
-.lookup-word span {
-  font-size: 17px;
+.dictionary-word span {
+  font-size: 26px;
   color: var(--muted);
+}
+.dictionary-wiktionary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dictionary-entries {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 22px;
+}
+.dictionary-entry + .dictionary-entry {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+.dictionary-entry h3 {
+  font-size: 19px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.dictionary-entry ul {
+  margin: 0;
+  padding-left: 24px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.dictionary-entry li {
+  padding-left: 4px;
+  margin: 10px 0;
+}
+
+.dictionary-example {
+  position: relative;
+  border-bottom: 1px dotted var(--muted);
+  cursor: help;
+  outline-offset: 3px;
+}
+.dictionary-pinyin-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--field);
+  box-shadow: 0 4px 14px #0006;
+  color: var(--ink);
+  font-size: inherit;
+  line-height: 1.5;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms;
+  pointer-events: none;
+}
+.dictionary-example:hover .dictionary-pinyin-bubble,
+.dictionary-example:focus .dictionary-pinyin-bubble {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Match the edge-to-edge lyric list in the translation workspace. */
+.timing-occurrences h2 {
+  padding: 0 16px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+.timing-ruler i {
+  position: absolute;
+  bottom: 0;
+  height: 6px;
+  border-left: 1px solid var(--muted);
+  opacity: 0.45;
+  pointer-events: none;
+}
+/* Spec grouping: hierarchy lives in the existing lyric list. */
+.group-sidebar-wrapper {
+  min-width: 0;
+}
+.group-sidebar-wrapper > .timing-occurrences {
+  padding: 18px 0;
+}
+.group-sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.group-sidebar-heading h2 {
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+}
+.group-sidebar-heading > button {
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.group-range-form {
+  padding: 0 14px 14px;
+}
+.group-range-form p {
+  font-size: 12px;
+}
+.group-range-form label {
+  margin: 0;
+}
+.group-range-form {
+  display: grid;
+  gap: 10px;
+}
+.group-range-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 6px;
+  margin: 0;
+}
+.group-range-actions button {
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.timing-occurrence-list button.range-selected {
+  background: #305271;
+}
+.spec-lyric-group {
+  border-left: 3px solid var(--group-color);
+  border-bottom: 1px solid var(--group-color);
+  border-radius: 7px;
+  margin: 6px 0 12px;
+}
+.spec-lyric-group.group-selected {
+  outline: 1px solid var(--group-color);
+  outline-offset: -1px;
+}
+.spec-group-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  background: var(--field);
+  padding: 8px 4px;
+}
+.timing-occurrence-list .spec-group-header button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  padding: 4px;
+}
+.timing-occurrence-list .spec-group-header .group-summary {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px;
+}
+.timing-occurrence-list .spec-group-header .group-summary span {
+  font-size: 11px;
+}
+.timing-occurrence-list .spec-group-header .group-menu-trigger {
+  flex: 0 0 28px;
+  width: 28px;
+  font-size: 23px;
+  line-height: 1;
+}
+.group-overflow-menu {
+  z-index: 100;
+  width: 185px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px #0009;
+  background: var(--surface);
+}
+.group-overflow-menu button {
+  display: block;
+  text-align: left;
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+}
+.timeline-group-rail {
+  position: absolute;
+  height: 18px;
+  border: 2px solid var(--group-color);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  pointer-events: none;
+}
+.timeline-group-rail > button {
+  pointer-events: auto;
+  position: absolute;
+  left: 4px;
+  top: -7px;
+  min-width: 28px;
+  max-width: min(160px, 25vw);
+  padding: 0 7px;
+  border-color: var(--group-color);
+  background: var(--field);
+  color: var(--group-color);
+  font-size: 13px;
+  height: 23px;
+  cursor: grab;
+  touch-action: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline-group-rail > button:active {
+  cursor: grabbing;
+}
+.timeline-group-rail:not(.rail-selected):not(:hover) > button span {
+  display: none;
+}
+.timeline-group-rail:focus-within {
+  z-index: 29 !important;
+}
+.timing-block.group-ghost {
+  pointer-events: none;
+  border: 2px dashed var(--group-color);
+  background: #344b7180;
+  z-index: 25;
+  padding: 6px;
+  overflow: hidden;
+  flex-direction: column;
+}
+.ghost-rail {
+  border-style: dashed;
+}
+.duplicate-group-panel {
+  position: sticky;
+  bottom: 12px;
+  z-index: 40;
+  margin: 20px 0 0;
+  border-color: var(--accent);
+  box-shadow: 0 5px 25px #0008;
+}
+.duplicate-group-panel input {
+  max-width: 500px;
+}
+.timing-workspace [inert],
+.navigation[inert],
+main > header[inert],
+.lyric-structure-actions[inert] {
+  opacity: 0.45;
+}
+.timing-lanes {
+  min-height: 140px;
+}
+.group-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  cursor: default;
+}
+.group-summary strong {
+  font-size: 18px;
+}
+.group-overflow-menu button:hover:not(:disabled),
+.group-overflow-menu button:focus-visible,
+.timing-occurrence-list .spec-group-header .group-menu-trigger:hover {
+  background: #26364a;
+}
+.group-action-dialog form,
+.repeat-lyric-dialog form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+.group-action-dialog h2,
+.repeat-lyric-dialog h2 {
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+.group-action-dialog label,
+.repeat-lyric-dialog label,
+.group-action-dialog p,
+.repeat-lyric-dialog p {
+  margin: 0;
+}
+.group-action-dialog .remove-dialog-actions,
+.repeat-lyric-dialog .remove-dialog-actions {
+  margin-top: 4px;
+}
+.repeat-lyric-dialog select {
+  font-size: 16px;
+}
+.timing-occurrence-list .spec-group-header .group-header-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding: 5px;
+}
+.group-header-toggle .group-chevron {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.group-header-toggle .group-summary {
+  cursor: inherit;
+}
+.timing-occurrence-list .spec-group-header .group-header-toggle:hover,
+.timing-occurrence-list .spec-group-header .group-header-toggle:focus-visible {
+  background: #26364a;
+}
+.group-warning-indicator {
+  flex: 0 0 auto;
+  color: var(--warning);
+  font-size: 17px;
+  padding: 4px 0;
+  cursor: help;
+}
+.timing-block.group-member {
+  border-color: var(--group-color);
+  box-shadow: inset 0 3px var(--group-color);
+}
+.timing-block.group-member-selected {
+  z-index: 3;
+  outline: 2px solid var(--group-color);
+  background: color-mix(in srgb, var(--group-color) 18%, var(--field));
+}
+.timing-block.group-member.selected {
+  outline: 2px solid var(--ink);
+  border-color: var(--ink);
+  background: color-mix(
+    in srgb,
+    var(--group-color) 30%,
+    var(--field)
+  ) !important;
+}
+.timing-block.group-member .timing-handle {
+  background: color-mix(in srgb, var(--group-color) 25%, transparent);
+}
+.timing-block.selected {
+  z-index: 4;
+}
+.timing-block.group-member.selected {
+  z-index: 4;
+}
+.timeline-group-rail > button.group-handle-dragging {
+  max-width: min(400px, 60vw);
+  width: max-content;
+}
+
+/* Keep selection equally visible on standalone and grouped lyrics. */
+.timing-block.selected:not(.group-member) {
+  outline: 2px solid var(--ink);
+  border-color: var(--ink);
+  background: #28577a;
+  box-shadow: inset 0 3px var(--accent);
+}
+.group-warning-indicator {
+  position: relative;
+  outline-offset: 3px;
+}
+.group-warning-bubble {
+  position: fixed;
+  bottom: auto;
+  z-index: 100;
+  max-width: min(280px, 70vw);
+  white-space: normal;
+  font-size: 16px;
+  opacity: 1;
+  visibility: visible;
+}
+
+.timing-occurrence-list .range-boundary {
+  min-height: 1.5em;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.group-range-form [role="status"] {
+  height: 3em;
+  overflow-y: auto;
+  margin: 0;
+  line-height: 1.5;
 }

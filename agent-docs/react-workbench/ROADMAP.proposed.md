@@ -78,21 +78,21 @@ One local-first **React Lyric Workbench** for Chinese-language lyric videos with
 
 - Wire workbench video config through a typed adapter into shared Remotion composition.
 - Select video/image mode, configurable visualizer primary/secondary colors/opacity/intensity, typography presets, aspect/lyric variant and relevant overlays.
-- Actual Remotion Player preview with the *same renderer/presets* as exported video, synchronized to selected timestamp. Keep manual export fully supported.
+- Actual Remotion Player preview with the _same renderer/presets_ as exported video, synchronized to selected timestamp. Keep manual export fully supported.
 - Optional explicit local render/export API; first check whether existing CLI render is sufficient. No file-system writes without user's explicit action.
 
 **Gate:** preset defaults reproduce legacy video. A visualizer color change in UI appears in final render, and the selected lyric has correct timing.
 
 ### M6 — Optional capabilities (not MVP)
 
-- Assisted auto-sync/forced alignment and word-level karaoke timing.
+- Assisted auto-sync/forced alignment: investigate known-lyrics matching using tone-free Pinyin syllables, confidence, repeated-section handling and manual anchors. See [ASSISTED_TIMING.md](ASSISTED_TIMING.md). Unknown-lyrics detection and word-level karaoke timing follow only if the approach proves useful.
 - Project library, file watching, local asset persistence, direct Remotion render queue.
 - Additional custom background modes and advanced thumbnail designer.
 - Publishing and deployment tooling only if useful.
 
 ## Operating principles
 
-Milestones are *ordered integration checkpoints*, not one broad code change. Avoid large speculative dependencies. Codex should report which gates passed and stop before crossing significant architecture decisions or destructive migrations. Reuse working code first; define shared logic only after auditing behavior. Maintain current CLI workflows throughout.
+Milestones are _ordered integration checkpoints_, not one broad code change. Avoid large speculative dependencies. Codex should report which gates passed and stop before crossing significant architecture decisions or destructive migrations. Reuse working code first; define shared logic only after auditing behavior. Maintain current CLI workflows throughout.
 
 ## Pointers
 

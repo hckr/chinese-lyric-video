@@ -1,3 +1,9 @@
+import { lyricsGrouping } from "./lyrics-grouping.ts";
+import { importLyrics } from "../import-api.ts";
+import { build } from "esbuild";
+import { withTimingBaseline } from "../src/timing.ts";
+import { catSongWorkflow } from "./cat-song-workflow.ts";
+import { timingAcceptance } from "./timing-browser.ts";
 // Uses the browser already cached by Remotion; never downloads a browser.
 import { openBrowser } from "@remotion/renderer";
 import fs from "node:fs";
@@ -21,8 +27,35 @@ const executable =
   path.resolve(
     "node_modules/.remotion/chrome-headless-shell/mac-x64/chrome-headless-shell-mac-x64/chrome-headless-shell",
   );
+// Build in memory so an open dev server cannot replace test assets with its
+// live-reload bundle while this suite runs.
+const built = await build({
+  entryPoints: ["web/src/main.tsx"],
+  bundle: true,
+  write: false,
+  outfile: "app.js",
+  define: { "process.env.NODE_ENV": JSON.stringify("production") },
+});
+const assets = new Map(
+  built.outputFiles.map((file) => [path.basename(file.path), file.contents]),
+);
 const server = http.createServer((req, res) => {
   const requestPath = req.url ?? "/";
+  if (
+    requestPath === "/api/import-lyrics" ||
+    requestPath === "/api/dictionary"
+  ) {
+    void importLyrics(
+      req,
+      res,
+      process.cwd(),
+      req.url === "/api/dictionary" ? "dictionary" : "import",
+    ).catch(() => {
+      if (!res.writableEnded)
+        res.writeHead(500).end(JSON.stringify({ error: "Import failed" }));
+    });
+    return;
+  }
   const name = requestPath === "/" ? "index.html" : requestPath.slice(1);
   if (!["index.html", "app.js", "app.css"].includes(name)) {
     res.writeHead(404).end();
@@ -36,7 +69,11 @@ const server = http.createServer((req, res) => {
         ? "text/css"
         : "text/html",
   );
-  res.end(fs.readFileSync(path.join("web/dist", name)));
+  res.end(
+    name === "index.html"
+      ? fs.readFileSync("web/index.html")
+      : assets.get(name),
+  );
 });
 (async () => {
   await new Promise<void>((resolve, reject) => {
@@ -66,14 +103,20 @@ const server = http.createServer((req, res) => {
     const settle = () =>
       page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
     const click = async (text: string) => {
-      await page.evaluate((text) => {
-        const b = [
-          ...document.querySelectorAll<HTMLButtonElement>("button"),
-        ].find((b) => b.textContent?.trim() === text);
-        if (!b) throw Error("Button missing: " + text);
-        if (b.disabled) throw Error("Button disabled: " + text);
-        b.click();
-      }, text);
+      const deadline = Date.now() + 10000;
+      let clicked = false;
+      while (!clicked && Date.now() < deadline) {
+        clicked = await page.evaluate((text) => {
+          const button = [
+            ...document.querySelectorAll<HTMLButtonElement>("button"),
+          ].find((b) => b.textContent?.trim() === text);
+          if (!button || button.disabled) return false;
+          button.click();
+          return true;
+        }, text);
+        if (!clicked) await settle();
+      }
+      if (!clicked) throw Error("Button unavailable: " + text);
       await settle();
     };
     const upload = async (name: string, source: string) => {
@@ -90,6 +133,16 @@ const server = http.createServer((req, res) => {
         name,
         source,
       );
+      const deadline = Date.now() + 15000;
+      while (Date.now() < deadline) {
+        const finished = await page.evaluate(
+          () =>
+            document.querySelector("h1")?.textContent !== "Import lyrics" ||
+            !!document.querySelector(".content > .error"),
+        );
+        if (finished) break;
+        await settle();
+      }
       await settle();
     };
     const read = () =>
@@ -118,6 +171,21 @@ const server = http.createServer((req, res) => {
       );
       await settle();
     };
+    if (process.argv.includes("--lyrics-grouping")) {
+      await lyricsGrouping(page, { click, fill, read, upload });
+      assert.deepEqual(errors, []);
+      console.log("Lyrics grouping acceptance passed.");
+      return;
+    }
+    if (process.argv.includes("--cat-song-workflow")) {
+      await catSongWorkflow(page, { click, fill, read, upload });
+      assert.deepEqual(
+        errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
+        [],
+      );
+      console.log("Cat song workflow passed.");
+      return;
+    }
     await upload(
       "Macchiato.ts",
       fs.readFileSync("src/Macchiato_Special_Affection_for_You.ts", "utf8"),
@@ -317,7 +385,7 @@ const server = http.createServer((req, res) => {
           JSON.stringify({
             parse: {
               wikitext:
-                window.__wikiCalls.length === 1
+                new URL(String(url)).searchParams.get("page") === "对"
                   ? "==Chinese==\n{{zh-see|對|s}}"
                   : "==Chinese==\nDefinitions",
             },
@@ -335,7 +403,20 @@ const server = http.createServer((req, res) => {
     await blockRequests.call(client, "Network.setBlockedURLs", {
       urls: ["https://en.wiktionary.org/wiki/*"],
     });
-    await click("Open Wiktionary");
+    await click("Wiktionary");
+    const redirectDeadline = Date.now() + 5000;
+    while (
+      !(await page.evaluate(
+        () =>
+          document.querySelector<HTMLIFrameElement>(
+            ".dictionary-dialog[open] iframe",
+          )?.src === "https://en.wiktionary.org/wiki/%E5%B0%8D#Chinese",
+      )) &&
+      Date.now() < redirectDeadline
+    ) {
+      await settle();
+    }
+
     assert.equal(
       await page.evaluate(
         () =>
@@ -455,7 +536,7 @@ const server = http.createServer((req, res) => {
     // TEST_PLAN M1: exact segmentation example, approved JSON recovery,
     // shared occurrences and raw ingestion through the actual React controls.
     await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
-    const fixture = {
+    const fixture: Project = {
       schemaVersion: 1,
       format: "lyric-workbench",
       source: "acceptance-fixture",
@@ -467,7 +548,6 @@ const server = http.createServer((req, res) => {
           translation: { en: "Beautiful", pl: "Piękne" },
           review: "reviewed",
           segmentationApproved: true,
-          notes: "Keep this segmentation",
           words: [
             {
               id: "pretty-left",
@@ -506,7 +586,7 @@ const server = http.createServer((req, res) => {
       ],
     };
     await upload("acceptance.json", JSON.stringify(fixture));
-    assert.deepEqual(await read(), fixture);
+    assert.deepEqual(await read(), withTimingBaseline(fixture));
     await click("Merge with next");
     await fill("[role=dialog] textarea", "beautiful");
     await click("Confirm merge draft");
@@ -520,10 +600,8 @@ const server = http.createServer((req, res) => {
     assert.equal(p.phrases[0].review, "pending");
     assert.equal(p.phrases[0].segmentationApproved, false);
     assert.equal(
-      await page.evaluate(
-        () => document.querySelector<HTMLElement>(".hero p")!.textContent,
-      ),
-      "piàoliang",
+      await page.evaluate(() => document.querySelector(".hero")),
+      null,
     );
     await click("Undo");
     assert.deepEqual((await read()).phrases, fixture.phrases);
@@ -602,6 +680,7 @@ const server = http.createServer((req, res) => {
     console.log(
       "M1 acceptance passed: 漂亮 merge/split, note/ID/timing preservation, review undo/redo, approved JSON reopen, TS reimport, shared chorus edits, raw repetitions/unassigned timing.",
     );
+    await timingAcceptance(page, { click, fill, read, upload });
     assert.deepEqual(
       errors.filter((e) => !String(e).includes("ERR_BLOCKED_BY_CLIENT")),
       [],

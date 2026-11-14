@@ -72,7 +72,7 @@ function sample(): Project {
   p.occurrences[1].endMs = 48000;
   return p;
 }
-test("merge/split keep stable IDs, notes, translations, occurrences and round trip", () => {
+test("merge/split keep stable IDs, grammar rows, translations, occurrences and round trip", () => {
   const p = sample(),
     phrase = p.phrases[0];
   const merged = mergeAdjacentTokens(phrase, "a", {

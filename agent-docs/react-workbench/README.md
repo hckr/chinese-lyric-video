@@ -1,8 +1,8 @@
 # Chinese Lyric Video — Integrated Workbench Plan (v2.1)
 
-**Status:** Architecture + implementation brief + interactive design reference; NOT implemented production React code.
+**Status:** Original architecture/design brief with checkpoints A and B implemented locally. See [checkpoint B](CHECKPOINT_B.md) for current behavior, accepted manual testing and final verification. The HTML mockups remain conceptual references; later Python AI and renderer integration are pending.
 **Date:** 2026-11-12
-**Target:** `hckr/chinese-lyric-video`, with *local uncommitted Streamlit work* that must be inventoried before modifying anything.
+**Target:** `hckr/chinese-lyric-video`, with _local uncommitted Streamlit work_ that must be inventoried before modifying anything.
 
 ## What changed in v2.1
 
@@ -16,7 +16,7 @@ A local-first React workbench for:
 
 1. **Import** — raw Chinese lyrics or existing Remotion song `.ts` modules.
 2. **Translation** — edit unique phrases once, including EN/PL, **merge/split word tokens**, contiguous per-word Pinyin (`piàoliang`, not `piào liang`), glosses and notes; later reuse the existing Python AI/NLP backend.
-3. **Timing** — synchronize each *occurrence* against a local audio track, with waveform, scrub/play, drag/trim, precise time inputs and keyboard nudging.
+3. **Timing** — synchronize each _occurrence_ against a local audio track, with waveform, scrub/play, drag/trim, precise time inputs and keyboard nudging.
 4. **Video settings** — choose either music-video footage or an image + audio visualizer, configure sensible visual parameters, choose layout/presets, eventually drive the real Remotion preview.
 5. **Export** — first download a backward-compatible song `.ts` for manual placement in `src/`; keep a separate workbench project JSON for timing, media and visual settings.
 
@@ -25,16 +25,17 @@ The workbench **is not a video-rendering replacement**. Remotion remains the ren
 ## Start here
 
 - **`CODEX_TASK.md`** — authoritative execution brief for Codex, staged milestones, safe handling of uncommitted work, acceptance criteria.
-- **`ROADMAP.proposed.md`** — roadmap to *merge* with the real local `agent-docs/ROADMAP.md` (do not blindly overwrite).
+- **`ROADMAP.proposed.md`** — roadmap to _merge_ with the real local `agent-docs/ROADMAP.md` (do not blindly overwrite).
 - **`ARCHITECTURE.md`** — data model, import/export compatibility and boundaries between React, Python, Remotion.
 - **`WORD_SEGMENTATION.md`** — required word merge/split controls, Pinyin orthography, validation and export/AI invariants.
 - **`TIMING_EDITOR.md`** — precise timing UI, interactions, timing invariants, and audio synchronization.
 - **`REMOTION_REFACTOR.md`** — audit-first extraction plan, background modes, thumbnail reuse, prop/preset policy.
 - **`UI_SPEC.md`** — screen structure and dark/blue design tokens.
 - **`TEST_PLAN.md`** — regression gates, round-trip checks and visual comparisons.
+- **`ASSISTED_TIMING.md`** — future tone-free Pinyin/audio alignment experiment, reviewable timing proposals and evaluation gate.
 - **`DECISIONS.md`** — settled choices vs details Codex must discover during the local audit.
 - **`CODEX_PROMPT.md`** — short, copyable kickoff prompt.
-- **`lyric-workbench-design.html`** — self-contained clickable *design prototype*; review/import/export screens plus newly added timing and video-settings mockups. Not production logic.
+- **`lyric-workbench-design.html`** — self-contained clickable _design prototype_; review/import/export screens plus newly added timing and video-settings mockups. Not production logic.
 
 ## Handoff to Codex
 
@@ -46,6 +47,6 @@ Unzip into the **repository root**, so the files land at `agent-docs/react-workb
 
 ## Important qualifications
 
-- The original roadmap and song example were previously consulted. In preparing this iteration, the GitHub repository's current files were **not accessible for a fresh full audit**, and your local uncommitted changes cannot be inspected remotely. All suggested names/layouts are *proposals*, not claims about the checked-out tree. Codex must inspect reality and adjust.
-- The timing demo contains **illustrative waveform/timestamps** and local UI interaction mockups. Real media-backed synchronization, safe TS parsing, AI requests, waveform generation and Remotion preview are *implementation requirements*, not delivered by the HTML reference.
+- The original roadmap and song example were previously consulted. In preparing this iteration, the GitHub repository's current files were **not accessible for a fresh full audit**, and your local uncommitted changes cannot be inspected remotely. All suggested names/layouts are _proposals_, not claims about the checked-out tree. Codex must inspect reality and adjust.
+- The timing demo contains **illustrative waveform/timestamps** and local UI interaction mockups. Real media-backed synchronization, safe TS parsing, AI requests, waveform generation and Remotion preview are _implementation requirements_, not delivered by the HTML reference.
 - Manual `.ts` download/copy remains the first operational workflow. Do not move visual config fields into existing song modules until compatibility and the actual Remotion consumer types are verified.

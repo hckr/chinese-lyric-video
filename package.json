@@ -54,7 +54,9 @@
     "hooks:install": "node scripts/install-hooks.mts",
     "format:index:check": "node scripts/check-staged-format.mts",
     "workbench:test:reload": "node web/tests/live-reload.ts",
-    "workbench:clean": "node scripts/clean-test-output.mts"
+    "workbench:clean": "node scripts/clean-test-output.mts",
+    "workbench:test:cat-song-workflow": "node web/tests/browser.ts --cat-song-workflow",
+    "workbench:test:lyrics-grouping": "node web/tests/browser.ts --lyrics-grouping"
   },
   "engines": {
     "node": ">=22.20.0"

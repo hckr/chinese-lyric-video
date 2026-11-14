@@ -9,10 +9,15 @@ import { openBrowser, getCompositions, renderStill } from "@remotion/renderer";
 (async () => {
   fs.mkdirSync("out/workbench", { recursive: true });
   const output = fs.mkdtempSync(path.resolve("out/workbench/export-check-"));
-  const project = importLegacy(
-    fs.readFileSync("src/Macchiato_Special_Affection_for_You.ts", "utf8"),
-  );
-  project.phrases[0].translation.en = "Workbench export verified";
+  const songArgument = process.argv.indexOf("--song");
+  const source =
+    songArgument < 0
+      ? "src/Macchiato_Special_Affection_for_You.ts"
+      : process.argv[songArgument + 1];
+  if (!source) throw Error("--song requires a TypeScript song file");
+  const project = importLegacy(fs.readFileSync(source, "utf8"));
+  if (songArgument < 0)
+    project.phrases[0].translation.en = "Workbench export verified";
   const song = path.join(output, "Song.ts");
   fs.writeFileSync(song, exportLegacy(project));
   try {
@@ -47,10 +52,15 @@ import { openBrowser, getCompositions, renderStill } from "@remotion/renderer";
       });
       const composition = compositions.find((c) => c.id === "LyricVideo2");
       if (!composition) throw Error("LyricVideo2 composition is missing");
+      const cue = project.occurrences[1] ?? project.occurrences[0];
+      const frame =
+        songArgument < 0
+          ? 100
+          : Math.round((((cue?.startMs ?? 0) + 100) / 1000) * composition.fps);
       await renderStill({
         serveUrl,
         composition,
-        frame: 100,
+        frame,
         output: path.join(output, "edited.png"),
         imageFormat: "png",
         scale: 1,
@@ -62,7 +72,9 @@ import { openBrowser, getCompositions, renderStill } from "@remotion/renderer";
         JSON.stringify(
           {
             composition: composition.id,
-            frame: 100,
+            source,
+            occurrences: project.occurrences,
+            frame,
             export: song,
             translation: project.phrases[0].translation.en,
           },

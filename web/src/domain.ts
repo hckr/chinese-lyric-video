@@ -10,17 +10,36 @@ export const wordSchema = z
     translation: z.object({ en: z.string() }).strict(),
   })
   .strict();
-const phraseSchema = z
+const phraseSchema = z.preprocess(
+  (input) => {
+    if (input && typeof input === "object" && !Array.isArray(input)) {
+      const phrase = { ...input } as Record<string, unknown>;
+      delete phrase.notes;
+      delete phrase.dictionaryEntries;
+      return phrase;
+    }
+    return input;
+  },
+  z
+    .object({
+      id,
+      lyricKey: z.string().min(1),
+      translation: z.object({ en: z.string(), pl: z.string() }).strict(),
+      words: z.array(wordSchema),
+      review: z.enum(["pending", "reviewed"]),
+      segmentationApproved: z.boolean(),
+    })
+    .strict(),
+);
+export const occurrenceSchema = z
   .object({
     id,
-    lyricKey: z.string().min(1),
-    translation: z.object({ en: z.string(), pl: z.string() }).strict(),
-    words: z.array(wordSchema),
-    review: z.enum(["pending", "reviewed"]),
-    segmentationApproved: z.boolean(),
-    notes: z.string(),
+    phraseId: id,
+    startMs: z.number().int().nonnegative().nullable(),
+    endMs: z.number().int().nonnegative().nullable(),
   })
   .strict();
+export type Occurrence = z.infer<typeof occurrenceSchema>;
 export const projectSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -32,17 +51,29 @@ export const projectSchema = z
         "Title and artist required",
       ),
     phrases: z.array(phraseSchema),
-    occurrences: z.array(
-      z
-        .object({
-          id,
-          phraseId: id,
-          startMs: z.number().int().nonnegative().nullable(),
-          endMs: z.number().int().nonnegative().nullable(),
-        })
-        .strict(),
-    ),
+    occurrences: z.array(occurrenceSchema),
+    timingBaseline: z.array(occurrenceSchema).optional(),
+    audio: z
+      .object({
+        name: z.string().min(1),
+        size: z.number().int().nonnegative(),
+        lastModified: z.number().int().nonnegative(),
+        durationMs: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
     source: z.string(),
+    lyricGroups: z
+      .array(
+        z
+          .object({
+            id,
+            name: z.string().trim().min(1),
+            occurrenceIds: z.array(id).min(1),
+          })
+          .strict(),
+      )
+      .optional(),
   })
   .strict()
   .superRefine((p, ctx) => {
@@ -55,10 +86,6 @@ export const projectSchema = z
       "phrase ID",
     );
     check(
-      p.phrases.map((v) => v.lyricKey),
-      "lyric key",
-    );
-    check(
       p.occurrences.map((v) => v.id),
       "occurrence ID",
     );
@@ -66,6 +93,39 @@ export const projectSchema = z
       p.phrases.flatMap((v) => v.words.map((w) => w.id)),
       "token ID",
     );
+    if (
+      p.timingBaseline &&
+      (p.timingBaseline.length !== p.occurrences.length ||
+        p.timingBaseline.some(
+          (o, i) =>
+            o.id !== p.occurrences[i]?.id ||
+            o.phraseId !== p.occurrences[i]?.phraseId,
+        ))
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Timing baseline must match occurrence IDs and order",
+      });
+    check(
+      (p.lyricGroups ?? []).map((group) => group.id),
+      "group ID",
+    );
+    check(
+      (p.lyricGroups ?? []).flatMap((group) => group.occurrenceIds),
+      "group membership",
+    );
+    for (const group of p.lyricGroups ?? []) {
+      check(group.occurrenceIds, "group appearance ID");
+      if (
+        group.occurrenceIds.some(
+          (id) => !p.occurrences.some((o) => o.id === id),
+        )
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Group contains an unknown appearance",
+        });
+    }
     for (const o of p.occurrences) {
       if (!p.phrases.some((v) => v.id === o.phraseId))
         ctx.addIssue({ code: "custom", message: `Unknown phrase in ${o.id}` });
@@ -216,7 +276,12 @@ export function splitToken(
     ],
   };
 }
-export type Snapshot = { project: Project; phraseId: string; tokenId: string };
+export type Snapshot = {
+  project: Project;
+  phraseId: string;
+  tokenId: string;
+  occurrenceId?: string;
+};
 export type History = {
   present: Snapshot;
   past: Snapshot[];
@@ -268,7 +333,6 @@ export function rawProject(
       words: [],
       review: "pending",
       segmentationApproved: false,
-      notes: "",
     })),
     occurrences: lines.map((key, i) => ({
       id: `line-${i}`,
@@ -280,6 +344,39 @@ export function rawProject(
 }
 export function exportIssues(p: Project): string[] {
   return [
+    ...p.occurrences
+      .filter(
+        (cue, index) =>
+          cue.startMs !== null &&
+          cue.endMs !== null &&
+          cue.endMs > cue.startMs &&
+          p.occurrences
+            .slice(index + 1)
+            .some(
+              (other) =>
+                other.startMs !== null &&
+                other.endMs !== null &&
+                other.endMs > other.startMs &&
+                cue.startMs! < other.endMs &&
+                cue.endMs! > other.startMs,
+            ),
+      )
+      .map(
+        (cue) =>
+          `${cue.id}: overlapping lyric timings; resolve before final export`,
+      ),
+
+    ...p.occurrences
+      .filter(
+        (o) =>
+          p.audio &&
+          ((o.startMs ?? 0) > p.audio.durationMs ||
+            (o.endMs ?? 0) > p.audio.durationMs),
+      )
+      .map(
+        (o) =>
+          `${o.id}: timing exceeds the saved audio duration; verify the soundtrack or edit this occurrence`,
+      ),
     ...p.phrases.flatMap((v) =>
       phraseIssues(v).map((s) => `${v.lyricKey}: ${s}`),
     ),
@@ -295,4 +392,188 @@ export function exportIssues(p: Project): string[] {
           `${o.id}: unassigned or zero-length timing (TS draft uses zero for unassigned boundaries)`,
       ),
   ];
+}
+
+// Structural edits keep stable IDs, original timing snapshots and history data.
+export function addAppearance(
+  project: Project,
+  phraseId: string,
+  afterId?: string,
+  appearanceId = newId(),
+): Project {
+  if (!project.phrases.some((p) => p.id === phraseId))
+    throw Error("Lyric not found.");
+  if (project.occurrences.some((o) => o.id === appearanceId))
+    throw Error("Duplicate lyric appearance ID.");
+  const cue: Occurrence = {
+    id: appearanceId,
+    phraseId,
+    startMs: null,
+    endMs: null,
+  };
+  const at = afterId
+    ? project.occurrences.findIndex((o) => o.id === afterId)
+    : project.occurrences.length - 1;
+  if (afterId && at < 0) throw Error("Insertion position not found.");
+  const insert = (items: Occurrence[]) => [
+    ...items.slice(0, at + 1),
+    { ...cue },
+    ...items.slice(at + 1),
+  ];
+  return {
+    ...project,
+    occurrences: insert(project.occurrences),
+    ...(project.timingBaseline
+      ? { timingBaseline: insert(project.timingBaseline) }
+      : {}),
+  };
+}
+export function addLyric(
+  project: Project,
+  phrase: Phrase,
+  afterId?: string,
+  appearanceId = newId(),
+): Project {
+  const existing = project.phrases.find((p) => p.lyricKey === phrase.lyricKey);
+  if (existing)
+    return addAppearance(project, existing.id, afterId, appearanceId);
+  if (project.phrases.some((p) => p.id === phrase.id))
+    throw Error("Duplicate lyric ID.");
+  const tokenIds = new Set(
+    project.phrases.flatMap((p) => p.words.map((w) => w.id)),
+  );
+  if (phrase.words.some((w) => tokenIds.has(w.id)))
+    throw Error("Duplicate word ID.");
+  const anchor = project.occurrences.find((cue) => cue.id === afterId);
+  const at = anchor
+    ? project.phrases.findIndex((p) => p.id === anchor.phraseId)
+    : project.phrases.length - 1;
+  const updated = addAppearance(
+    {
+      ...project,
+      phrases: [
+        ...project.phrases.slice(0, at + 1),
+        phrase,
+        ...project.phrases.slice(at + 1),
+      ],
+    },
+    phrase.id,
+    afterId,
+    appearanceId,
+  );
+  if (anchor?.endMs != null) {
+    const startMs = anchor.endMs;
+    const occupied = project.occurrences.some(
+      (cue) =>
+        cue.id !== anchor.id &&
+        cue.startMs !== null &&
+        cue.endMs !== null &&
+        cue.startMs <= startMs &&
+        cue.endMs > startMs,
+    );
+    const nextStart = Math.min(
+      ...project.occurrences
+        .filter(
+          (cue) =>
+            cue.id !== anchor.id &&
+            cue.startMs !== null &&
+            cue.startMs >= startMs,
+        )
+        .map((cue) => cue.startMs!),
+    );
+    const endMs = Math.min(
+      startMs + 2000,
+      nextStart,
+      project.audio?.durationMs ?? Infinity,
+    );
+    if (!occupied && Number.isSafeInteger(endMs) && endMs > startMs) {
+      updated.occurrences = updated.occurrences.map((cue) =>
+        cue.id === appearanceId ? { ...cue, startMs, endMs } : cue,
+      );
+    }
+  }
+  return updated;
+}
+export function removeAppearance(
+  project: Project,
+  appearanceId: string,
+): Project {
+  const cue = project.occurrences.find((o) => o.id === appearanceId);
+  if (!cue) throw Error("Lyric appearance not found.");
+  const remaining = project.occurrences.filter((o) => o.id !== appearanceId);
+  const stillUsed = remaining.some((o) => o.phraseId === cue.phraseId);
+  return {
+    ...project,
+    occurrences: remaining,
+    ...(project.lyricGroups
+      ? {
+          lyricGroups: project.lyricGroups
+            .map((group) => ({
+              ...group,
+              occurrenceIds: group.occurrenceIds.filter(
+                (id) => id !== appearanceId,
+              ),
+            }))
+            .filter((group) => group.occurrenceIds.length),
+        }
+      : {}),
+    phrases: stillUsed
+      ? project.phrases
+      : project.phrases.filter((p) => p.id !== cue.phraseId),
+    ...(project.timingBaseline
+      ? {
+          timingBaseline: project.timingBaseline.filter(
+            (o) => o.id !== appearanceId,
+          ),
+        }
+      : {}),
+  };
+}
+
+export function conflictingLyrics(project: Project): string[] {
+  const content = (p: Phrase) =>
+    JSON.stringify({
+      translation: p.translation,
+      words: p.words.map(({ hanzi, pinyin, translation }) => ({
+        hanzi,
+        pinyin,
+        translation,
+      })),
+    });
+  return [
+    ...new Set(
+      project.phrases
+        .filter((p, i, all) =>
+          all.some(
+            (other, j) =>
+              i !== j &&
+              other.lyricKey === p.lyricKey &&
+              content(other) !== content(p),
+          ),
+        )
+        .map((p) => p.lyricKey),
+    ),
+  ];
+}
+
+export function repeatAppearance(
+  project: Project,
+  phraseId: string,
+  selectedId?: string,
+  appearanceId = newId(),
+): Project {
+  const source =
+    project.occurrences.find(
+      (cue) => cue.id === selectedId && cue.phraseId === phraseId,
+    ) ?? project.occurrences.find((cue) => cue.phraseId === phraseId);
+  if (!source) throw Error("Original lyric appearance not found.");
+  const next = addAppearance(project, phraseId, source.id, appearanceId);
+  return {
+    ...next,
+    occurrences: next.occurrences.map((cue) =>
+      cue.id === appearanceId
+        ? { ...cue, startMs: source.startMs, endMs: source.endMs }
+        : cue,
+    ),
+  };
 }

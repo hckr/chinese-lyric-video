@@ -1,3 +1,4 @@
+import { conflictingLyrics } from "./domain.ts";
 import * as ts from "typescript";
 import { z } from "zod";
 import { type Project, projectSchema } from "./domain.ts";
@@ -203,7 +204,6 @@ export function importLegacy(source: string, filename = "song.ts"): Project {
       })),
       review: "pending",
       segmentationApproved: false,
-      notes: "",
     })),
     occurrences: data.TIMELINE.map((o) => ({
       id: o.id,
@@ -214,6 +214,10 @@ export function importLegacy(source: string, filename = "song.ts"): Project {
   });
 }
 export function exportLegacy(project: Project): string {
+  if (conflictingLyrics(project).length)
+    throw Error(
+      "Resolve conflicting duplicate lyrics before TypeScript export.",
+    );
   const p = projectSchema.parse(project);
   const dump = (value: unknown) => JSON.stringify(value, null, 2);
   const timeline = p.occurrences.map((o) => ({

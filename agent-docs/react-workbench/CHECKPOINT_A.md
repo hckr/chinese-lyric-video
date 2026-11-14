@@ -1,5 +1,7 @@
 # Checkpoint A — implementation, review feedback and acceptance results
 
+Later progress: [checkpoint B — timing](CHECKPOINT_B.md). This report records checkpoint A and its historical remaining work.
+
 Updated 2026-11-13 against [TEST_PLAN.md](TEST_PLAN.md) and [WORD_SEGMENTATION.md](WORD_SEGMENTATION.md).
 
 The React file workflow is implemented. **The complete M0/M1 acceptance checklist is not fully green:** the current footage reference script uses server-side rendering rather than the user’s configured Chrome/client-side workflow and fails in its native tool, and the combined frontend/Python Pinyin requirement is only satisfied on the frontend. Timing (B), Python integration (C), renderer consolidation (D) and settings-to-renderer integration (E) remain pending. These results do not imply completion of those milestones.

@@ -105,4 +105,8 @@ The React development server (`npm run workbench`) automatically refreshes the b
 
 Filenames are read from Git with NUL separators and passed as argument arrays, so spaces in filenames work.
 
-Workbench render tests remove temporary bundles after each run, including failures. Screenshots, exported song fixtures and JSON reports remain available for review in `out/workbench` and `out/reference`. Run `npm run workbench:clean` when these are no longer needed; it removes those two test directories only, preserving rendered videos and thumbnails elsewhere in `out`. Reference captures must be regenerated after cleanup.
+Workbench render tests remove temporary bundles after each run, including failures. Screenshots, exported song fixtures and JSON reports remain available for review in `out/workbench` and `out/reference`. Run `npm run workbench:clean` when these are no longer needed; it removes `out/workbench`, `out/reference` and `output/playwright`, preserving rendered videos and thumbnails elsewhere in `out`. Reference captures must be regenerated after cleanup.
+
+The React workbench now includes local-audio timing: open **Timing**, load a soundtrack, and align individual lyric occurrences with exact milliseconds, tap capture, drag/trim and undo. See the [timing workflow](web/README.md#timing-workflow-checkpoint-b) and [checkpoint B results](agent-docs/react-workbench/CHECKPOINT_B.md).
+
+Additional Playwright review artifacts (traces, screenshots and downloaded fixtures) are ignored under `output/playwright/` and are also removed by `npm run workbench:clean`.
