@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
         ("NI3 HAO3", "NǏ HǍO"),
         ("m2", "ḿ"),
         ("n1", "n̄"),
+        ("xin1 yin4 ming2 qing2 zhong4 xing4", "xīn yìn míng qíng zhòng xìng"),
     ],
 )
 def test_pinyin(raw, expected):

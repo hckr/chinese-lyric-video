@@ -1,4 +1,6 @@
-# Direct dependencies verified against the package index on 2026-11-12.
+# Application dependencies verified on 2026-11-12; packaging baseline on 2026-11-14.
+# Modern Setuptools lets Jieba use its filesystem resource loader without pkg_resources.
+setuptools==84.2.1
 streamlit==1.67.0
 pydantic==2.14.3
 opencc-python-reimplemented==0.1.7

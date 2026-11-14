@@ -9,6 +9,8 @@ npm install
 python-src/venv/bin/streamlit run python-src/app.py
 ```
 
+The requirements pin Setuptools 84.2.1. Jieba uses its built-in filesystem resource loader with this packaging baseline, avoiding the deprecated `pkg_resources` API. Update existing virtualenvs with the same requirements install command above.
+
 With `n`, launch as `n exec auto python-src/venv/bin/streamlit run python-src/app.py` so the TypeScript song helper inherits the pinned Node runtime. The helper is executed directly by Node, with no runtime loader.
 
 The app starts without opening a browser window. Open the local URL printed in the terminal when you want to use it. This is configured in `python-src/.streamlit/config.toml` and works whether you launch from the repository root or `python-src`. Watchdog is included in the requirements for efficient file watching and reloads when code changes. Restart an already running Streamlit process after installing it.
