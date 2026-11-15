@@ -1,12 +1,13 @@
 # Acceptance tests and regression plan
 
-Apply the tests at the checkpoint they first become relevant. Use tests that fit the existing tooling; do not install software just for visual screenshots.
+This reference lists cross-feature acceptance checks and known issues. Feature requirements belong to [segmentation](WORD_SEGMENTATION.md), [timing](TIMING_EDITOR.md), [grouping](features/lyrics-grouping/SPEC.md), [import enhancements](features/lyrics-import-enhancements/SPEC.md), [assisted timing](ASSISTED_TIMING.md) and [Remotion](REMOTION_REFACTOR.md). Checked items below record historical passes, not a fresh run on the current checkout. When you work on a feature, run its remaining checks before calling it complete.
 
 ## M0 — baseline / preservation
 
-- [x] `git status --short`, `git diff`, staged changes and untracked Streamlit/Python files examined and documented.
+- [x] Existing user work preserved; inspect current Git changes before implementation.
 - [x] Current song files and all registered Remotion composition IDs, FPS, durations, dimensions, aspect ratios, audio origins, backgrounds, thumbnails inventoried.
-- [ ] Reference frames or still captures saved for at least one **music-video**, **image + visualizer** and each **thumbnail family** at representative timestamps; originals retained.
+- [x] Initial stills captured for image+visualizer and all three thumbnail families.
+- [ ] Representative intro/active/repeat/long-line/outro references completed for all video families through a working capture path and retained before D extraction.
 - [x] Existing CLI Remotion render and Python tests documented; no local user work discarded.
 
 ## M1 — editor/import/export
@@ -14,31 +15,36 @@ Apply the tests at the checkpoint they first become relevant. Use tests that fit
 - [x] Import at least two real existing song TS modules; support consts/references/spreads/`as const`/Hanzi keys/known getter; unsupported expressions fail visibly without mutating editor state.
 - [x] Export/re-import preserving normalized metadata, occurrence IDs/order/keys/times, translations, Pinyin, multiline glosses, empty-Hanzi grammar tokens.
 - [x] UI can **merge adjacent lexical tokens** and **split a lexical token** at a chosen Hanzi boundary, with editable Pinyin/gloss, note preservation, review invalidation and undo/redo. Verify export/reimport; see `WORD_SEGMENTATION.md`.
-- [ ] A single `漂亮` word uses `piàoliang` in editor, Python output and TS export (never `piào liang`); distinct tokens appear separated in full-line Pinyin (`wǒ xǐhuan`); apostrophes (`nǚ'ér`), accents and contextual-note tokens remain intact. Imported manual spacing errors are flagged without silent rewrites.
+- [x] Frontend validation, explicit correction and TS round trips exercise the [Pinyin contract](WORD_SEGMENTATION.md).
+- [ ] Python generation/postprocessing/response validation enforces that same contract for new output.
 - [x] Split/merge changes do not alter phrase translation, repeated occurrences, timestamps or unrelated word tokens.
 - [x] Repeat chorus appears N times in timeline but one unique phrase is edited; modifying the phrase updates every displayed instance.
 - [x] Raw lyrics with repeated line and section heading preserve occurrence order, report unassigned timings.
-- [ ] Legacy TS output typechecks against actual Remotion song consumers; old renderer can render a manually copied file.
+- [x] Both exported songs typechecked against all four actual video consumer types.
+- [x] Generated/edited TS rendered through unchanged LyricVideo2 by temporary bundle substitution.
+- [ ] Representative footage consumer/render compatibility verified through the owner’s working Chrome/client-side path; complete family coverage remains open.
 
 ## M2 — timing
 
 - [x] Import `startMs=12345`, `endMs=12789`; exact values survive save/reload/export/re-import (unless user edits them).
 - [x] Select the second of three occurrences referring to one phrase; change its start/end; no other occurrence changes.
 - [x] Load local audio; playhead uses actual media currentTime, pauses/stops correctly, scrubs and seeks to the requested media position in the browser tests.
-- [x] Press `S`/`E` at known audio times; exported milliseconds match selected position within appropriate media clock precision.
+- [x] Capture at known audio times exports matching milliseconds within media clock precision.
 - [x] Drag/trim and exact numeric edit work; undo/redo works; invalid `end<=start` rejected with intelligible feedback.
 - [x] User-reviewed timing policy: normal gaps are allowed without warnings; imported overlaps are flagged without changing data. Draft overlaps are allowed both during previews and after final edits, with warnings; unsynchronized exports warn.
 - [x] Timeline not flattened to unique phrases; keep consecutive and repeated occurrences.
-- [x] Keyboard shortcuts do not activate while editing text; keyboard timing adjustments are covered by browser tests.
+- [x] Existing keyboard interactions tested against the [shared interaction rules](UI_SPEC.md#layout--implementation).
 
-The user accepted manual testing as sufficient on 2026-11-14. M2 is accepted within the executed checks above; actual touch interaction and perceptual synchronization quality have not been independently verified. Evidence and limits: [CHECKPOINT_B.md](CHECKPOINT_B.md). M0/M1 results and remaining partial gates are detailed in [CHECKPOINT_A.md](CHECKPOINT_A.md); the open footage-reference and Python generation gates are not closed by M2 acceptance.
+- [ ] Independently test touch interaction and perceptual lyric/audio synchronization when device validation is undertaken.
+
+The owner accepted B manual testing on 2026-11-14. This does not close M0/M1 carry-forwards. Grouping regression coverage is linked from its feature specification.
 
 ## M3 — Python AI
 
 - [ ] Existing local Python unit tests retained; no duplicate TS reimplementation of established NLP/dictionary logic.
 - [ ] Generate unique-phrase draft, inspect dictionary entries and prompt provenance, accept/revise without losing manual modifications.
 - [ ] Failed/canceled/retried AI request preserves editor state; no unexpected automatic paid calls; API keys not present in browser bundle.
-- [ ] LLM prompts/postprocessing output contiguous Pinyin **per lexical word** and validate the resulting segmentation; regenerated drafts never silently overwrite manually approved split/merge edits.
+- [ ] AI output and proposal acceptance satisfy the [segmentation/Pinyin contract](WORD_SEGMENTATION.md).
 - [ ] Repeated phrase reuses the same translation; individual occurrence timing survives translation edits.
 
 ## M4 — Remotion consolidation
@@ -65,3 +71,8 @@ Always report real executed checks separately from planned checks. Compare deter
 ## Future assisted timing experiment
 
 Not part of the current checkpoint B gate. Follow [ASSISTED_TIMING.md](ASSISTED_TIMING.md): compare character matching, tone-free syllable matching and anchored/approximate alignment; assess repeated sections, uncertainty and correction-time savings. Preserve all manual text/segmentation/timing until explicit proposal acceptance, with cancellation and undo. No automatic uploads, downloads or paid inference on ordinary edits.
+
+## Known issues
+
+- **Footage capture:** the server-side reference helper aborts in bundled ffprobe/libavdevice because macOS AVFoundation lacks `_AVCaptureDeviceTypeContinuityCamera`. Use the owner’s working Chrome/client-side path for the outstanding M0/M1 footage checks.
+- **Root static checks:** unused `useId` imports in two footage components and missing TypeScript JSON-module configuration for Lotties were reported. Recheck these before planning repairs; static-check failures alone do not establish a playback/render failure.

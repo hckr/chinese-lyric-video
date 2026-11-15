@@ -1,49 +1,37 @@
-# Timing editor — UX and implementation contract
+# Timing editor — behavior and interaction contract
 
-## What problem it solves
+## Purpose and status
 
-Today timestamps are hand-edited in a song `.ts`, then verified through repeated Remotion preview playback. Build a **musically usable timing workspace** in React, backed by the **same occurrences exported to `TIMELINE`**. A repeated chorus phrase can have one translation but different start/end pairs for each occurrence.
+The React Timing workspace edits each lyric occurrence independently and exports those times through legacy `TIMELINE`. Repeated phrases share translations, not timestamps. Audio playback is required to synchronize and check timestamps; the current local audio/video picker is one way to select that source, not a permanent navigation requirement.
 
-## Layout
+Manual timing was accepted by the owner on 2026-11-14. Source inspection confirms the behavior below; touch operation and perceptual synchronization were not independently verified. Outstanding checks are in [TEST_PLAN.md](TEST_PLAN.md). Operating steps and existing optional shortcuts are in [web/README.md](../../web/README.md#timing-workflow-checkpoint-b).
 
-- **Top:** transport controls (play/pause, seek, current time/duration), audio load/reload, playback speed, loop selection and a labelled seek slider. Start/end capture uses S/E keyboard shortcuts.
-- **Left:** chronological occurrence/group list (Hanzi, start/end, status), not deduplicated phrase list. Clicking selects and seeks; preserve all repeats.
-- **Center:** zoomable timeline with horizontal waveform, ruler and labelled lyric blocks, playhead and draggable start/end handles. A light overview/minimap may help long songs.
-- **Right inspector:** selected occurrence and its shared phrase, exact integer `startMs` and `endMs` editable directly, a fixed-height lyric preview, equal-width Previous/Next/Translate navigation, exact Apply timing fields and aligned Remove lyric and Reset timing actions. Flag missing/invalid/conflicting timing; normal gaps are not warnings.
-- **Preview:** optional small synchronized lyric frame (mock first, actual Remotion Player later). Avoid committing to full-fledged DAW features now.
+## Data and playback
 
-## Interaction details
+- Preserve imported IDs, ordering and exact integer milliseconds without quantization. Raw occurrences start with null boundaries; draft TS exports use warned zero placeholders. Assigned intervals must have a nonnegative start and later end within known media duration. Applying invalid field values shows an error and leaves saved occurrence times unchanged; the entered values remain visible for correction.
+- Timing edits affect only the chosen occurrence, without changing phrase text, translation or review state. Preserve deliberate gaps. Overlaps produce warnings; neighboring occurrences keep their timings.
+- One native media element owns playback. Its `currentTime` is authoritative; animation frames refresh the playhead rather than supplying a second clock. Playback pauses when leaving Timing. Local media is not uploaded.
+- Waveform analysis uses local Web Audio decoding and at most 1,600 peak bins. Files over 32 MiB or eight minutes, and decode failures, retain playback and ruler editing without analysis. Unsupported media reports an error while retaining project edits.
+- Session object URLs are revoked on replacement/unmount. JSON saves lightweight audio metadata and timing baselines, not media bytes, absolute paths or URLs; reopening requires relinking. Audio selection stays independent of undo/redo history.
 
-1. Import `.ts` → keep all existing timestamps and occurrences unchanged; load audio/video separately through File picker. For raw lyrics create **unassigned** times (`null` in project JSON; explicit error/warning on `.ts` export), not plausible timings.
-2. Click ruler/waveform to seek. Drag a block to shift start and end together; drag left/right edges to trim. Clamp to `[0, mediaDuration]` when duration is known; prevent negative/zero-length cues. **Do not silently move neighboring cues**.
-3. Use S/E at the _current audio position_ during playback (tap-to-sync). Support keyboard shortcuts when not focused in text inputs: `Space` play/pause, `S` set start, `E` set end, `Left/Right` seek or selected-boundary nudge with a deliberate modifier, `[` / `]` go to prior/next cue; document keys in UI. Ensure shortcuts don't hijack typing.
-4. Use numeric field inputs with either `mm:ss.mmm` or raw millisecond editing; show both. Adjust focused cue bodies/handles by 10/100ms with the keyboard. Include undo/redo for timing edits and a reset-to-imported snapshot.
-5. Waveform should be computed from **local audio** with Web Audio decoding and downsampled peak arrays; don't send audio to a third party. For long files, guard against high memory use and provide a flat timeline if analysis fails. The illustrative HTML reference has a synthetic waveform and is not proof of waveform analysis.
-6. Use `<audio>` (or a single video media element) as the playback source and `media.currentTime` as the clock. Refresh playhead with `requestAnimationFrame`, but never use animation frame elapsed time as audio truth. Use object URLs only while the file is loaded, revoke safely on replacement/unmount. On reload, prompt to reselect unavailable local files rather than showing fake playback.
-7. Zoom around cursor/selection, keep horizontal scroll position stable, and use appropriate pointer capture for drag. Mouse, touch and keyboard should all work. Allow ordinary gaps without warnings. Imported overlaps remain visible without silent edits; new draft overlaps are allowed with warnings. Pointer previews freeze their rows until a committed drop compacts the layout. Snapping options: neighboring edges (default) or off. No frame-rate snapping.
-8. Timing edits update only the selected **occurrence**, never the shared phrase dictionary or its review status. Translation edits still update all occurrences using the phrase.
-9. Save project JSON and export TS: match IDs/order/`lyricKey` and every `startMs`/`endMs` exactly (unless deliberately changed). Include unsynchronized warnings before exporting. Avoid rounding drift: authored milliseconds stay integer; frame conversion is a renderer concern.
+## Selection, editing and viewport
 
-## MVP vs later
+The workspace has playback controls, a chronological occurrence/group sidebar, waveform/ruler and selected-occurrence inspector. The inspector provides start/end fields in integer milliseconds with Apply timing, a fixed-height text preview, equal-width Previous/Next/Translate navigation, Remove lyric and Reset timing actions. The text preview is not a Remotion render.
 
-**Timing MVP** (after file-based editing): local audio file, waveform (or degraded ruler if analysis fails), seek/play/pause, occurrence blocks, drag/trim, exact inputs, start/end capture at playhead, undo, export and validation. Do not require Python AI or the Remotion refactor.
+Selecting a sidebar row or timeline block seeks to its start whether paused or playing, reveals it in both timeline axes and scrolls the sidebar. Translate opens the shared phrase editor. Clicking the ruler/waveform seeks; dragging a body shifts both boundaries while an edge trims one. Media bounds and positive duration remain enforced. Each drag commits one undo entry. Reset is undoable and restores that occurrence's saved timing snapshot. On import or load, a project without a snapshot copies its initial occurrence timings, including null boundaries for raw lyrics. Using accepted automated timing as the reset target is [proposed work](../ROADMAP.md#triage--captured-but-not-prioritized).
 
-**Later:** actual Remotion Player synced with audio, automatic/assisted alignment, word-level timing, beat detection, multiple audio channels, fine-grained video timing, per-section markers. These are _not_ prerequisites.
+Zoom defaults to 8×, supports 1× through 32× and increases ruler density. With a soundtrack loaded, zoom uses the playhead position as its reference; otherwise it uses the selected occurrence’s start time (or zero if unassigned). Neighbor-edge snapping defaults on with a 100 ms threshold; Off remains available.
 
-## Edge cases and tests
+While paused, background hand-drag pans; clicking without dragging seeks. During playback, follow scrolling moves the playhead from 15/16 to 1/16 of the visible width, clamped at song boundaries. Programmatic selection/zoom follow scroll smoothly; hand-panning is immediate. Pausing cancels follow animation.
 
-- Imported timestamps such as `12345` and `12789` remain exact across import/export/re-import. Never auto-quantize to `30fps` grid when loading.
-- The same `lyricKey` occurs at 10s and 45s: editing second occurrence does not change first; editing translation changes both.
-- Select at 23.000s, press `S`, select at 24.750s, press `E`: interval is exactly `[23000, 24750)` on export.
-- Prevent `endMs <= startMs`, negative values, past-duration edits when known, and invalid numeric inputs; preserve the last valid edit and show an error.
-- Preserve imported overlaps as flagged data; allow overlapping draft edits/drops and show non-blocking warnings.
-- Undo/redo survives dragging one occurrence and then editing another; never changes unrelated phrase text.
-- Audio/video files can be unplayable, unsupported or missing; present actionable error and retain project data.
-- At 30fps and 60fps, check that frame rounding matches actual legacy renderer. Verify end-of-song and intro/outro boundary behavior.
-- No file mutation occurs outside explicit user export.
+## Occurrences and groups
 
-## Current review decisions and future scope
+Timing → Repeat inserts a shared-translation occurrence after its source with copied timing, allowing an expected overlap. Removing a phrase's last occurrence requires confirmation and removes the phrase; undo restores the occurrence and shared phrase data.
 
-The current UI defaults to 8× zoom and neighbor snapping. It uses hand-drag background panning while paused and smooth playback follow at 15/16 → 1/16. The extra capture/nudge panel is removed; exact fields and keyboard controls remain. See [the operational workflow](../../web/README.md#timing-workflow-checkpoint-b) for the consolidated UI contract. The user accepted manual testing on 2026-11-14; final verification is recorded in CHECKPOINT_B.md.
+Grouping is defined in [the grouping specification](features/lyrics-grouping/SPEC.md).
 
-Assisted known-lyrics/audio alignment, including the user's tone-free Pinyin hypothesis, is a future experiment under [ASSISTED_TIMING.md](ASSISTED_TIMING.md), not delivered by this timing milestone.
+## Executable references and open proposals
+
+[timing.ts](../../web/src/timing.ts), [useLocalAudio.ts](../../web/src/useLocalAudio.ts) and [waveform.ts](../../web/src/waveform.ts) define timing, media and waveform operations. [Timing domain tests](../../web/tests/timing.test.ts) and [browser timing acceptance](../../web/tests/timing-browser.ts) cover editing, audio clock/waveform, history/reset, relinking and exports. Renderer frame conversion and incomplete reference-render coverage belong to [REMOTION_REFACTOR.md](REMOTION_REFACTOR.md).
+
+Cursor-anchored zoom, an overview/minimap and a resizable/collapsible inspector remain undelivered proposals; they do not reopen accepted B. Actual Remotion Player synchronization is E work. [Assisted known-lyrics alignment](ASSISTED_TIMING.md) is a separate experiment; word-level timing, reliable beat detection, multiple audio channels, fine-grained video timing and section markers remain future possibilities. Manual timing does not require Python AI or the Remotion refactor.

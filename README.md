@@ -4,7 +4,7 @@ Local tools (Node 22.20.0+; `.n-node-version` pins the verified version). With `
 - **Python / Streamlit workbench:** retained for translation generation and review. [Setup and usage](python-src/README.md); dependencies are in `python-src/requirements.txt`.
 - **Remotion Studio:** `npm run dev`. Existing compositions and source songs remain unchanged.
 
-The React app currently implements checkpoint A. Timing, Python integration and renderer/preset integration remain later milestones in [the merged roadmap](agent-docs/ROADMAP.md).
+The React app supports file editing, manual timing/grouping and local Python draft/dictionary helpers. AI generation/revision and renderer/preset integration remain unfinished in [the active roadmap](agent-docs/ROADMAP.md).
 
 Save a frame from a video:
 
@@ -107,6 +107,6 @@ Filenames are read from Git with NUL separators and passed as argument arrays, s
 
 Workbench render tests remove temporary bundles after each run, including failures. Screenshots, exported song fixtures and JSON reports remain available for review in `out/workbench` and `out/reference`. Run `npm run workbench:clean` when these are no longer needed; it removes `out/workbench`, `out/reference` and `output/playwright`, preserving rendered videos and thumbnails elsewhere in `out`. Reference captures must be regenerated after cleanup.
 
-The React workbench now includes local-audio timing: open **Timing**, load a soundtrack, and align individual lyric occurrences with exact milliseconds, tap capture, drag/trim and undo. See the [timing workflow](web/README.md#timing-workflow-checkpoint-b) and [checkpoint B results](agent-docs/react-workbench/CHECKPOINT_B.md).
+The React workbench now includes local-audio timing: open **Timing**, load a soundtrack, and align individual lyric occurrences with exact milliseconds, tap capture, drag/trim and undo. See the [timing workflow](web/README.md#timing-workflow-checkpoint-b) and [timing contract](agent-docs/react-workbench/TIMING_EDITOR.md).
 
 Additional Playwright review artifacts (traces, screenshots and downloaded fixtures) are ignored under `output/playwright/` and are also removed by `npm run workbench:clean`.

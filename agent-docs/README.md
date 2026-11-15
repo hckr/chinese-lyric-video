@@ -17,20 +17,13 @@ This folder is primarily working context for agents. Keep it discoverable withou
 | Remotion refactor requirements                                    | [react-workbench/REMOTION_REFACTOR.md](react-workbench/REMOTION_REFACTOR.md)                                               |
 | Acceptance gates and remaining unchecked items                    | [react-workbench/TEST_PLAN.md](react-workbench/TEST_PLAN.md)                                                               |
 
-## Historic or transitional material
+## Authority
 
-The following documents are retained **temporarily** to prevent lost requirements while they are reconciled. They are **not authoritative** for current priority or instructions:
-
-- `react-workbench/ROADMAP.proposed.md`, `react-workbench/CODEX_TASK.md`, `react-workbench/CODEX_PROMPT.md`: initial React migration proposal and kickoff instructions; superseded as a work queue by `ROADMAP.md`.
-- `react-workbench/CHECKPOINT_A.md`, `react-workbench/CHECKPOINT_B.md`: reports of implementation and verification _at those times_, not live Git-status reports.
-- `react-workbench/LOCAL_AUDIT.md`: historical local repository audit; re-check actual code before relying on details.
-- `react-workbench/DECISIONS.md`: original settled decisions and investigation questions; some may now be answered.
-- `react-workbench/features/lyrics-grouping/IMPLEMENTATION.md`: historical implementation/verification details, to reconcile into the living feature reference before eventual removal.
-
-**Cleanup policy:** move useful unresolved constraints/decisions into a relevant living reference _before_ proposing deletion. Don't copy whole logs into other documents. Git retains the originals after reviewed removal.
+[ROADMAP.md](ROADMAP.md) owns priorities and completion status. Architecture and domain references own shared contracts; feature specifications own feature requirements. [TEST_PLAN.md](react-workbench/TEST_PLAN.md) owns cross-feature acceptance checks and known issues. READMEs provide navigation and operating instructions. Link to the authoritative definition instead of restating it.
 
 ## Working rules
 
+- Express verifiable contracts in schemas, domain functions and automated tests. Documentation should explain product decisions and boundaries, and link to executable definitions rather than repeat their assertions.
 - A proposed feature can have one reference document before implementation and keep that same document afterward, updated to reflect current behavior. Tiny changes usually belong in an existing reference, not a new file.
 - Assets and mockups are reference material, not proof of current implementation. Preserve them unless their removal is separately approved.
 - New ideas and bugs go into the roadmap's **Triage** section automatically; only the owner sets implementation priority.

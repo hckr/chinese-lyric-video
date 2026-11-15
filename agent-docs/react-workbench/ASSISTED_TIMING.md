@@ -1,6 +1,6 @@
 # Future experiment — automatic lyric alignment and timing proposals
 
-Status: **proposed experiment, not implemented** or required for checkpoint B. The owner would like to investigate this **before checkpoints C and D**, if the existing Python code allows a useful standalone spike. Check any API-bridge dependencies before committing to an implementation sequence; this is not approval to install models or execute inference. A prior Whisper attempt had poor results. The objective remains to reduce repetitive manual timing for a song whose lyrics are already supplied.
+Status: **proposed experiment, not implemented** or required for checkpoint B. Scheduling and dependencies are tracked in [the roadmap](../ROADMAP.md). Check any API-bridge dependencies before committing to an implementation sequence; this is not approval to install models or execute inference. A prior Whisper attempt had poor results. The objective remains to reduce repetitive manual timing for a song whose lyrics are already supplied.
 
 ## Working hypothesis
 
@@ -19,7 +19,7 @@ Separate two tasks:
 4. Align expected and observed syllable sequences in order with explicit insertion/deletion/substitution costs and candidate pronunciation alternatives. Investigate weighted approximate matching and time-constrained sequence alignment; keep exact tone-free matching as a baseline. Missing/extra sung syllables, ad-libs and pauses must be allowed without shifting every later lyric.
 5. Support manual time anchors and restrict re-alignment to a selected region. Repeated choruses must retain their ordered identities instead of all matching the first similar passage. Evaluate instrumental breaks, intro/outro, held notes, fast passages, tempo changes and mixed-language lines explicitly. Never fabricate precise boundaries by evenly distributing words across a coarse chunk without identifying them as low-confidence estimates.
 6. Return proposed integer-millisecond start/end times keyed by stable appearance ID, plus confidence/reasons, unresolved regions, source/model/version and parameters. Display proposals beside the current timings. Let the user audition, adjust, accept/reject individual cues or a selected range, and undo acceptance as a batch. Uncertain items remain pending.
-7. Preserve existing timestamps until explicit acceptance. Validate accepted proposals against the timing editor's duration and non-overlap rules. Do not replace lyric text, translations, manual Pinyin, approved segmentation, IDs, repetition order or the original-timing reset baseline.
+7. Preserve existing timestamps until explicit acceptance. Validate accepted proposals against the [timing contract](TIMING_EDITOR.md): enforce duration/bounds, allow overlaps with non-blocking warnings. Do not replace lyric text, translations, manual Pinyin, approved segmentation, IDs, repetition order or the original-timing reset baseline.
 
 ## Boundaries
 

@@ -1,8 +1,8 @@
 # Import view: live lyric grouping and project replacement protection
 
 **Area:** React workbench → Import lyrics
-**Status:** Feature proposal, independent of `features/lyrics-grouping/SPEC.md`
-**Priority:** Replacement protection first; grouping after the grouping data model is available. AI-assisted inference can follow the AI translation integration.
+**Status:** Proposal. Replacement protection and live structure preview are not implemented. Fixed-membership groups already exist; reuse [their contract](../lyrics-grouping/SPEC.md) and the [project schema](../../../../web/src/domain.ts).
+**Scheduling:** [ROADMAP.md](../../../ROADMAP.md).
 
 ## Objective
 
@@ -102,6 +102,6 @@ Eventually the import view may accept a YouTube URL to propose **title**, **arti
 
 ## Scope and dependencies
 
-Implement **A** independently. Implement **B1** when the existing group schema/import pipeline supports it. **B2** is a later enhancement contingent on the AI translation integration. **D** is explicitly deferred.
+Implement **A** independently. **B1** can reuse the implemented group schema, but source-to-occurrence mapping and preview/import integration remain unfinished. **B2** is a later enhancement contingent on the AI translation integration. **D** is explicitly deferred.
 
 Inspect the current local workbench code first: existing import parsers, project state, autosave/export and grouping models take precedence over assumptions from public repository versions. Avoid unrelated refactors and do not alter the timing UI to implement this import-view feature.
