@@ -94,8 +94,9 @@ small {
 }
 .brand small {
   display: block;
-  font-size: 9px;
-  letter-spacing: 1px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
 }
 nav {
   display: grid;

@@ -13,6 +13,10 @@
 - Prefer coherent, independently verifiable increments over a giant diff. At agreed review boundaries, summarize changes, tests actually run, limitations and what's next. Present changes for user review **before committing**. Never create a commit without explicit approval; never stage unrelated user changes.
 - Preserve user work. No destructive Git operations, unrequested deletion/movement of sources or assets, or new dependencies, browser/runtime/system software without explicit approval. Avoid changes outside the task's scope.
 
+## Application versioning
+
+- Follow the [workbench versioning convention](web/README.md#application-versioning), the authoritative reference for package metadata, version bumps and release scope.
+
 ## Keep the backlog and documentation current
 
 - Capture actionable suggestions, bugs, follow-ups and deferred requirements in `agent-docs/ROADMAP.md` as **unprioritized** work if not implemented in the current task. Avoid duplicates; link to an existing detailed document where possible. Casual ideas are not authorization to implement them.

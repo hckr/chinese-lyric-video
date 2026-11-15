@@ -1,3 +1,4 @@
+import { version } from "../../package.json";
 import { RepeatLyricDialog } from "./RepeatLyricDialog";
 import { orderGroupedProject } from "./lyric-groups.ts";
 import { DictionaryLookup } from "./DictionaryLookup";
@@ -433,7 +434,10 @@ export function App() {
     <div className="app">
       <aside className="navigation">
         <div className="brand">
-          字 <span>Lyric Workbench</span>
+          字{" "}
+          <span>
+            Lyric Workbench<small>v{version}</small>
+          </span>
         </div>
         <nav aria-label="Workspaces">
           {[

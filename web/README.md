@@ -38,6 +38,26 @@ The JSON schema remains version 1 with optional validated `audio` and `timingBas
 
 Beat detection is deferred after the fixed-tempo experiment proved unreliable on real music. Future assisted alignment against supplied lyrics is planned in [ASSISTED_TIMING.md](../agent-docs/react-workbench/ASSISTED_TIMING.md).
 
+## Application versioning
+
+The root `package.json` version is the single source of truth, starting at
+`0.1.0`. The React navigation imports it directly and displays `v` followed by
+that version beneath “Lyric Workbench” across all workspaces, including before
+import. Keep the top-level and root-package versions in `package-lock.json`
+synchronized when changing it.
+
+- Use Conventional Commits for commit messages: `type(scope): description`
+  (scope optional). Use `feat` for features, `fix` for bug fixes, and `docs`,
+  `test` or `refactor` for those changes. Version bumps follow the
+  accepted-task rules below; commit types do not trigger automatic releases.
+- Accepted feature: increment minor and reset patch (`0.1.1 → 0.2.0`).
+- Accepted bug fix or small improvement: increment patch (`0.2.0 → 0.2.1`).
+- Documentation, tests and internal refactoring alone: no bump.
+- Include at most one bump per accepted task in its reviewable changes. Mixed
+  feature/fix tasks receive a minor bump.
+- Major-version changes require an explicit decision. Do not add a release
+  process, publishing, tags or automation unless explicitly requested.
+
 ## Verification
 
 ```sh
