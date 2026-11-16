@@ -38,6 +38,7 @@
     "workbench:build": "node web/dev.ts --build",
     "workbench:check": "tsc -p web/tsconfig.json && tsc -p web/tsconfig.tools.json",
     "workbench:test": "node web/tests/run.ts",
+    "workbench:seatbelt:build": "sh scripts/chrome-seatbelt/build.sh",
     "workbench:test:browser": "node web/tests/browser.ts",
     "workbench:test:reference": "node web/tests/reference.ts",
     "workbench:test:export": "node web/tests/render-export.ts",

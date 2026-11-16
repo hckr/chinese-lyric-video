@@ -1,3 +1,15 @@
 #!/bin/sh
+
+# Codex Seatbelt cannot execute Git through the symlink in Git's helper path.
+# Remove that directory only when Git prepended it inside this sandbox.
+if [ "${CODEX_SANDBOX:-}" = seatbelt ] && [ -n "${GIT_EXEC_PATH:-}" ]; then
+  case "$PATH" in
+    "$GIT_EXEC_PATH":*)
+      PATH=${PATH#*:}
+      export PATH
+      ;;
+  esac
+fi
+
 # Check index contents without formatting files or re-staging partial edits.
 exec node scripts/check-staged-format.mts

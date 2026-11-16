@@ -21,8 +21,9 @@ python-src/venv/
 # React workbench build output
 web/dist/
 
-# Python formatter cache
+# Local tooling caches and generated artifacts
 .ruff_cache/
+/.cache
 
 # Local Playwright traces, screenshots and downloaded test fixtures
 output/playwright/

@@ -1,3 +1,4 @@
+import { browserExecutable } from "./browser-executable.ts";
 import { lyricsGrouping } from "./lyrics-grouping.ts";
 import { importLyrics } from "../import-api.ts";
 import { build } from "esbuild";
@@ -22,11 +23,12 @@ declare global {
   }
 }
 
-const executable =
-  process.env.WORKBENCH_BROWSER ||
-  path.resolve(
-    "node_modules/.remotion/chrome-headless-shell/mac-x64/chrome-headless-shell-mac-x64/chrome-headless-shell",
-  );
+const executable = browserExecutable(
+  process.platform,
+  process.arch,
+  process.env,
+);
+
 // Build in memory so an open dev server cannot replace test assets with its
 // live-reload bundle while this suite runs.
 const built = await build({
