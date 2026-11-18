@@ -39,6 +39,27 @@ This reference lists cross-feature acceptance checks and known issues. Feature r
 
 The owner accepted B manual testing on 2026-11-14. This does not close M0/M1 carry-forwards. Grouping regression coverage is linked from its feature specification.
 
+## M2 extension — Automatic Timing & Review (approved requirements; not implemented)
+
+The [feature SPEC §11](features/automatic-timing-review/SPEC.md#11-acceptance-scenarios-and-tests)
+owns full scenarios; its §13 records integration constraints, not completed implementation.
+Historical engine/UI passes do not check off the new contract. No tests were run
+for the 2026-11-18 documentation-only reconciliation.
+
+- [ ] Direct atomic generation in the existing timeline; remove global Preview/Apply and ordinary range/window setup while preserving manual editing and progress/cancel/error handling.
+- [ ] Independent per-occurrence review and automatic/last-reviewed reset targets; metadata-aware legacy migration without a version bump, all timing mutations, no-op edits, linked/group moves, repeat/copy and undo/redo.
+- [ ] Compact counts/status, contextual reset labels, wrapped auto-advance and secondary bulk review without conflating phrase content review.
+- [ ] Individual detected-candidate listen/add, duplicate-click prevention, origins, stable IDs, persistence and distinct handling of unresolved imported rows/weak candidates.
+- [ ] Pending detected/weak candidates survive reopen with stable IDs and normalized-audio hashes; matching sources reuse normally, mismatches require explicit reuse/regeneration, unknown hash is not a match. Media replacement never deletes data; no audio/full transcript stored.
+- [ ] Regenerated exact matches retain Reviewed, changed authorized replacements need review, and weak/no-result rows preserve current values until explicit per-row use. Latest automatic action retains reviewed reset/undo; copies start unreviewed with no inherited reset references.
+- [ ] Bounded Play lyric/one loop control, pre/post-roll and cancellation on context changes; preserve native global clock/playback and untimed manual controls.
+- [ ] Accessible gear/summary and validated project preferences, old JSON/defaults, browser recovery and unchanged legacy TS export contract.
+- [ ] Preserve-reviewed/default versus explicitly confirmed replace-all regeneration, reviewed snapshot protection, source/revision staleness and missing-result preservation.
+- [ ] Full synthetic regressions plus raw-lyrics → audio → generation → review/save/reload owner walkthrough; cached-model smoke and final whole-scope owner acceptance.
+
+Workflow-header navigation has [separate acceptance criteria](features/workflow-navigation/SPEC.md#acceptance-criteria)
+and is not required to close this Timing extension.
+
 ## M3 — Python AI
 
 - [ ] Existing local Python unit tests retained; no duplicate TS reimplementation of established NLP/dictionary logic.

@@ -36,6 +36,18 @@ Python projects use `version: 1`, phrase text, separate vocabulary/translation s
 
 Browser files use session-local File/Blob object URLs and require relinking after reload. Remotion currently resolves named assets with `staticFile` from `public/`; project downloads do not bundle those assets. Asset persistence, preview resolution and a possible local asset service remain future work, not guarantees that arbitrary filesystem paths will resolve.
 
+The [approved Timing review plan](features/automatic-timing-review/SPEC.md#14-completion-plan--documentation-commit-before-implementation)
+adds independent occurrence review, automatic/reviewed snapshots, pending detected
+and weak candidates, source-audio hashes and portable preferences. These are not
+implemented yet. Keep `schemaVersion: 1` without a new version bump: absence of the
+new review metadata triggers legacy migration, while explicit new Needs review
+metadata must survive saves. Valid legacy current times become reviewed snapshots;
+retire old `timingBaseline` as a competing reset target. Older strict builds may
+reject added fields despite the unchanged marker; legacy TS stays unchanged. Save
+minimal candidate/run context and normalized-audio identity, not media bytes or
+full transcripts. Matching hashes permit candidate reuse; mismatches require an
+explicit choice, and unknown identity is not claimed as matching.
+
 ## Word segmentation and Pinyin invariant
 
 [WORD_SEGMENTATION.md](WORD_SEGMENTATION.md) is authoritative for word segmentation, Pinyin spelling/tones, preservation rules and implementation/test references. `Phrase.words` is an ordered, editable segmentation shared by all occurrences of that phrase.
@@ -70,7 +82,11 @@ Three levels, in precedence order: **built-in safe defaults < named video preset
 - `/api/import-lyrics` invokes `workbench.react_ingest` for OpenCC/Jieba/CC-CEDICT word drafts; sentence EN/PL translations remain manual.
 - `/api/dictionary` invokes `workbench.react_dictionary` on demand. Results are memory-cached in React, attributed to CC-CEDICT/MDBG and excluded from saved songs/projects.
 
-These bounded subprocess routes reject cross-origin browser requests, preserve the open project on failure and do not perform AI generation. A production/static bundle does not supply these development-server routes. Keep dictionary senses distinct from future model-inferred contextual meanings; never claim a sense match without identifying one.
+These bounded subprocess routes reject cross-origin browser requests, preserve the open project on failure and do not perform AI generation. A standalone static bundle does not supply these development-server routes. Keep dictionary senses distinct from future model-inferred contextual meanings; never claim a sense match without identifying one.
+
+Automatic timing is planned separately in [Automatic Timing & Review](features/automatic-timing-review/SPEC.md).
+Its Python worker and local API are not part of the committed baseline; the
+implemented routes above cover raw lyric drafts and dictionary lookup only.
 
 ## Proposed AI interface and backend reuse
 
@@ -85,7 +101,7 @@ The following routes are proposals, not implemented APIs:
 
 Generate/revise per unique phrase, reusing results across occurrences. Show dictionary evidence and store provider/model/prompt provenance. Acceptance or replacement must be explicit and undoable, retain occurrence timing and phrase IDs, and preserve manual changes on failure/cancellation/retry. Apply the [segmentation contract](WORD_SEGMENTATION.md) to backend output and proposal acceptance. C is complete when a draft can be generated, corrected, saved and exported without losing those protections.
 
-Never send credentials to React. Keep generated suggestions separate from accepted edits, support cancellation, retries and invalidation. Backend not required for audio timing or safe local file import/export. Any paid API call must be deliberate, especially while developing.
+Never send credentials to React. Keep generated suggestions separate from accepted edits, support cancellation, retries and invalidation. Manual browser timing and compatible local file import/export do not require a provider backend; raw dictionary import uses local Python routes, and planned automatic timing will require its own local route. Any paid API call must be deliberate, especially while developing.
 
 ## Preservation and deferred scope
 

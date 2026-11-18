@@ -17,6 +17,11 @@
 
 - Follow the [workbench versioning convention](web/README.md#application-versioning), the authoritative reference for package metadata, version bumps and release scope.
 
+## Python environment
+
+- Dependency installation is manual: provide the owner with exact installation commands; do not run package installers yourself, even when a dependency is approved for the project.
+- Run Python commands and helper scripts with `python-src/venv/bin/python` from the repository root (or the equivalent relative path from another directory), including one-off editing scripts. Use `python-src/venv/bin/python -m pip` for package installation.
+
 ## Keep the backlog and documentation current
 
 - Capture actionable suggestions, bugs, follow-ups and deferred requirements in `agent-docs/ROADMAP.md` as **unprioritized** work if not implemented in the current task. Avoid duplicates; link to an existing detailed document where possible. Casual ideas are not authorization to implement them.

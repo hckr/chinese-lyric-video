@@ -3,11 +3,18 @@
 Run from the repository root with Python 3.11+ and Node 22.20.0+ (the repository pin is in .n-node-version):
 
 ```sh
-python3 -m venv python-src/venv
-python-src/venv/bin/pip install -r python-src/requirements.txt
+python3 -m venv --copies python-src/venv
+python-src/venv/bin/python -m pip install -r python-src/requirements.txt
 npm install
 python-src/venv/bin/streamlit run python-src/app.py
 ```
+
+Use an installed Python 3.11+ interpreter for the creation command; replace
+`python3` with its absolute path if necessary. On macOS, `/usr/bin/python3` may
+invoke Command Line Tools rather than a usable installed interpreter. The
+`--copies` option copies the interpreter into the environment instead of symlinking
+it. For subsequent Python commands, including one-off scripts, use
+`python-src/venv/bin/python`; activation is optional.
 
 The requirements pin Setuptools 84.2.1. Jieba uses its built-in filesystem resource loader with this packaging baseline, avoiding the deprecated `pkg_resources` API. Update existing virtualenvs with the same requirements install command above.
 

@@ -1,3 +1,5 @@
+> Reconciliation (2026-11-18): this reference describes the existing workspace organization. [Automatic Timing & Review](features/automatic-timing-review/SPEC.md) owns the proposed Timing changes; [Workflow navigation](features/workflow-navigation/SPEC.md) separately proposes a later top header. Neither proposal is already implemented, and Timing does not authorize shell navigation changes.
+
 # UI specification — dark React workbench, five workspaces
 
 The included HTML is an **interactive visual reference** with sample phrases, simulated timings, a synthetic waveform and illustrative video settings. It does **not** implement secure TS AST parsing, Python AI, actual media-backed audio analysis or Remotion rendering. Production requirements are defined in the other documents.

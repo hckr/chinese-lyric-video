@@ -15,14 +15,14 @@ Open **http://127.0.0.1:5173** yourself. The command never opens a browser. The 
 5. **Mark phrase reviewed** records review and segmentation approval once validation passes. Editing a sentence invalidates review without erasing segmentation approval. Editing word structure invalidates its approval. Save project JSON to retain workbench metadata; legacy TS carries only the renderer's established data contract.
 6. **Export data** lists warnings and previews the actual TS. Download the legacy module, manually place/reference it under `src/`, and use the existing Remotion workflow. Missing raw timings remain null in JSON and become warned zero placeholders in a TS draft. Incomplete/unreviewed/invalid manual data requires explicit acknowledgement before draft download; it is never silently normalized. The app never overwrites source files.
 
-Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word readings/glosses while preserving repetitions. English/Polish sentence translations remain manual. There is no paid AI request or browser API key. No audio/media is uploaded. Video settings and synchronized Remotion Player integration remain later checkpoints.
+Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word readings/glosses while preserving repetitions. English/Polish sentence translations remain manual. There is no paid AI request or browser API key. Raw import does not upload audio/media. Automatic timing is planned separately. Video settings and synchronized Remotion Player integration remain later checkpoints.
 
 Browser recovery stores the current project, not the undo stack. History is bounded to 100 edits; source imports begin a new history. Reselecting a phrase preserves its committed edits. Save a portable JSON before clearing browser data. The browser's static TypeScript parser adds bundle size (roughly 11 MB unminified development JS); this avoids introducing an API/server merely for local file parsing.
 
 ## Timing workflow (checkpoint B)
 
 1. Open **Timing** after importing a song or raw lyrics. **Lyrics** lists every timed appearance, including repeats. Select a sidebar row or timeline block to seek to its start, both paused and playing. In the lyric editor, each appearance has a **Timing** button that opens its own timing selection; **Translate** returns to the shared phrase editor.
-2. Choose local audio, or a supported video container used only for its soundtrack. The picker shows **No audio selected** until loaded, then the filename beside **Replace audio**. One native audio element owns playback and `currentTime`; no media is uploaded. Playback speed, loop selection, the labelled seek slider and ruler/waveform clicks use that clock.
+2. Choose local audio, or a supported video container used only for its soundtrack. The picker shows **No audio selected** until loaded, then the filename beside **Replace audio**. One native audio element owns playback and `currentTime`; playback itself uploads no media. Playback speed, loop selection, the labelled seek slider and ruler/waveform clicks use that clock.
 3. Enter integer **Start/End milliseconds** and click **Apply timing**, or press **S/E** to capture the current playback position. Empty fields are unassigned. For a raw cue capture start then end. To move an existing interval beyond its end, edit both fields together or set the end first. Negative, fractional, zero-length and past-duration edits retain the last valid interval and show an error. Overlaps are allowed as drafts with warnings.
 4. Drag a cue body to move it or an edge to trim. Previews and committed drops may overlap other cues; overlapping drafts show warnings. A successful drag is one undo step. Moves preserve duration, media bounds are enforced, and other appearances, phrase review and segmentation remain unchanged. Imported overlaps remain intact and are flagged; ordinary gaps are not warnings.
 5. **Zoom** starts at **8×**. Zoom keeps the playhead visible, or anchors the selected cue without audio. **Snap** defaults to **Neighboring edges**, within 100 ms; Off remains available. No frame-rate or beat snapping is exposed, and imports are never quantized.
@@ -30,13 +30,15 @@ Browser recovery stores the current project, not the undo stack. History is boun
 7. Selecting a lyric reveals it in both panels. The fixed-height preview and equal-width Previous/Next/Translate buttons keep navigation steady. **Undo/Redo** stays in the sticky workspace header. Programmatic selection, zoom and follow scrolling use the native smooth-scroll API; hand-panning stays immediate.
 8. Focus a cue body/edge and use ←/→ for 10 ms, Shift for 100 ms. Elsewhere, Space plays/pauses; S/E captures boundaries; ←/→ seeks 100 ms, Shift 1 s; Alt+←/→ adjusts the last selected target by 10 ms, Shift 100 ms; `[`/`]` selects the previous/next lyric. Keyboard adjustments permit overlaps with warnings.
 9. **Reset timing for this lyric** restores only the selected appearance's import snapshot and is undoable; overlaps remain allowed as warned drafts. Older project JSON without a snapshot uses its current timing as the baseline when first opened in this version.
-10. Save project JSON or download legacy TypeScript as before. JSON stores original timings and lightweight audio filename/size/modified-time/duration metadata, never media bytes, absolute paths or object URLs. Reloading requires selecting audio again; leaving Timing pauses playback. Choosing audio is independent of edit history, so Undo/Redo retains metadata for the currently selected file. Legacy TS exports exact ordered IDs and integer timestamps, with warnings for missing/invalid/overlapping timing or intervals beyond the saved audio duration.
+10. Download project JSON or legacy TypeScript as before. JSON stores original timings and lightweight audio filename/size/modified-time/duration metadata, never media bytes, absolute paths or object URLs. Reloading requires selecting audio again; leaving Timing pauses playback. Choosing audio is independent of edit history, so Undo/Redo retains metadata for the currently selected file. Legacy TS exports exact ordered IDs and integer timestamps, with warnings for missing/invalid/overlapping timing or intervals beyond the saved audio duration.
 
-Waveforms are computed locally from decoded PCM, with at most 1,600 peak bins. Files over 32 MiB or eight minutes skip analysis to limit memory use; playback and ruler editing remain available. Decode failures likewise fall back to the ruler. Progress/failure notices appear when relevant, without redundant waveform labels. Unsupported media retains project edits and reports an error.
+Waveform analysis runs in the browser and is skipped for files over 32 MiB or
+eight minutes. Playback and ruler editing remain available when the browser can
+play the media. No media is uploaded.
 
 The JSON schema remains version 1 with optional validated `audio` and `timingBaseline` fields. Existing version-1 projects load; older strict workbench versions may reject files with these new fields. Legacy TS omits workbench metadata. The text preview is layout only; Remotion media assignment and rendering remain explicit manual steps.
 
-Beat detection is deferred after the fixed-tempo experiment proved unreliable on real music. Future assisted alignment against supplied lyrics is planned in [ASSISTED_TIMING.md](../agent-docs/react-workbench/ASSISTED_TIMING.md).
+Beat detection is deferred after the fixed-tempo experiment proved unreliable on real music. The planned review workflow is specified in [Automatic Timing & Review](../agent-docs/react-workbench/features/automatic-timing-review/SPEC.md).
 
 ## Application versioning
 
@@ -86,7 +88,7 @@ All project tooling is TypeScript, executed directly by Node. `npm run workbench
 
 ### Real-song import regression
 
-Run `npm run workbench:test:cat-song-workflow` for the supplied 做你的猫 fixture. It starts its own temporary loopback server and isolated browser, reuses the installed browser without downloads, and calls only the local Python dictionary importer. It checks title/credit removal, all 73 appearances in order, 22 unique lyrics, word coverage/Pinyin, editing/reload, insertion/repeats/removal/Undo, action alignment, JSON reopen and TypeScript draft export. Disposable results go to `output/playwright/cat-song-workflow/`. It leaves the running development server and your browser project alone.
+Run `npm run workbench:test:import-workflow` for a fully synthetic Chinese import fixture. It starts its own temporary loopback server and isolated browser, reuses the installed browser without downloads, and calls only the local Python dictionary importer. It checks title/credit removal, all 73 appearances in order, 22 unique lyrics, word coverage/Pinyin, editing/reload, insertion/repeats/removal/Undo, action alignment, JSON reopen and TypeScript draft export. Disposable results go to `output/playwright/import-workflow/`. It leaves the running development server and your browser project alone.
 
 Name future test commands after their concrete scenario or workflow; avoid vague names such as `test:raw`.
 
@@ -107,3 +109,15 @@ The [grouping contract](../agent-docs/react-workbench/features/lyrics-grouping/S
 Run `npm run workbench:test:lyrics-grouping` for the dedicated spec acceptance scenario. Its implementation is `web/tests/lyrics-grouping.ts`; disposable screenshots and results go to `output/playwright/lyrics-grouping/` and are covered by `npm run workbench:clean`. It uses the existing installed browser and a temporary local server, without modifying the running development server or your browser project.
 
 Timeline rows stay fixed during a drag and compact after a drop. Selection reveals the block in both axes; view layout is not saved in project files. Detailed layout behavior and executable checks are linked from the grouping contract.
+
+## Planned automatic timing and review
+
+The committed editor currently supports manual timing. Automatic transcription,
+detected additions, weak estimates, live playback lyrics and linked-edge controls
+belong to ongoing feature work and are not available in this checkout.
+
+[Automatic Timing & Review](../agent-docs/react-workbench/features/automatic-timing-review/SPEC.md)
+contains the approved requirements and completion plan. The evaluation record and
+[experiment index](../experiments/lyric-timing/README.md) preserve listening evidence
+and local inputs; their generated projects may require the feature implementation.
+Use the SPEC's final reproduction after implementation, not as current instructions.

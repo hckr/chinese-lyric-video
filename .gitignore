@@ -29,3 +29,6 @@ web/dist/
 
 # Local Playwright traces, screenshots and downloaded test fixtures
 output/playwright/
+
+# Local lyric-timing experiment transcripts and evaluation outputs
+experiments/lyric-timing/artifacts/

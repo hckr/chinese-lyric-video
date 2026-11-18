@@ -4,18 +4,20 @@ This folder is primarily working context for agents. Keep it discoverable withou
 
 ## Current references
 
-| Need                                                              | Read                                                                                                                       |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| What should be done next / what's still open                      | [ROADMAP.md](ROADMAP.md)                                                                                                   |
-| Architecture, data contracts and Python/React/Remotion boundaries | [react-workbench/ARCHITECTURE.md](react-workbench/ARCHITECTURE.md)                                                         |
-| Workbench screens and UI decisions                                | [react-workbench/UI_SPEC.md](react-workbench/UI_SPEC.md), [react-workbench/README.md](react-workbench/README.md)           |
-| Timing behavior and interaction constraints                       | [react-workbench/TIMING_EDITOR.md](react-workbench/TIMING_EDITOR.md)                                                       |
-| Word-level Pinyin and segmentation                                | [react-workbench/WORD_SEGMENTATION.md](react-workbench/WORD_SEGMENTATION.md)                                               |
-| Grouping behavior and design references                           | [react-workbench/features/lyrics-grouping/SPEC.md](react-workbench/features/lyrics-grouping/SPEC.md)                       |
-| Proposed import safeguards and live grouping preview              | [react-workbench/features/lyrics-import-enhancements/SPEC.md](react-workbench/features/lyrics-import-enhancements/SPEC.md) |
-| Assisted timing experiment (unimplemented)                        | [react-workbench/ASSISTED_TIMING.md](react-workbench/ASSISTED_TIMING.md)                                                   |
-| Remotion refactor requirements                                    | [react-workbench/REMOTION_REFACTOR.md](react-workbench/REMOTION_REFACTOR.md)                                               |
-| Acceptance gates and remaining unchecked items                    | [react-workbench/TEST_PLAN.md](react-workbench/TEST_PLAN.md)                                                               |
+| Need                                                                         | Read                                                                                                                       |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| What should be done next / what's still open                                 | [ROADMAP.md](ROADMAP.md)                                                                                                   |
+| Architecture, data contracts and Python/React/Remotion boundaries            | [react-workbench/ARCHITECTURE.md](react-workbench/ARCHITECTURE.md)                                                         |
+| Workbench screens and UI decisions                                           | [react-workbench/UI_SPEC.md](react-workbench/UI_SPEC.md), [react-workbench/README.md](react-workbench/README.md)           |
+| Timing behavior and interaction constraints                                  | [react-workbench/TIMING_EDITOR.md](react-workbench/TIMING_EDITOR.md)                                                       |
+| Word-level Pinyin and segmentation                                           | [react-workbench/WORD_SEGMENTATION.md](react-workbench/WORD_SEGMENTATION.md)                                               |
+| Grouping behavior and design references                                      | [react-workbench/features/lyrics-grouping/SPEC.md](react-workbench/features/lyrics-grouping/SPEC.md)                       |
+| Proposed import safeguards and live grouping preview                         | [react-workbench/features/lyrics-import-enhancements/SPEC.md](react-workbench/features/lyrics-import-enhancements/SPEC.md) |
+| Assisted timing engine and historical evaluation                             | [react-workbench/ASSISTED_TIMING.md](react-workbench/ASSISTED_TIMING.md)                                                   |
+| Automatic timing desired review flow, reconciliation and full remaining plan | [Automatic Timing & Review](react-workbench/features/automatic-timing-review/SPEC.md)                                      |
+| Separately proposed app-wide workflow header                                 | [Workflow navigation](react-workbench/features/workflow-navigation/SPEC.md)                                                |
+| Remotion refactor requirements                                               | [react-workbench/REMOTION_REFACTOR.md](react-workbench/REMOTION_REFACTOR.md)                                               |
+| Acceptance gates and remaining unchecked items                               | [react-workbench/TEST_PLAN.md](react-workbench/TEST_PLAN.md)                                                               |
 
 ## Authority
 
