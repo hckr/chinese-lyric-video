@@ -2,7 +2,7 @@
 
 This records timing experiments and owner feedback, not released application
 functionality. [Automatic Timing & Review](features/automatic-timing-review/SPEC.md)
-owns the approved workflow and remaining implementation plan. Retained inputs and
+describes the accepted workflow and its verification record. Retained inputs and
 reports are indexed in [lyric-timing experiments](../../experiments/lyric-timing/README.md).
 
 ## Scope and interpretation

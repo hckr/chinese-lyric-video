@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import type { openBrowser } from "@remotion/renderer";
 import { rawProject, type Project } from "../src/domain.ts";
+import { reviewTiming } from "../src/timing.ts";
 import { importLegacy } from "../src/legacy.ts";
 
 type Page = Awaited<
@@ -17,7 +18,7 @@ export async function timingAcceptance(
   page: Page,
   { click, fill, read, upload }: Helpers,
 ) {
-  const fixture = rawProject(
+  let fixture = rawProject(
     "你好\n你好\n你好",
     "Timing acceptance",
     "Local test",
@@ -41,6 +42,11 @@ export async function timingAcceptance(
     startMs: i === 0 ? 12345 : i === 1 ? 25000 : 45000,
     endMs: i === 0 ? 12789 : i === 1 ? 28000 : 47000,
   }));
+  fixture = reviewTiming(
+    fixture,
+    new Set(fixture.occurrences.map((o) => o.id)),
+    true,
+  );
   await upload("timing.json", JSON.stringify(fixture));
   await click("Timing");
   await click("Translate");
@@ -110,9 +116,27 @@ export async function timingAcceptance(
     );
   };
   await select("line-1");
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLButtonElement>(
+          '[aria-label="Reset timing for this lyric"]',
+        )!.disabled,
+    ),
+    true,
+  );
   await fill('[aria-label="Start milliseconds"]', "23000");
   await fill('[aria-label="End milliseconds"]', "24750");
   await click("Apply timing");
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLButtonElement>(
+          '[aria-label="Reset timing for this lyric"]',
+        )!.disabled,
+    ),
+    false,
+  );
   let saved = await read();
   assert.deepEqual(saved.occurrences[0], fixture.occurrences[0]);
   assert.deepEqual(saved.occurrences[2], fixture.occurrences[2]);
@@ -130,6 +154,30 @@ export async function timingAcceptance(
     ),
     /later than start/,
   );
+  // A transcript chosen before the first audio file must survive audio loading.
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>(
+      ".automatic-timing input[type=file]",
+    )!;
+    const transfer = new DataTransfer();
+    transfer.items.add(
+      new File(
+        [JSON.stringify({ segments: [] })],
+        "selected-before-audio.json",
+        { type: "application/json" },
+      ),
+    );
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  // Loading metadata must not reveal the selected lyric or scroll the page.
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+  await page.evaluate(() => {
+    document
+      .querySelector(".timing-scroll")!
+      .scrollTo({ left: 0, behavior: "instant" });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  });
   // A real, small PCM WAV: no mocked HTMLMediaElement or synthetic clock.
   await page.evaluate(() => {
     const rate = 8000,
@@ -174,6 +222,80 @@ export async function timingAcceptance(
     () => page.evaluate(() => document.querySelector("audio")!.readyState >= 2),
     "real WAV loaded",
   );
+
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)));
+  assert.equal(
+    await page.evaluate(
+      () => document.querySelector(".timing-scroll")!.scrollLeft,
+    ),
+    0,
+  );
+  assert.equal(await page.evaluate(() => window.scrollY), 0);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLInputElement>(
+          ".automatic-timing input[type=file]",
+        )!.files?.[0]?.name,
+    ),
+    "selected-before-audio.json",
+  );
+  // Playback preview follows the media clock, not the selected occurrence.
+  const previewIds = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("[data-playing-lyric]")].map(
+        (el) => el.dataset.playingLyric,
+      ),
+    );
+  await page.evaluate(() => {
+    document.querySelector("audio")!.currentTime = 12.5;
+  });
+  await wait(
+    async () => (await previewIds()).join() === "line-0",
+    "preview seek",
+  );
+  assert.match(
+    await page.evaluate(
+      () =>
+        document.querySelector('[aria-label="Current lyrics"]')!.textContent!,
+    ),
+    /nǐhǎo.*你好.*Hello.*Cześć/,
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      document
+        .querySelector('[data-occurrence="line-1"]')!
+        .getAttribute("aria-pressed"),
+    ),
+    "true",
+  );
+  await click("Play");
+  await wait(
+    async () => (await previewIds()).length === 0,
+    "preview clears after lyric ends during playback",
+  );
+  await click("Pause");
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  assert.equal(
+    await page.evaluate(() => {
+      const preview = document
+        .querySelector(".timing-live-preview")!
+        .getBoundingClientRect();
+      const controls = document
+        .querySelector(".timing-transport > .timing-controls")!
+        .getBoundingClientRect();
+      const seek = document
+        .querySelector(".timing-scrub")!
+        .getBoundingClientRect();
+      return (
+        preview.top >= controls.bottom &&
+        preview.top >= seek.bottom &&
+        document.documentElement.scrollWidth <= innerWidth
+      );
+    }),
+    true,
+  );
+  await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
   await wait(
     () =>
       page.evaluate(
@@ -349,8 +471,7 @@ export async function timingAcceptance(
       .querySelector<HTMLInputElement>(".timing-controls input[type=checkbox]")!
       .click(),
   );
-  await seek(24.74);
-  await click("Play");
+  await seek(24.99);
   await wait(
     () =>
       page.evaluate(() => {
@@ -442,10 +563,134 @@ export async function timingAcceptance(
   assert.deepEqual((await read()).occurrences[1], dragged);
   await key("ArrowRight", '[aria-label="Trim start line-1"]');
   assert.equal((await read()).occurrences[1].startMs, dragged.startMs! + 10);
-  await click("Reset timing");
+  await page.evaluate(() =>
+    document
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="Reset timing for this lyric"]',
+      )!
+      .click(),
+  );
   assert.deepEqual((await read()).occurrences[1], fixture.occurrences[1]);
   await click("Undo");
   assert.equal((await read()).occurrences[1].startMs, dragged.startMs! + 10);
+  // Create a touching pair, then verify one-step history for linked keyboard trims.
+  await select("line-0");
+  await fill(
+    '[aria-label="End milliseconds"]',
+    String((await read()).occurrences[1].startMs),
+  );
+  await click("Apply timing");
+  const touching = await read();
+  const toggle = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLLabelElement>("label")]
+        .find((el) => el.textContent?.trim() === "Link touching edges")!
+        .querySelector<HTMLInputElement>("input")!
+        .click(),
+    );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        [...document.querySelectorAll<HTMLLabelElement>("label")]
+          .find((el) => el.textContent?.trim() === "Link touching edges")!
+          .querySelector<HTMLInputElement>("input")!.checked,
+    ),
+    false,
+  );
+  await toggle();
+  await key("ArrowRight", '[aria-label="Trim end line-0"]');
+  const linked = await read();
+  assert.equal(
+    linked.occurrences[0].endMs,
+    touching.occurrences[0].endMs! + 10,
+  );
+  assert.equal(linked.occurrences[1].startMs, linked.occurrences[0].endMs);
+  await click("Undo");
+  assert.deepEqual((await read()).occurrences, touching.occurrences);
+  await click("Redo");
+  assert.deepEqual((await read()).occurrences, linked.occurrences);
+  await click("Undo");
+  // Actual pointer capture previews both edges, cancellation changes neither.
+  await page.evaluate(() =>
+    document
+      .querySelector('[aria-label="Trim end line-0"]')!
+      .scrollIntoView({ block: "center", behavior: "instant" }),
+  );
+  const sharedBox = await page.evaluate(() => {
+    const r = document
+      .querySelector('[aria-label="Trim end line-0"]')!
+      .getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  const beginSharedDrag = async () => {
+    await pointer.send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      ...sharedBox,
+    });
+    await pointer.send("Input.dispatchMouseEvent", {
+      type: "mousePressed",
+      ...sharedBox,
+      button: "left",
+      clickCount: 1,
+    });
+    await pointer.send("Input.dispatchMouseEvent", {
+      type: "mouseMoved",
+      x: sharedBox.x + 20,
+      y: sharedBox.y,
+      button: "left",
+      buttons: 1,
+    });
+  };
+  await beginSharedDrag();
+  const preview = await page.evaluate(() => {
+    const left = document
+      .querySelector('[data-cue="line-0"]')!
+      .getBoundingClientRect();
+    const right = document
+      .querySelector('[data-cue="line-1"]')!
+      .getBoundingClientRect();
+    return { end: left.right, start: right.left };
+  });
+  assert.ok(Math.abs(preview.end - preview.start) < 1);
+  assert.deepEqual((await read()).occurrences, touching.occurrences);
+  await key("Escape");
+  await pointer.send("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x: sharedBox.x + 20,
+    y: sharedBox.y,
+    button: "left",
+    clickCount: 1,
+  });
+  assert.deepEqual((await read()).occurrences, touching.occurrences);
+  await beginSharedDrag();
+  await pointer.send("Input.dispatchMouseEvent", {
+    type: "mouseReleased",
+    x: sharedBox.x + 20,
+    y: sharedBox.y,
+    button: "left",
+    clickCount: 1,
+  });
+  const sharedDrag = await read();
+  assert.ok(sharedDrag.occurrences[0].endMs! > touching.occurrences[0].endMs!);
+  assert.equal(
+    sharedDrag.occurrences[0].endMs,
+    sharedDrag.occurrences[1].startMs,
+  );
+  await click("Undo");
+  assert.deepEqual((await read()).occurrences, touching.occurrences);
+  await toggle();
+  await click("Undo");
+  await select("line-1");
+  // Restore the reviewed first interval; settings now have their own undo entries.
+  await select("line-0");
+  await page.evaluate(() =>
+    document
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="Reset timing for this lyric"]',
+      )!
+      .click(),
+  );
+  await select("line-1");
   // Capture known values again for the exported fixture.
   await seek(23);
   await key("s");
@@ -459,7 +704,7 @@ export async function timingAcceptance(
     "out/workbench/timing.png",
     Buffer.from(activeShot.value.data, "base64"),
   );
-  await click("Save project JSON");
+  await click("Download project JSON");
   const download = await page.evaluate(async () =>
     Promise.all(window.__downloads),
   );
@@ -490,7 +735,17 @@ export async function timingAcceptance(
   );
   const ts = [...downloads].reverse().find((d) => d.name === "Song.ts");
   assert.ok(ts);
-  assert.deepEqual(importLegacy(ts.text).occurrences, saved.occurrences);
+  assert.deepEqual(
+    importLegacy(ts.text).occurrences.map(
+      ({ id, phraseId, startMs, endMs }) => ({ id, phraseId, startMs, endMs }),
+    ),
+    saved.occurrences.map(({ id, phraseId, startMs, endMs }) => ({
+      id,
+      phraseId,
+      startMs,
+      endMs,
+    })),
+  );
   fs.writeFileSync("out/workbench/timed-export.ts", ts.text);
   const reloadUrl = await page.evaluate(() => location.href);
   await page.goto({ url: reloadUrl, timeout: 30000 });

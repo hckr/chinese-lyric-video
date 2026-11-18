@@ -1,9 +1,13 @@
+import { automaticTiming, cachedTimingModels } from "../timing-api.ts";
+import { detectedAudioAcceptance } from "./detected-audio-browser.ts";
+import { waveformMedia } from "./waveform-media.ts";
 import { browserExecutable } from "./browser-executable.ts";
 import { lyricsGrouping } from "./lyrics-grouping.ts";
 import { importLyrics } from "../import-api.ts";
 import { build } from "esbuild";
 import { withTimingBaseline } from "../src/timing.ts";
-import { catSongWorkflow } from "./cat-song-workflow.ts";
+import { importWorkflow } from "./import-workflow.ts";
+import { timingReviewAcceptance } from "./timing-review-browser.ts";
 import { timingAcceptance } from "./timing-browser.ts";
 // Uses the browser already cached by Remotion; never downloads a browser.
 import { openBrowser } from "@remotion/renderer";
@@ -43,6 +47,14 @@ const assets = new Map(
 );
 const server = http.createServer((req, res) => {
   const requestPath = req.url ?? "/";
+  if (req.url === "/api/timing-models") {
+    void cachedTimingModels(req, res);
+    return;
+  }
+  if (requestPath === "/api/automatic-timing") {
+    void automaticTiming(req, res, process.cwd());
+    return;
+  }
   if (
     requestPath === "/api/import-lyrics" ||
     requestPath === "/api/dictionary"
@@ -173,19 +185,45 @@ const server = http.createServer((req, res) => {
       );
       await settle();
     };
+    if (process.argv.includes("--timing-review")) {
+      await timingReviewAcceptance(page, { click, upload, read, fill });
+      assert.deepEqual(
+        errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
+        [],
+      );
+      return;
+    }
+    if (process.argv.includes("--detected-audio")) {
+      await detectedAudioAcceptance(page, { click, upload, read });
+      assert.deepEqual(
+        errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
+        [],
+      );
+      return;
+    }
+    if (process.argv.includes("--waveform-media")) {
+      await upload("waveform.txt", "测试音频");
+      await click("Timing");
+      await waveformMedia(page);
+      assert.deepEqual(
+        errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
+        [],
+      );
+      return;
+    }
     if (process.argv.includes("--lyrics-grouping")) {
       await lyricsGrouping(page, { click, fill, read, upload });
       assert.deepEqual(errors, []);
       console.log("Lyrics grouping acceptance passed.");
       return;
     }
-    if (process.argv.includes("--cat-song-workflow")) {
-      await catSongWorkflow(page, { click, fill, read, upload });
+    if (process.argv.includes("--import-workflow")) {
+      await importWorkflow(page, { click, fill, read, upload });
       assert.deepEqual(
         errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
         [],
       );
-      console.log("Cat song workflow passed.");
+      console.log("Synthetic import workflow passed.");
       return;
     }
     await upload(
@@ -466,7 +504,7 @@ const server = http.createServer((req, res) => {
         );
       };
     });
-    await click("Save project JSON");
+    await click("Download project JSON");
     let downloads = await page.evaluate(() => Promise.all(window.__downloads));
     assert.equal(
       JSON.parse(downloads[0].text).phrases[0].translation.en,
@@ -538,7 +576,7 @@ const server = http.createServer((req, res) => {
     // TEST_PLAN M1: exact segmentation example, approved JSON recovery,
     // shared occurrences and raw ingestion through the actual React controls.
     await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
-    const fixture: Project = {
+    let fixture: Project = {
       schemaVersion: 1,
       format: "lyric-workbench",
       source: "acceptance-fixture",
@@ -587,6 +625,7 @@ const server = http.createServer((req, res) => {
         },
       ],
     };
+    fixture = withTimingBaseline(fixture);
     await upload("acceptance.json", JSON.stringify(fixture));
     assert.deepEqual(await read(), withTimingBaseline(fixture));
     await click("Merge with next");
@@ -612,7 +651,7 @@ const server = http.createServer((req, res) => {
     const approved = await read();
     assert.equal(approved.phrases[0].segmentationApproved, true);
     const beforeJson = await page.evaluate(() => window.__downloads.length);
-    await click("Save project JSON");
+    await click("Download project JSON");
     downloads = await page.evaluate(() => Promise.all(window.__downloads));
     await upload("reopened.json", downloads[beforeJson].text);
     assert.deepEqual(await read(), approved);
@@ -683,6 +722,7 @@ const server = http.createServer((req, res) => {
       "M1 acceptance passed: 漂亮 merge/split, note/ID/timing preservation, review undo/redo, approved JSON reopen, TS reimport, shared chorus edits, raw repetitions/unassigned timing.",
     );
     await timingAcceptance(page, { click, fill, read, upload });
+    await timingReviewAcceptance(page, { click, fill, read, upload });
     assert.deepEqual(
       errors.filter((e) => !String(e).includes("ERR_BLOCKED_BY_CLIENT")),
       [],

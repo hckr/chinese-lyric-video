@@ -25,7 +25,7 @@ test(
         method: "POST",
         headers: { "Content-Type": "application/json", Origin: url },
         body: JSON.stringify({
-          raw: "做你的猫\n唱：小可乐\n词：陈大创\n曲：陈大创\n做你的猫 喵喵\n在你怀里睡着\n做你的猫 喵喵",
+          raw: "词句导入练习\n唱：测试歌手\n词：测试作者\n曲：测试作者\n打开你的书包\n在纸上画个心\n打开你的书包",
         }),
       });
       const text = await response.text();
@@ -33,7 +33,7 @@ test(
       const p = parseProject(text);
       assert.equal(p.phrases.length, 2);
       assert.equal(p.occurrences.length, 3);
-      assert.equal(p.metadata.title, "做你的猫");
+      assert.equal(p.metadata.title, "词句导入练习");
       assert.ok(
         p.phrases.every(
           (v) =>

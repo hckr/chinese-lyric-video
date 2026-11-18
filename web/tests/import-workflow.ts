@@ -14,11 +14,11 @@ type Helpers = {
   upload: (name: string, source: string) => Promise<void>;
 };
 
-export async function catSongWorkflow(
+export async function importWorkflow(
   page: Page,
   { click, fill, read, upload }: Helpers,
 ) {
-  const output = "output/playwright/cat-song-workflow";
+  const output = "output/playwright/import-workflow";
   fs.mkdirSync(output, { recursive: true });
   const waitFor = async (
     description: string,
@@ -32,7 +32,7 @@ export async function catSongWorkflow(
     throw Error(`Timed out: ${description}`);
   };
   const raw = fs.readFileSync(
-    "python-src/tests/fixtures/cat-song-workflow.txt",
+    "python-src/tests/fixtures/import-workflow.txt",
     "utf8",
   );
   await fill("textarea.raw", raw);
@@ -42,7 +42,10 @@ export async function catSongWorkflow(
     async () => (await read())?.occurrences.length === 73,
   );
   const imported = await read();
-  assert.deepEqual(imported.metadata, { title: "做你的猫", artist: "小可乐" });
+  assert.deepEqual(imported.metadata, {
+    title: "词句导入练习",
+    artist: "测试歌手",
+  });
   assert.equal(imported.phrases.length, 22);
   assert.equal(imported.occurrences.length, 73);
   const expected = raw.trim().split("\n").slice(4);
@@ -76,7 +79,7 @@ export async function catSongWorkflow(
   );
   assert.equal(
     imported.phrases
-      .find((p) => p.lyricKey === "在你心上撒娇")!
+      .find((p) => p.lyricKey === "在纸上画个心")!
       .words.find((w) => w.hanzi === "心")!.pinyin,
     "xīn",
   );
@@ -102,8 +105,8 @@ export async function catSongWorkflow(
   );
   await click("Undo");
   assert.deepEqual(await read(), beforeBlank);
-  await fill('[aria-label="English sentence"]', "Be your cat, meow meow");
-  await fill('[aria-label="Polish sentence"]', "Być twoim kotem, miau miau");
+  await fill('[aria-label="English sentence"]', "Open your schoolbag");
+  await fill('[aria-label="Polish sentence"]', "Otwórz swój plecak");
   await waitFor(
     "dictionary lookup",
     async () =>
@@ -155,6 +158,8 @@ export async function catSongWorkflow(
       .querySelector<HTMLInputElement>('[aria-label="Pinyin 1"]')!
       .focus(),
   );
+  // A deliberately shorter viewport exercises overflow even with synthetic lines.
+  await page.setViewport({ width: 1640, height: 800, deviceScaleFactor: 1 });
   await page.evaluate(() => window.scrollTo({ top: 700, behavior: "instant" }));
   const sidebar = await page.evaluate(() => {
     const panel = document.querySelector<HTMLElement>(
@@ -176,6 +181,7 @@ export async function catSongWorkflow(
   );
   assert.ok(sidebar.bottom <= sidebar.viewport - 15);
   assert.ok(sidebar.scrolls);
+  await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   const shot = await page
     ._client()
@@ -387,16 +393,23 @@ export async function catSongWorkflow(
     `${output}/timing-sidebar.png`,
     Buffer.from(timingShot.value.data, "base64"),
   );
-  const timingButtons = await page.evaluate(() =>
-    [...document.querySelectorAll<HTMLElement>(".timing-reset button")].map(
-      (button) => {
-        const rect = button.getBoundingClientRect();
-        return { top: rect.top, width: rect.width };
-      },
-    ),
+  assert.ok(
+    await page.evaluate(() => {
+      const reset = document.querySelector<HTMLButtonElement>(
+        ".timing-reset button",
+      )!;
+      const remove = document.querySelector<HTMLButtonElement>(
+        ".timing-remove button",
+      )!;
+      return (
+        reset.disabled &&
+        reset.textContent?.includes("No reset reference") &&
+        remove.getBoundingClientRect().top >
+          reset.getBoundingClientRect().bottom
+      );
+    }),
+    "Remove lyric sits separately below the disabled reset action",
   );
-  assert.equal(timingButtons.length, 2);
-  assert.deepEqual(timingButtons[0], timingButtons[1]);
   await click("Remove lyric");
   assert.ok(
     await page.evaluate(
@@ -441,7 +454,7 @@ export async function catSongWorkflow(
       );
     };
   });
-  await click("Save project JSON");
+  await click("Download project JSON");
   const json = (await page.evaluate(() => Promise.all(window.__downloads))).at(
     -1,
   )!;
@@ -556,24 +569,24 @@ export async function catSongWorkflow(
     await page.evaluate(() => {
       const ruler = document.querySelector<HTMLElement>(".timing-ruler")!;
       const bounds = ruler.getBoundingClientRect();
-      return [...ruler.querySelectorAll<HTMLElement>("span,i")].every(
-        (tick) => {
-          const rect = tick.getBoundingClientRect();
-          const expected =
-            bounds.left + (parseFloat(tick.style.left) / 100) * bounds.width;
-          return (
-            Math.abs(rect.bottom - bounds.bottom) < 1 &&
-            Math.abs(
-              (tick.matches("span:last-child") ? rect.right : rect.left) -
-                expected,
-            ) < 1.1
-          );
-        },
-      );
+      return [
+        ...ruler.querySelectorAll<HTMLElement>(":scope > span, :scope > i"),
+      ].every((tick) => {
+        const rect = tick.getBoundingClientRect();
+        const expected =
+          bounds.left + (parseFloat(tick.style.left) / 100) * bounds.width;
+        return (
+          Math.abs(rect.bottom - bounds.bottom) < 1 &&
+          Math.abs(
+            (tick.matches("span:last-child") ? rect.right : rect.left) -
+              expected,
+          ) < 1.1
+        );
+      });
     }),
   );
   const lowLabels = await page.evaluate(
-    () => document.querySelectorAll(".timing-ruler span").length,
+    () => document.querySelectorAll(".timing-ruler > span").length,
   );
   assert.ok(
     await page.evaluate(() =>
@@ -598,7 +611,7 @@ export async function catSongWorkflow(
     async () =>
       await page.evaluate(
         (count) =>
-          document.querySelectorAll(".timing-ruler span").length > count,
+          document.querySelectorAll(".timing-ruler > span").length > count,
         lowLabels,
       ),
   );

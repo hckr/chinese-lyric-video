@@ -89,7 +89,20 @@ test("merge/split keep stable IDs, grammar rows, translations, occurrences and r
   assert.deepEqual(merged.translation, phrase.translation);
   const round = importLegacy(exportLegacy({ ...p, phrases: [merged] }));
   assert.equal(round.phrases[0].words[0].pinyin, "piàoliang");
-  assert.deepEqual(round.occurrences, p.occurrences);
+  assert.deepEqual(
+    round.occurrences.map(({ id, phraseId, startMs, endMs }) => ({
+      id,
+      phraseId,
+      startMs,
+      endMs,
+    })),
+    p.occurrences.map(({ id, phraseId, startMs, endMs }) => ({
+      id,
+      phraseId,
+      startMs,
+      endMs,
+    })),
+  );
   const split = splitToken(
     merged,
     "a",
@@ -526,4 +539,19 @@ test("Chinese section headings are excluded from phrases, occurrences and export
     rawProject("主歌是故事\n副歌声响起", "Title", "Artist").phrases.length,
     2,
   );
+});
+
+test("lyric previews mark each missing reading without changing source data or showing note rows", () => {
+  const phrase = rawProject("偶尔唱歌给我听", "Preview", "Test").phrases[0];
+  phrase.words = [
+    { id: "a", hanzi: "偶尔", pinyin: "ǒu'ěr", translation: { en: "" } },
+    { id: "b", hanzi: "唱歌", pinyin: "chànggē", translation: { en: "" } },
+    { id: "c", hanzi: "给", pinyin: "", translation: { en: "" } },
+    { id: "d", hanzi: "我", pinyin: "wǒ", translation: { en: "" } },
+    { id: "e", hanzi: "听", pinyin: "  ", translation: { en: "" } },
+    { id: "note", hanzi: "", pinyin: "", translation: { en: "note" } },
+  ];
+  const before = JSON.stringify(phrase);
+  assert.equal(linePinyin(phrase), "ǒu'ěr chànggē ??? wǒ ???");
+  assert.equal(JSON.stringify(phrase), before);
 });

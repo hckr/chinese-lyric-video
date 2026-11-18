@@ -71,9 +71,10 @@ test("group moves apply exactly one offset and allow overlap without changing ba
     assert.equal(moved.endMs, old.endMs! + 10000);
   }
   assert.deepEqual(next.phrases, p.phrases);
-  assert.deepEqual(
-    next.timingBaseline!.find((cue) => cue.id === "line-1"),
-    p.timingBaseline![1],
+  assert.equal(next.timingBaseline, undefined);
+  assert.equal(
+    next.occurrences.find((o) => o.id === "line-1")!.timingReview,
+    "needs-review",
   );
   assert.doesNotThrow(() => shiftGroup(p, g.id, -1500));
   assert.equal(

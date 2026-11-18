@@ -691,13 +691,10 @@ th {
   color: var(--warning);
 }
 .timing-board-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(85%);
   align-items: start;
   gap: 12px;
-  flex-wrap: wrap;
-}
-.timing-board-toolbar > div {
-  flex: 1 1 170px;
 }
 .timing-board-toolbar p {
   margin: 0 0 14px;
@@ -723,7 +720,7 @@ th {
   height: 44px;
   cursor: crosshair;
 }
-.timing-ruler span {
+.timing-ruler > span {
   position: absolute;
   top: 0;
   font-size: 12px;
@@ -732,7 +729,7 @@ th {
   height: 100%;
   font-variant-numeric: tabular-nums;
 }
-.timing-ruler span:last-child {
+.timing-ruler > span:last-child {
   transform: translateX(-100%);
   border-left: 0;
   border-right: 1px solid var(--border);
@@ -781,7 +778,7 @@ th {
   touch-action: none;
 }
 .timing-block .timing-handle {
-  width: clamp(2px, 12%, 14px);
+  width: clamp(2px, 18%, 20px);
   min-width: 0;
   flex-shrink: 0;
   cursor: ew-resize;
@@ -850,12 +847,7 @@ th {
   padding-left: 22px;
 }
 .timing-reset {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
-  margin-top: 20px;
+  margin-top: 8px;
 }
 .timing-text-preview {
   background: var(--field);
@@ -877,6 +869,7 @@ th {
 .timing-block-label > * {
   max-width: 100%;
   overflow: hidden;
+  text-overflow: ellipsis;
   padding: 0 4px;
 }
 .timing-file-button {
@@ -909,9 +902,10 @@ th {
   margin-bottom: 16px;
 }
 .timing-inspector .timing-text-preview {
-  height: 270px;
+  min-height: 78px;
+  max-height: 180px;
   overflow: auto;
-  margin: 0 0 20px;
+  margin: 0 0 12px;
   display: grid;
   align-content: safe center;
   gap: 12px;
@@ -987,8 +981,8 @@ html {
 .timing-cue-nav button {
   padding: 8px 4px;
   min-width: 0;
-  overflow-wrap: normal;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  min-height: 44px;
 }
 .timing-reset > button {
   width: 100%;
@@ -1045,9 +1039,6 @@ html {
   }
   .timing-inspector {
     grid-column: 1 / -1;
-  }
-  .timing-fields {
-    max-width: 520px;
   }
 }
 @media (max-width: 800px) {
@@ -1161,7 +1152,11 @@ html {
   text-align: right;
   font-size: 12px;
   color: var(--muted);
-  margin: 0;
+  margin: 18px 0 0;
+  padding-top: 10px;
+}
+.dictionary-lookup + hr {
+  margin-top: 10px;
 }
 .dictionary-source a {
   color: inherit;
@@ -1175,6 +1170,7 @@ html {
   overflow-wrap: anywhere;
 }
 .dictionary-word strong {
+  color: var(--ink);
   font-size: 48px;
   line-height: 1.3;
 }
@@ -1347,8 +1343,9 @@ html {
   font-size: 11px;
 }
 .timing-occurrence-list .spec-group-header .group-menu-trigger {
-  flex: 0 0 28px;
-  width: 28px;
+  flex: 0 0 36px;
+  width: 36px;
+  min-height: 36px;
   font-size: 23px;
   line-height: 1;
 }
@@ -1488,6 +1485,7 @@ main > header[inert],
   padding: 5px;
 }
 .group-header-toggle .group-chevron {
+  font-size: 17px;
   flex-shrink: 0;
   padding-top: 2px;
 }
@@ -1573,4 +1571,415 @@ main > header[inert],
   overflow-y: auto;
   margin: 0;
   line-height: 1.5;
+}
+
+.detected-audio-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.timing-transport {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "source seek" "controls seek";
+}
+.timing-transport > .timing-source {
+  grid-area: source;
+  min-width: 0;
+}
+.timing-transport > .timing-controls {
+  grid-area: controls;
+}
+.timing-transport > .timing-scrub {
+  grid-area: seek;
+}
+.timing-live-preview {
+  min-width: 0;
+  min-height: 100px;
+  max-height: 260px;
+  margin-bottom: 18px;
+  font-size: 1.75rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  text-align: center;
+  align-content: center;
+}
+.timing-live-preview p {
+  margin: 5px 0;
+}
+.timing-live-preview strong {
+  font-size: 3rem;
+}
+.timing-live-preview > div + div {
+  margin-top: 12px;
+}
+@media (max-width: 800px) {
+  .timing-transport {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "source" "controls" "seek";
+  }
+}
+
+.timing-transport > .timing-scrub {
+  align-content: center;
+}
+@media (max-width: 800px) {
+  .timing-live-preview {
+    min-height: 80px;
+    max-height: 220px;
+    font-size: 1.125rem;
+  }
+  .timing-live-preview strong {
+    font-size: 2rem;
+  }
+}
+
+.lyric-reading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: end;
+  gap: 0.5em 0.35em;
+}
+.lyric-reading-word {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+}
+.lyric-reading-pinyin {
+  color: var(--muted);
+  font-size: 0.65em;
+}
+.lyric-reading-word strong {
+  line-height: 1.5;
+}
+
+.timing-live-preview > div > p {
+  font-size: 0.65em;
+}
+
+/* A fixed viewport prevents missing translations or wrapped lines moving the timeline. */
+.timing-live-preview {
+  height: 110px;
+  min-height: 110px;
+}
+.timing-live-preview.with-translations {
+  height: 145px;
+  min-height: 145px;
+}
+.playback-translations {
+  font-size: 0.65em;
+  line-height: 1.4;
+}
+.playback-translations p {
+  min-height: 1.4em;
+}
+@media (max-width: 800px) {
+  .timing-live-preview {
+    height: 90px;
+    min-height: 90px;
+  }
+  .timing-live-preview.with-translations {
+    height: 150px;
+    min-height: 150px;
+  }
+}
+
+.lyric-reading-unit {
+  display: inline-flex;
+  align-items: end;
+  gap: 0.15em;
+  max-width: 100%;
+}
+
+.dictionary-word.single-reading {
+  flex-direction: row;
+  align-items: end;
+  gap: 4px;
+  min-width: 0;
+}
+.dictionary-word.single-reading > span {
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.dictionary-reading-part {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.automatic-timing {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.automatic-timing-header,
+.timing-audio-identity,
+.timing-candidate-added,
+.automatic-timing-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.automatic-timing-header,
+.timing-candidate-added {
+  justify-content: space-between;
+}
+.automatic-timing h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.automatic-timing p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.automatic-timing-header p,
+.timing-audio-identity p {
+  font-size: 13px;
+}
+.automatic-timing-setup {
+  align-items: end;
+}
+#automatic-timing-setup {
+  margin-top: 12px;
+}
+.timing-advanced {
+  margin-top: 8px;
+}
+.automatic-timing summary,
+.timing-suggestion-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 6px;
+  border-radius: 5px;
+}
+.automatic-timing summary:hover,
+.timing-suggestion-details summary:hover {
+  background: var(--field);
+}
+.timing-advanced .timing-controls {
+  align-items: end;
+}
+.timing-advanced label {
+  min-width: 0;
+}
+.timing-advanced input[type="file"] {
+  max-width: 100%;
+}
+.timing-advanced[open] p {
+  margin: 6px 0 0;
+}
+.automatic-timing-feedback:has(p:not(:empty), button, progress) {
+  margin-top: 8px;
+}
+.automatic-timing-feedback p:empty {
+  margin: 0;
+}
+.timing-audio-identity {
+  margin-top: 8px;
+}
+.timing-candidates {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.timing-candidate-added {
+  padding: 6px;
+  background: var(--field);
+}
+.timing-candidate-added p {
+  flex: 1 1 180px;
+}
+.timing-candidate-list {
+  max-height: min(320px, 40vh);
+  overflow: auto;
+  scroll-padding-block: 6px;
+  margin: 0;
+  padding: 2px 6px;
+  list-style: none;
+}
+.timing-candidate-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.timing-candidate-list li:last-child {
+  border-bottom: 0;
+}
+.timing-candidate-list li > strong {
+  overflow-wrap: anywhere;
+}
+.timing-candidate-range {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.timing-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.timing-candidate-actions button,
+.timing-audio-identity button {
+  padding: 6px 10px;
+  min-height: 36px;
+}
+@media (max-width: 760px) {
+  .timing-candidate-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.timing-settings-trigger {
+  display: grid;
+  text-align: start;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.35;
+}
+.timing-settings-label {
+  font-weight: 650;
+}
+.timing-settings-label > span {
+  font-size: 17px;
+}
+.timing-settings-summary {
+  color: var(--muted);
+  font-size: 12px;
+}
+.timing-board-toolbar > .timing-settings {
+  grid-column: 1 / -1;
+  justify-self: end;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(520px, calc(100dvh - 32px));
+  overflow: auto;
+  z-index: 20;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px #0006;
+  padding: 16px;
+}
+.timing-settings label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 40px;
+  margin: 3px 0;
+}
+.timing-settings label.check {
+  cursor: pointer;
+}
+.timing-settings input[type="checkbox"] {
+  justify-self: start;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.timing-settings input[type="number"] {
+  width: 100px;
+  max-width: 100%;
+}
+.timing-settings button {
+  margin-top: 8px;
+}
+
+.timing-review-status {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0;
+}
+.timing-review-counts,
+.bulk-timing-review {
+  font-size: 0.85rem;
+  padding: 8px;
+}
+.timing-block[data-timing-status="Needs review"] {
+  border-style: dashed;
+}
+.timing-inspector .timing-review-actions {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.timing-review-actions button {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.timing-review-next {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.timing-play-hint,
+.timing-completion {
+  margin: 4px 0 10px;
+  font-size: 13px;
+}
+.timing-completion {
+  color: var(--accent);
+}
+.timing-diagnostics:not(:empty),
+.timing-remove {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+.timing-diagnostics > button,
+.timing-weak-estimate > button {
+  margin: 4px 6px 4px 0;
+}
+.timing-suggestion-details p,
+.timing-weak-estimate p {
+  margin: 4px 0;
+}
+.timing-remove button {
+  background: transparent;
+  font-size: 13px;
+}
+.timing-confirm {
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+
+.lyric-reading,
+.timing-text-preview p {
+  overflow-wrap: anywhere;
+}
+.timing-inspector :is(button, input) {
+  scroll-margin-top: 90px;
+}
+
+.automatic-timing-feedback > p {
+  flex: 0 0 100%;
+}
+.automatic-timing-feedback > p:empty {
+  display: none;
+}
+
+.timing-toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#automatic-timing-content {
+  scroll-margin-top: 90px;
 }

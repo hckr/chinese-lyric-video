@@ -1,8 +1,8 @@
 # Automatic timing & review — feature specification
 
 **Area:** React Lyric Workbench → Timing
-**Status:** Reconciled with local source on 2026-11-18; the owner has approved the nine decisions in §15. Implementation remains pending the separate documentation commit and checkpoint continuation. The manual editor is implemented; automatic-timing work is separate and uncommitted, and the review workflow below is not yet implemented.
-**Priority:** Ongoing owner-requested timing checkpoint; completion sequence in §14 incorporates the approved decisions; documentation must be committed separately before implementation continues.
+**Status:** Automatic Timing & Review was completed on 2026-11-18. See §16 for executed checks and limitations.
+**Checkpoint:** Complete. §§14–15 retain its approved scope and decisions; top workflow navigation remains separate.
 
 ## 1. Objective
 
@@ -46,12 +46,9 @@ Read and reconcile with:
 This SPEC owns desired Timing review behavior; [TIMING_EDITOR.md](../../TIMING_EDITOR.md)
 and [web README](../../../../web/README.md) describe current operation, and
 [ASSISTED_TIMING.md](../../ASSISTED_TIMING.md) retains engine/evaluation safeguards
-and dated history. The constraints in §13 identify integration risks, not completed work or test passes. §14 is the complete remaining plan; §15 records the approved decisions.
-The committed baseline has no automatic-timing or detected-candidate interface.
-References to preserving that capability mean reusing separately evaluated,
-uncommitted work when implementation resumes. Individual Add to lyrics is an
-approved requirement, not existing baseline functionality. No requirement is
-satisfied by the prototype.
+and dated history. The constraints in §13 identify integration risks, not completed work or test passes. §14 records the approved implementation scope; §15 records the approved decisions and §16 records current verification.
+Before this checkpoint, the committed baseline had no automatic-timing or detected-candidate interface.
+The checkpoint reused the evaluated candidate discovery work and delivers individual **Add to lyrics**. The prototype remains a design reference.
 
 ### Visual and interaction assets
 
@@ -75,13 +72,13 @@ TIMING                                                 0 / 73 reviewed
 Automatic timing can estimate where each line is sung.
 
 Model                [Whisper medium              v]
-Existing transcript  [Choose JSON…]  (optional)
+▸ Advanced (optional transcript)
 
 [ Generate automatic timings ]
 ```
 
 - **Keep model selection** visible. Show actually supported/cached models; use the existing backend rather than inventing different quality presets.
-- **Keep optional existing Whisper transcript import** visible. Reuse the existing expected file format and error handling; do not silently treat arbitrary JSON as compatible.
+- **Keep optional Whisper transcript import under a collapsed Advanced disclosure**, available for first runs and regeneration. Indicate a selected transcript or a validation error in the summary. Validate the word-timestamp format before generation, and allow the user to clear the file.
 - **Do not require first/last lyric range or audio start/end anchor inputs** in the ordinary setup UI. They may be useful for future targeted re-alignment, but they are not justified by the main new-project flow. Their presence in separate experimental work is not a reason to include them. If the algorithm truly requires internal bounds, derive them from the whole song/ordered occurrences or document the constraint and propose an unobtrusive alternative.
 - Do not require prior transcription or translation review to generate timings unless the real implementation proves that dependency essential; report such a prerequisite explicitly.
 - Display only genuine requirements: selected local media, ordered lyrics, ready model/transcript. Avoid fake processing-time estimates.
@@ -104,7 +101,7 @@ Avoid invented percentages or estimates. If cancellation exists, terminate/ignor
 - Collapse the generation area into a compact status/re-run control once timings exist. Present useful counts, e.g. `42 reviewed · 27 need review · 4 untimed` (illustrative).
 - A **missing/unmatched lyric** is an existing occurrence for which the algorithm cannot produce a valid assignment; leave it untimed, report the count, and allow manual timing. Do not invent interpolated timestamps merely to eliminate an unmatched state.
 - **Preserve the existing “Detected from audio” flow.** Additional transcript segments that do not match an imported occurrence may contain legitimate material (for example, a spoken introduction missing from published lyrics). Present these as **actionable candidates** with recognized text, approximate time range and a way to listen/inspect where already supported. A discoverable **Add to lyrics** action should create a new occurrence individually; do not quietly discard them as diagnostics or silently insert them into the project.
-- When adding a detected candidate, preserve its audio position, allocate a stable occurrence ID, place it sensibly in the lyric sequence, and initialize its timing as **Needs review**. Preserve unrelated lyrics/translations/groups and avoid adding the _same candidate_ twice. Keep this operation undoable and persist it normally. Reuse the existing implementation instead of replacing it with speculative bulk transcript merging.
+- When adding a detected candidate, preserve its audio position, allocate a stable occurrence ID, place it sensibly in the lyric sequence, and initialize its timing as **Needs review**. Preserve unrelated lyrics/translations/groups and avoid adding the _same candidate_ twice. Keep this operation undoable and persist it normally. **Add to lyrics** keeps the candidate list and current timing selection in context. **View lyric** explicitly selects the added occurrence. Display the lyric text in both previews when it has no word breakdown.
 - Keep unmatched **imported occurrences** (no assigned audio interval) distinct from unmatched **audio-detected candidates** (possible extra occurrences). Both can occur in one run; they require different actions.
   A compact example for an unmatched **audio-detected** segment (not an unmatched imported lyric):
 
@@ -251,7 +248,7 @@ The source of truth for **current** timing stays in the existing occurrence timi
 - During first-time review: **Reset to automatic timing**.
 - After a reviewed snapshot exists and current time differs: **Reset to reviewed timing**.
 - **Keep the reset control visible but disabled** when current timestamps already equal the chosen baseline. Its disabled text explicitly explains why: **Already at automatic timing** before any reviewed snapshot, or **Already at reviewed timing** when the last-reviewed snapshot is the reset target. Do not hide the button.
-- Choose the target based on which baseline exists, **not** merely on the current review flag: editing a previously reviewed interval makes its current state Needs review but must not remove its reviewed reset target. If an occurrence has no baseline, show a disabled **No reset timing available** state. Identical timestamps alone must not silently change review status.
+- Disable reset if its target lies outside the loaded audio and retain the snapshot for relinking. Choose the target based on which baseline exists, **not** merely on the current review flag: editing a previously reviewed interval makes its current state Needs review but must not remove its reviewed reset target. If an occurrence has no baseline, show a disabled **No reset timing available** state. Identical timestamps alone must not silently change review status.
 - If a later **explicit regeneration** produces a new suggestion for an occurrence with a prior reviewed snapshot, preserve the last-reviewed reset target; allow **Use latest automatic suggestion** through a secondary **Use latest automatic suggestion** action. It assigns that normal automatic interval as Needs review, retains the reviewed snapshot and is undoable. Weak estimates keep their separate explicit opt-in action. Never quietly replace the previously reviewed baseline.
 
 Reset and review operations must be undoable, including restored review flags and snapshots.
@@ -300,7 +297,7 @@ The common workflow is a first run on an untimed song. A later automatic run may
 
 ### 8.1 Timing regeneration (in scope)
 
-Provide **Regenerate timings…** as a secondary action after the initial run. Before committing any regenerated results, clarify the impact on current data. Approved modes:
+Use **Regenerate timing…** in the Timeline toolbar to toggle the Automatic Timing panel after the initial run. Before committing any regenerated results, clarify the impact on current data. If pending detected passages remain, ask for explicit confirmation before a successful run replaces their list. Canceling or failing a run retains that list. Approved modes:
 
 1. **Update unreviewed/untimed occurrences only** (default). Preserve current timings and last-reviewed snapshots of all reviewed occurrences. New suggestions for eligible occurrences become Needs review.
 2. **Replace all current timings with new suggestions** (explicitly destructive to edited/current timings; require confirmation and preserve recovery via Undo/project JSON). Do not delete lyric occurrences. Retain prior last-reviewed snapshots so the user can return to confirmed values.
@@ -335,47 +332,33 @@ The top workflow header is specified in [Workflow navigation](../workflow-naviga
 
 ## 11. Acceptance scenarios and tests
 
+The checks below record automated behavior verification, not owner acceptance or listening approval. See §16 for evidence and runtime limitations.
+
 Use existing test infrastructure/dependencies, real project fixtures where suitable, and a stub/fake inference response where deterministic behavior is required. The 73-occurrence song in the screenshot is a useful **example**, not a hard-coded count.
 
-- [ ] On a project with all timestamps null, Timing offers **Generate automatic timings** without first/last lyric or start/end anchor clutter; cached model selection and optional transcript remain.
-- [ ] Generation success populates the **existing** timeline directly; normal generated assignments start as Needs review; weak-estimate opt-in is addressed in §15. No global Apply/Preview checklist is required.
-- [ ] Generated timings, reviews, reset references, model/settings and audio metadata survive autosave, JSON export/reopen and browser reload (subject to relinking media).
-- [ ] An untimed/unmatched imported occurrence is not approvable; it remains manually editable. An extra audio-detected spoken intro is shown with recognized content/timestamps and an easy individual **Add to lyrics** action. Nothing is added without the click; after adding it has a stable ID, preserved timing, Needs review status, and supports Undo/JSON round-trip; duplicate accidental addition is prevented.
-- [ ] One occurrence can be auditioned with pre/post-roll and stop/loop behavior; global playback/spacebar behavior remains unchanged.
-- [ ] A generated occurrence can be corrected, marked reviewed, and advanced to the next unreviewed one when enabled. Turning auto-advance off keeps selection. Button affordance reflects the setting.
-- [ ] Review and bulk-review actions only change the intended occurrences and are undoable; grouping and repeated phrases keep independent statuses.
-- [ ] **Before initial review**, Reset to automatic timing restores machine values while remaining Needs review. If values are already equal, the reset control is visible, disabled and labeled **Already at automatic timing**.
-- [ ] **After review**, editing invalidates current review without losing the reviewed snapshot; Reset to reviewed timing restores reviewed values/status. If values already match the reviewed snapshot, the disabled control reads **Already at reviewed timing**. A later regeneration does not silently override that snapshot.
-- [ ] Existing valid manual/imported legacy timings without new metadata migrate to **Reviewed** with their current values as the sole reviewed reset snapshot. Untimed occurrences stay unreviewed. Existing project JSON reads correctly, with no competing import/reset baseline.
-- [ ] Existing zoom, snap and link-touching-edges interactions work unchanged behind a gear; active setting values are visible in a compact summary and persist in JSON.
-- [ ] Regeneration offers only **update unreviewed/untimed** and **replace all current timings**, defaulting to preserve reviewed work. Explicit replace-all warns and supports undo; no run implicitly deletes lyrics or conflates repeated chorus occurrences with duplicates. No optional compare/apply wizard.
-- [ ] Failed/canceled/stale inference does not partly corrupt project state or erase manually reviewed work.
+- [x] On a project with all timestamps null, Timing offers **Generate automatic timings** without first/last lyric or start/end anchor clutter; cached model selection remains visible and the optional transcript is available under Advanced.
+- [x] Generation success populates the **existing** timeline directly; normal generated assignments start as Needs review; weak-estimate opt-in is addressed in §15. No global Apply/Preview checklist is required.
+- [x] Generated timings, reviews, reset references, model/settings and audio metadata survive autosave, JSON export/reopen and browser reload (subject to relinking media).
+- [x] An untimed/unmatched imported occurrence is not approvable; it remains manually editable. An extra audio-detected spoken intro is shown with recognized content/timestamps and an easy individual **Add to lyrics** action. Nothing is added without the click; after adding it has a stable ID, preserved timing, Needs review status, and supports Undo/JSON round-trip; duplicate accidental addition is prevented.
+- [x] One occurrence can be auditioned with pre/post-roll and stop/loop behavior; global playback/spacebar behavior remains unchanged.
+- [x] A generated occurrence can be corrected, marked reviewed, and advanced to the next unreviewed one when enabled. Turning auto-advance off keeps selection. Button affordance reflects the setting.
+- [x] Review and bulk-review actions only change the intended occurrences and are undoable; grouping and repeated phrases keep independent statuses.
+- [x] **Before initial review**, Reset to automatic timing restores machine values while remaining Needs review. If values are already equal, the reset control is visible, disabled and labeled **Already at automatic timing**.
+- [x] **After review**, editing invalidates current review without losing the reviewed snapshot; Reset to reviewed timing restores reviewed values/status. If values already match the reviewed snapshot, the disabled control reads **Already at reviewed timing**. A later regeneration does not silently override that snapshot.
+- [x] Existing valid manual/imported legacy timings without new metadata migrate to **Reviewed** with their current values as the sole reviewed reset snapshot. Untimed occurrences stay unreviewed. Existing project JSON reads correctly, with no competing import/reset baseline.
+- [x] Existing zoom, snap and link-touching-edges interactions work unchanged behind a gear; active setting values are visible in a compact summary and persist in JSON.
+- [x] Regeneration offers only **update unreviewed/untimed** and **replace all current timings**, defaulting to preserve reviewed work. Explicit replace-all warns and supports undo; no run implicitly deletes lyrics or conflates repeated chorus occurrences with duplicates. No optional compare/apply wizard.
+- [x] Failed/canceled/stale inference does not partly corrupt project state or erase manually reviewed work.
 - [x] Documentation reconciliation extracted the top workflow navigation into a **separate proposed feature spec** with its own assets, acceptance criteria and approval boundary. Navigation implementation and its UI tests belong to that separate feature, not the Timing feature's completion gate.
-- [ ] Existing manual timing, grouped timeline movement, keyboard shortcuts, audio clock, export and format/regression checks still pass. Test on existing browser tooling; do not install browsers or dependencies without approval.
+- [x] Existing manual timing, grouped timeline movement, keyboard shortcuts, audio clock, export and format/regression checks still pass. Test on existing browser tooling; do not install browsers or dependencies without approval.
 
-## 12. Codex handoff: reconcile → plan → implement → review
+## 12. Maintenance
 
-**Do not implement this document blindly.** First inspect `git status`, relevant current local files (including uncommitted automatic timing work), the docs above, JSON/schema and actual test scripts. In particular, identify what the committed Reset timing and undo logic do, and inspect separately available automatic-timing work before reusing its generation, candidate and progress handling. Do not infer behavior from screenshot labels.
-
-Before changing code, deliver a **complete proposed implementation plan** that:
-
-1. Summarizes the actual existing behavior and conflicts with this spec, including what is reusable.
-2. Proposes the smallest coherent state/schema migration and reset/review invariants, including the distinction between original automatic suggestions and last-reviewed snapshots; no additional imported baseline. Preserve add-from-audio candidates and migrate valid legacy timed occurrences as Reviewed.
-3. Lists UI changes and sensible **Timing-only** phases: (a) state/persistence, (b) compact generation flow and per-lyric review, (c) playback/settings, (d) regeneration; adjust order for dependencies. The separate [workflow-navigation draft](../workflow-navigation/SPEC.md) has been extracted as required by Section 9. Include navigation as a separately reviewable plan/workstream, not a mandatory Timing implementation phase.
-4. Separates **current feature scope** (including required individual “Detected from audio” addition) from deferred bulk transcription/lyric replacement and algorithm experiments; reports any ambiguity that materially affects data safety.
-5. Includes executable acceptance tests and realistic manual listening checks; specifies suggested review boundaries and any schema backward-compatibility concerns.
-6. Identifies redundant/contradictory docs to update once implementation is verified, **without overwriting unrelated docs**.
-
-**Writing the separate proposed navigation SPEC and organizing its design references are authorized documentation/reconciliation steps, not approval to implement application changes. Wait for the owner's approval of the plan(s) before implementing.** During approved implementation, use native task tracking when available and track the **entire** scope, not just a first slice. Prefer reviewable increments; report tests actually executed and any remaining steps at each boundary. **Present diffs for owner review and do not stage/commit without explicit approval.** Do not mark the feature done prematurely. No new software, system dependencies, browser downloads, model downloads or unrelated refactors without approval. Respect `AGENTS.md` and the repository's versioning convention.
-
-After verified implementation and owner acceptance, update the living Timing/assisted-timing documentation and `ROADMAP.md` to reflect real behavior. Keep this spec as a useful behavior reference, not a contradictory second set of unverified claims.
+This checkpoint is complete. Use the behavior contract above, the tests and the verification record in §16 when changing Timing. Consult the [roadmap](../../ROADMAP.md) for open work and Git for current worktree status.
 
 ## 13. Reconciliation constraints
 
-The committed baseline supports manual timing. Automatic-timing implementation
-work is separate and uncommitted; inspect it when resuming rather than assuming
-the API, origin fields or new controls exist in the baseline. This specification
-does not certify feature completion. Reuse evaluated work when available.
+The prior baseline supported manual timing. This checkpoint adds the automatic-timing API, origin fields and review controls. The following constraints governed implementation.
 
 - Timing review belongs to each occurrence, independently of phrase-content review.
 - Audit every timestamp mutation, including group moves and copies, when adding
@@ -404,17 +387,9 @@ The [evaluation record](../../ASSISTED_TIMING.md) holds listening evidence and
 accuracy safeguards. Application checks must be rerun during implementation rather
 than copied from historical test totals.
 
-## 14. Completion plan — documentation commit before implementation
+## 14. Historical implementation plan
 
-This plan covers the **full remaining Timing scope**, not only its first increment.
-Use existing dependencies/test infrastructure. Do not rewrite the algorithm,
-waveform, main timeline, dictionary/editor or app shell. Internal review boundaries
-below are suggested coherent increments, not declarations of checkpoint completion.
-Owner decisions in §15 are approved. Application changes remain on hold until the separate documentation commit and checkpoint continuation; this preparation does not stage, commit or change application code.
-Dependency order: A provides the common state/settings model; B/C/D build on it.
-Implement E's update-policy and stale-result domain guards **with B**, before any
-re-run is exposed, then finish E's regeneration UI/integration after C/D. E is not
-a reason to ship an unsafe intermediate generation flow or a circular dependency.
+This section records the approved scope and original implementation sequence for the completed checkpoint. The verification record in §16 describes the delivered result.
 
 ### A. State, migration and timing-domain invariants
 
@@ -459,7 +434,7 @@ Reuse worker/progress/result validation. Whole-song ordered occurrences/media
 bounds replace ordinary range/anchor controls; keep range support internal only
 if useful to existing tests, with no new advanced setup requirement. Discover
 actually cached models rather than presenting hardcoded availability while keeping optional
-transcript selection visible and its pre-audio selection/error protections.
+transcript selection under Advanced and retaining its pre-audio selection and validation.
 
 On success, apply eligible **normal valid** generated timings as one project/history
 change, record their automatic snapshots/reasons and set Needs review. Failures,
@@ -567,12 +542,7 @@ listen/correct/mark each occurrence, add selected intro candidates individually,
 reset before/after review, regenerate with reviewed protection, undo and reload JSON.
 The old explicit Apply walkthrough is not the target acceptance test.
 
-**Boundary:** final owner review of the whole approved scope, exact diff/validation
-summary and a fresh commit proposal. Do not stage/commit automatically. Stage
-explicitly scoped paths only after approval; the deleted checkpoint file's old
-mixed-code staging script is obsolete. First commit the reconciled documentation
-separately after its own approval; later domain/UI commits may follow the above
-coherent boundaries, but a slice review is not checkpoint completion.
+**Review boundary:** The full feature and verification results were reviewed together before checkpoint acceptance. See §16 for the record.
 
 ### Separate workstream: workflow navigation
 
@@ -583,9 +553,8 @@ header/viewport/inert constraints documented there.
 
 ## 15. Approved decisions
 
-The owner resolved these individually after reconciliation. These decisions govern
-the remaining implementation; they are **not claims of implemented behavior**.
-Application changes remain outside this documentation-only preparation.
+The owner resolved these design decisions during reconciliation. They define the behavior of the completed checkpoint.
+The owner subsequently authorized implementation of the full plan; acceptance remains distinct from implementation.
 
 1. **Migration without a version bump.** Keep the existing file-version marker.
    Files lacking new timing-review metadata migrate valid current intervals to
@@ -638,3 +607,46 @@ Implementation details such as field names, hash encoding/decoding parameters,
 accessible settings positioning and test organization should follow these rules
 and existing conventions; material changes to the agreed behavior need owner review.
 The navigation proposal remains separately scoped and unprioritized.
+
+## 16. Implementation and verification record
+
+**Completed checkpoint, 2026-11-18.** The implementation passed the checks recorded below and received code review. Verification used installed dependencies and cached models. The schema marker remains version 1.
+
+Approved task scope:
+
+- A — implemented: occurrence timing review, automatic/reviewed snapshots, shared metadata-aware ingress, retired canonical baseline, validated project settings, consistent mutation/copy rules.
+- B/E — implemented: whole-song cached-model/transcript generation; atomic regular assignments; preserve-reviewed default and confirmed replace-all; failed/canceled/stale stream guards; persisted candidates/weak estimates; individual additions and duplicate-click guard; normalized audio identity with explicit relink reuse and unverified external-transcript provenance.
+- C — implemented: occurrence/group counts and status, reviewed-first reset/equality labels, latest-automatic action, wrapped displayed-order auto-advance, secondary confirmed bulk approval and atomic history.
+- D — implemented: native-clock padded one-shot/loop, playback-context cancellation, accessible modal Timing preferences, portable padding and auto-advance, retained speed/translation controls.
+- Integration — implemented and checked as below. Automated checks cover behavior. They do not establish perceptual timing accuracy or physical touch behavior.
+
+Executed verification (using installed tools directly; the npm wrapper attempted registry access and was not used):
+
+| Check                                                                                                                                                                                                                  | Result                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node node_modules/typescript/bin/tsc -p web/tsconfig.json` and `-p web/tsconfig.tools.json`                                                                                                                           | Passed                                                                                                                                                                     |
+| `node web/dev.ts --build`                                                                                                                                                                                              | Passed                                                                                                                                                                     |
+| `node scripts/format-changes.mts --check` and `git diff --check`                                                                                                                                                       | Passed; index unchanged                                                                                                                                                    |
+| `node web/tests/run.ts`                                                                                                                                                                                                | 111 passed                                                                                                                                                                 |
+| `node web/tests/browser.ts`                                                                                                                                                                                            | Passed M1/manual M2 plus the integrated automatic-review scenarios                                                                                                         |
+| `node web/tests/browser.ts --timing-review`                                                                                                                                                                            | Passed focused review/generation and real native WAV playback scenarios                                                                                                    |
+| `node web/tests/browser.ts --lyrics-grouping`                                                                                                                                                                          | Passed                                                                                                                                                                     |
+| `node web/tests/browser.ts --import-workflow`                                                                                                                                                                          | Passed synthetic import workflow                                                                                                                                           |
+| `python-src/venv/bin/python -m pytest --ignore=python-src/.env --ignore-glob='**/.env*' python-src/tests/test_automatic_timing.py python-src/tests/test_timing_evaluation.py python-src/tests/test_react_ingest.py -q` | 35 passed                                                                                                                                                                  |
+| Full Python suite with the same ignore options                                                                                                                                                                         | 93 passed, 12 failed in legacy `test_workbench.py`: NumPy/PyArrow mismatch, missing OpenSSL runtime and downstream widget failures; no unrelated runtime repairs attempted |
+| Matching full-song imported transcript                                                                                                                                                                                 | 73 occurrences, 72 regular assignments, 1 unresolved, 7 optional detected passages; result validated/applied and JSON round-tripped through the new domain                 |
+| Real cached `base` model                                                                                                                                                                                               | Completed a two-second synthetic PCM run and an eight-second real-song excerpt; the latter remained a weak estimate and was not silently promoted                          |
+
+The real recording was decoded to temporary mono 16kHz PCM WAV using the already-installed browser for smoke verification. Direct compressed-media worker decoding is limited on this machine: no FFmpeg is on PATH, and the installed Remotion FFmpeg fails on missing newer macOS AVFoundation symbols. WAV generation/checking works without FFmpeg. Nothing was installed or downloaded to bypass this. Real media/transcripts/model outputs remain in ignored artifacts or temporary storage, not committed fixtures.
+
+Coverage includes migration/reopen, independent repeats/copies, linked/group edits, no-op edits, exact milliseconds and TS portability, reset precedence/equality, bulk undo, regular versus weak assignment, candidate identity/duplicate clicks, canceled/failed/stale generation, reviewed protection, settings keyboard access/focus, native speed/stop/loop, media relinking and mobile width. Existing manual/grouping acceptance is exercised alongside the new loop. Simulated inference verifies UI/state contracts; it does not certify perceptual synchronization or screenshot fidelity to the design references.
+
+To reproduce the manual listening workflow, use a mono 16kHz PCM WAV on this machine (or repair the local decoder separately), generate from the matching transcript, audition/correct/review occurrences, try each reset path and optional candidate addition, regenerate with protection, then undo/download/reopen/relink.
+
+### Desktop UX follow-up
+
+The results card collapses after generation. **Regenerate timing…** beside **Timing settings** opens the entire card without starting a run. The transcript picker is under Advanced, and rejected imports cannot silently fall back to a model run. Adding a passage preserves review selection and keeps focus in the candidate list. View lyric reveals the added cue, and previews fall back to recognized text without a word breakdown. Candidates retain their local dictionary drafts, and the Lyric editor follows first appearance order. **Draft words and Pinyin** can restore a draft for previously added detected lyrics. Dismiss and Clear detected passages update the saved candidate list and support Undo. A fresh run can rediscover dismissed passages. Replace-all, relink reuse, and bulk approval use in-app confirmation. Auto-advance opens collapsed destination groups, and the inspector reports completion and remaining untimed lyrics. Timing settings summarize linked edges and open as a viewport-bounded popover without moving the timeline. Audio-link actions wait until media is loaded, and the inspector hides automatic timing details that only repeat current values.
+
+The desktop follow-up passed the workbench build, TypeScript checks, browser regressions, and the grouping and synthetic import workflows. Focused Chromium checks and screenshots at 1024×768 and 1440×1000 cover a seven-candidate list with long text, keyboard scroll and focus, both detected-text previews, in-app cancellation, and completion with an untimed lyric. The existing matching song transcript also passed the new parser. The UI checks use synthetic generation and native WAV playback. Live inference and listening quality were outside this UX pass.
+
+Code review identified two data safeguards that are now implemented. The checkpoint now confirms successful replacement of pending detected passages during regeneration and rejects resets outside the loaded recording. The reset reference is retained for use with suitable audio.

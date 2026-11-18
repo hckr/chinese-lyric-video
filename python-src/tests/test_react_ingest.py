@@ -25,10 +25,10 @@ def dictionary(tmp_path):
 
 def test_credits_title_repetitions_and_word_drafts(dictionary):
     project = draft_project(
-        "做你的猫\n唱：小可乐\n词：陈大创\n曲：陈大创\n做你的猫 喵喵\n漂亮的猫\n做你的猫 喵喵",
+        "纸上练习\n唱：测试歌手\n词：测试作者\n曲：测试作者\n女儿的猫\n漂亮的猫\n女儿的猫",
         dictionary_path=dictionary,
     )
-    assert project["metadata"] == {"title": "做你的猫", "artist": "小可乐"}
+    assert project["metadata"] == {"title": "纸上练习", "artist": "测试歌手"}
     assert len(project["phrases"]) == 2
     assert len(project["occurrences"]) == 3
     assert (
@@ -83,14 +83,14 @@ def test_on_demand_dictionary(dictionary):
 @pytest.mark.parametrize("label", ["詞", "作詞", "編曲", "詞曲", "製作人", "錄音"])
 def test_traditional_credits_are_not_lyrics(dictionary, label):
     project = draft_project(
-        f"做你的貓\n唱：小可樂\n{label}：陳大創\n曲：陳大創\n做你的貓 喵喵",
+        f"紙上練習\n唱：測試歌手\n{label}：測試作者\n曲：測試作者\n女兒的貓",
         dictionary_path=dictionary,
     )
     assert len(project["phrases"]) == 1
-    assert project["phrases"][0]["lyricKey"] == "做你的猫 喵喵"
+    assert project["phrases"][0]["lyricKey"] == "女儿的猫"
     assert len(project["occurrences"]) == 1
-    assert project["metadata"]["title"] == "做你的貓"
-    assert project["metadata"]["artist"] == "小可樂"
+    assert project["metadata"]["title"] == "紙上練習"
+    assert project["metadata"]["artist"] == "測試歌手"
 
 
 @pytest.mark.parametrize(

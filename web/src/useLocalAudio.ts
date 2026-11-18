@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Project } from "./domain.ts";
 import { mediaMs } from "./timing.ts";
-import { waveformAllowed, waveformPeaks } from "./waveform.ts";
+import { decodeWaveform } from "./waveform-stream.ts";
 
 export function useLocalAudio(
   active: boolean,
@@ -9,8 +9,17 @@ export function useLocalAudio(
   loop: { startMs: number; endMs: number } | null,
 ) {
   const ref = useRef<HTMLAudioElement>(null);
+  const bounded = useRef<{
+    startMs: number;
+    endMs: number;
+    loop: boolean;
+  } | null>(null);
+  const cancelBounded = () => {
+    bounded.current = null;
+  };
   const file = useRef<File | null>(null);
   const version = useRef(0);
+  const analysis = useRef<AbortController | null>(null);
   const [url, setUrl] = useState("");
   const [durationMs, setDuration] = useState<number>();
   const [positionMs, setPosition] = useState(0);
@@ -29,26 +38,38 @@ export function useLocalAudio(
   useEffect(
     () => () => {
       version.current++;
+      analysis.current?.abort();
     },
     [],
   );
   useEffect(() => {
-    if (!active) ref.current?.pause();
+    if (!active) {
+      bounded.current = null;
+      ref.current?.pause();
+    }
   }, [active]);
   useEffect(() => {
     const audio = ref.current;
     if (!audio) return;
     let frame = 0;
     const update = () => {
-      const range = live.current.loop;
+      const range =
+        bounded.current ??
+        (live.current.loop ? { ...live.current.loop, loop: true } : null);
       if (
         !audio.paused &&
         range &&
         range.endMs <= mediaMs(audio.duration) &&
         (mediaMs(audio.currentTime) >= range.endMs ||
           mediaMs(audio.currentTime) < range.startMs)
-      )
-        audio.currentTime = range.startMs / 1000;
+      ) {
+        if (range.loop) audio.currentTime = range.startMs / 1000;
+        else {
+          bounded.current = null;
+          audio.currentTime = range.endMs / 1000;
+          audio.pause();
+        }
+      }
       setPosition(mediaMs(audio.currentTime));
     };
     const tick = () => {
@@ -66,8 +87,10 @@ export function useLocalAudio(
       update();
     };
     const ended = () => {
-      const range = live.current.loop;
-      if (range && range.endMs <= mediaMs(audio.duration)) {
+      const range =
+        bounded.current ??
+        (live.current.loop ? { ...live.current.loop, loop: true } : null);
+      if (range?.loop && range.endMs <= mediaMs(audio.duration)) {
         audio.currentTime = range.startMs / 1000;
         void audio
           .play()
@@ -77,20 +100,32 @@ export function useLocalAudio(
     audio.addEventListener("play", play);
     audio.addEventListener("pause", pause);
     audio.addEventListener("ended", ended);
-    audio.addEventListener("seeked", update);
+    const seeked = () => {
+      const range = bounded.current;
+      if (
+        range &&
+        (mediaMs(audio.currentTime) < range.startMs ||
+          mediaMs(audio.currentTime) > range.endMs)
+      )
+        bounded.current = null;
+      update();
+    };
+    audio.addEventListener("seeked", seeked);
     audio.addEventListener("timeupdate", update);
     return () => {
       cancelAnimationFrame(frame);
       audio.removeEventListener("play", play);
       audio.removeEventListener("pause", pause);
       audio.removeEventListener("ended", ended);
-      audio.removeEventListener("seeked", update);
+      audio.removeEventListener("seeked", seeked);
       audio.removeEventListener("timeupdate", update);
       audio.pause();
     };
   }, []);
   const load = (next: File) => {
+    cancelBounded();
     version.current++;
+    analysis.current?.abort();
     ref.current?.pause();
     file.current = next;
     setError("");
@@ -117,43 +152,39 @@ export function useLocalAudio(
       lastModified: selected.lastModified,
       durationMs: duration,
     });
-    if (!waveformAllowed(selected.size, duration)) {
-      setWaveStatus(
-        "Waveform skipped for this large file. Playback and timing remain available.",
-      );
-      return;
-    }
-    setWaveStatus("Analyzing local audio…");
-    let context: AudioContext | undefined;
+    analysis.current?.abort();
+    const controller = new AbortController();
+    analysis.current = controller;
+    setWaveStatus("Analyzing audio track…");
     try {
-      context = new AudioContext({ sampleRate: 16000 });
-      const decoded = await context.decodeAudioData(
-        await selected.arrayBuffer(),
-      );
-      if (version.current !== generation) return;
-      const channels = Array.from(
-        { length: decoded.numberOfChannels },
-        (_, i) => decoded.getChannelData(i),
-      );
-      setPeaks(waveformPeaks(channels));
+      const peaks = await decodeWaveform(selected, duration, controller.signal);
+      if (version.current !== generation || controller.signal.aborted) return;
+      setPeaks(peaks);
       setWaveStatus("");
-    } catch {
-      if (version.current === generation)
+    } catch (error) {
+      if (version.current === generation && !controller.signal.aborted)
         setWaveStatus(
-          "Waveform analysis unavailable. Use the ruler; audio playback is independent.",
+          `${error instanceof Error ? error.message : "Waveform analysis unavailable."} Playback and timing remain available.`,
         );
     } finally {
-      await context?.close().catch(() => {});
+      if (analysis.current === controller) analysis.current = null;
     }
   };
+
   const seek = (ms: number) => {
     const audio = ref.current;
     if (!audio || durationMs === undefined) return;
+    if (
+      bounded.current &&
+      (ms < bounded.current.startMs || ms >= bounded.current.endMs)
+    )
+      cancelBounded();
     audio.currentTime =
       Math.min(durationMs, Math.max(0, Math.round(ms))) / 1000;
     setPosition(mediaMs(audio.currentTime));
   };
   const toggle = () => {
+    cancelBounded();
     const audio = ref.current;
     if (!audio || durationMs === undefined) return;
     if (audio.paused) {
@@ -165,8 +196,26 @@ export function useLocalAudio(
         );
     } else audio.pause();
   };
+  const playSegment = (
+    bounds: { startMs: number; endMs: number },
+    repeat = false,
+  ) => {
+    const audio = ref.current;
+    if (!audio || durationMs === undefined) return;
+    const startMs = Math.max(0, bounds.startMs),
+      endMs = Math.min(durationMs, bounds.endMs);
+    if (endMs <= startMs) return;
+    bounded.current = { startMs, endMs, loop: repeat };
+    audio.currentTime = startMs / 1000;
+    void audio.play().catch(() => {
+      cancelBounded();
+      setError("Playback failed.");
+    });
+  };
   const mediaError = () => {
+    cancelBounded();
     version.current++;
+    analysis.current?.abort();
     setPlaying(false);
     setDuration(undefined);
     setPeaks([]);
@@ -176,6 +225,9 @@ export function useLocalAudio(
     );
   };
   return {
+    file,
+    playSegment,
+    cancelBounded,
     ref,
     url,
     durationMs,

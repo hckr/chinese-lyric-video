@@ -10,7 +10,7 @@ export const wordSchema = z
     translation: z.object({ en: z.string() }).strict(),
   })
   .strict();
-const phraseSchema = z.preprocess(
+export const phraseSchema = z.preprocess(
   (input) => {
     if (input && typeof input === "object" && !Array.isArray(input)) {
       const phrase = { ...input } as Record<string, unknown>;
@@ -31,10 +31,59 @@ const phraseSchema = z.preprocess(
     })
     .strict(),
 );
+export const intervalSchema = z
+  .object({
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+  })
+  .strict()
+  .refine((v) => v.endMs > v.startMs, "End must follow start");
+export const timingSettingsSchema = z
+  .object({
+    zoom: z
+      .union([
+        z.literal(1),
+        z.literal(2),
+        z.literal(4),
+        z.literal(8),
+        z.literal(16),
+        z.literal(32),
+      ])
+      .default(8),
+    snap: z.enum(["off", "edges"]).default("edges"),
+    linkEdges: z.boolean().default(false),
+    model: z
+      .enum(["base", "small", "medium", "large-v3-turbo"])
+      .default("medium"),
+    preRollMs: z.number().int().min(0).max(5000).default(250),
+    postRollMs: z.number().int().min(0).max(5000).default(250),
+    autoAdvance: z.boolean().default(true),
+  })
+  .strict();
+export const defaultTimingSettings = timingSettingsSchema.parse({});
+export const audioIdentitySchema = z
+  .object({
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    encoding: z.literal("mono-f32le-16000"),
+  })
+  .strict();
+const timingContextSchema = z.object({
+  runId: z.string(),
+  reasons: z.array(z.string()),
+  matched: z.number().int().nonnegative().optional(),
+  total: z.number().int().nonnegative().optional(),
+});
+const timingSuggestionSchema = intervalSchema.and(timingContextSchema);
 export const occurrenceSchema = z
   .object({
     id,
     phraseId: id,
+    detectedFromAudio: z.boolean().optional(),
+    timingReview: z.enum(["needs-review", "reviewed"]).optional(),
+    reviewedTiming: intervalSchema.optional(),
+    automaticTiming: timingSuggestionSchema.optional(),
+    weakTiming: timingSuggestionSchema.optional(),
+    timingIssue: timingContextSchema.optional(),
     startMs: z.number().int().nonnegative().nullable(),
     endMs: z.number().int().nonnegative().nullable(),
   })
@@ -62,6 +111,28 @@ export const projectSchema = z
       })
       .strict()
       .optional(),
+    timingSettings: timingSettingsSchema.optional(),
+    timingRun: z
+      .object({
+        id: z.string(),
+        model: z.string(),
+        transcriptProvenance: z.enum(["generated", "external-unverified"]),
+        audioIdentity: audioIdentitySchema.optional(),
+        candidates: z.array(
+          z
+            .object({
+              id: z.string(),
+              text: z.string().min(1),
+              words: z.array(wordSchema).optional(),
+              startMs: z.number().int().nonnegative(),
+              endMs: z.number().int().nonnegative(),
+            })
+            .strict()
+            .refine((v) => v.endMs > v.startMs),
+        ),
+      })
+      .strict()
+      .optional(),
     source: z.string(),
     lyricGroups: z
       .array(
@@ -82,6 +153,10 @@ export const projectSchema = z
         ctx.addIssue({ code: "custom", message: `Duplicate ${name}` });
     };
     check(
+      (p.timingRun?.candidates ?? []).map((c) => c.id),
+      "candidate ID",
+    );
+    check(
       p.phrases.map((v) => v.id),
       "phrase ID",
     );
@@ -93,19 +168,6 @@ export const projectSchema = z
       p.phrases.flatMap((v) => v.words.map((w) => w.id)),
       "token ID",
     );
-    if (
-      p.timingBaseline &&
-      (p.timingBaseline.length !== p.occurrences.length ||
-        p.timingBaseline.some(
-          (o, i) =>
-            o.id !== p.occurrences[i]?.id ||
-            o.phraseId !== p.occurrences[i]?.phraseId,
-        ))
-    )
-      ctx.addIssue({
-        code: "custom",
-        message: "Timing baseline must match occurrence IDs and order",
-      });
     check(
       (p.lyricGroups ?? []).map((group) => group.id),
       "group ID",
@@ -129,12 +191,33 @@ export const projectSchema = z
     for (const o of p.occurrences) {
       if (!p.phrases.some((v) => v.id === o.phraseId))
         ctx.addIssue({ code: "custom", message: `Unknown phrase in ${o.id}` });
-      if (o.startMs !== null && o.endMs !== null && o.endMs < o.startMs)
-        ctx.addIssue({
-          code: "custom",
-          message: `End precedes start: ${o.id}`,
-        });
     }
+  })
+  .transform((p) => {
+    const { timingBaseline: _retired, ...rest } = p;
+    return {
+      ...rest,
+      occurrences: p.occurrences.map((input) => {
+        const o = Object.fromEntries(
+          Object.entries(input).filter(([, value]) => value !== undefined),
+        ) as typeof input;
+        const valid =
+          o.startMs !== null &&
+          o.endMs !== null &&
+          o.endMs > o.startMs &&
+          (!p.audio || o.endMs <= p.audio.durationMs);
+        if (o.timingReview !== undefined) return o;
+        return {
+          ...o,
+          timingReview: valid
+            ? ("reviewed" as const)
+            : ("needs-review" as const),
+          ...(valid
+            ? { reviewedTiming: { startMs: o.startMs!, endMs: o.endMs! } }
+            : {}),
+        };
+      }),
+    } as typeof p;
   });
 export type Project = z.infer<typeof projectSchema>;
 export type Phrase = z.infer<typeof phraseSchema>;
@@ -145,10 +228,20 @@ export const hanzi = (text: string) =>
 export const linePinyin = (p: Phrase) =>
   p.words
     .filter((w) => w.hanzi)
-    .map((w) => w.pinyin)
+    .map((w) => (w.pinyin.trim() ? w.pinyin : "???"))
     .join(" ");
 export const parseProject = (source: string): Project =>
   projectSchema.parse(JSON.parse(source));
+// Missing/false means an ordinary appearance. Keep saved projects compact
+// without mutating live state or treating the flag as a review status.
+export function serializeProject(project: Project, space?: number): string {
+  return JSON.stringify(
+    projectSchema.parse(project),
+    (key, value) =>
+      key === "detectedFromAudio" && value === false ? undefined : value,
+    space,
+  );
+}
 export const pending = (p: Phrase): Phrase => ({
   ...p,
   review: "pending",
@@ -385,6 +478,15 @@ export function exportIssues(p: Project): string[] {
       .map((v) => `${v.lyricKey}: unreviewed`),
     ...p.occurrences
       .filter(
+        (o) =>
+          o.startMs !== null &&
+          o.endMs !== null &&
+          o.endMs > o.startMs &&
+          o.timingReview !== "reviewed",
+      )
+      .map((o) => `${o.id}: timing needs review`),
+    ...p.occurrences
+      .filter(
         (o) => o.startMs === null || o.endMs === null || o.endMs <= o.startMs,
       )
       .map(
@@ -395,6 +497,18 @@ export function exportIssues(p: Project): string[] {
 }
 
 // Structural edits keep stable IDs, original timing snapshots and history data.
+export function phrasesInAppearanceOrder(project: Project): Phrase[] {
+  const phrases = new Map(project.phrases.map((phrase) => [phrase.id, phrase]));
+  const ordered: Phrase[] = [];
+  for (const { phraseId } of project.occurrences) {
+    const phrase = phrases.get(phraseId);
+    if (!phrase) continue;
+    ordered.push(phrase);
+    phrases.delete(phraseId);
+  }
+  return [...ordered, ...phrases.values()];
+}
+
 export function addAppearance(
   project: Project,
   phraseId: string,
@@ -410,6 +524,7 @@ export function addAppearance(
     phraseId,
     startMs: null,
     endMs: null,
+    timingReview: "needs-review",
   };
   const at = afterId
     ? project.occurrences.findIndex((o) => o.id === afterId)
@@ -572,7 +687,14 @@ export function repeatAppearance(
     ...next,
     occurrences: next.occurrences.map((cue) =>
       cue.id === appearanceId
-        ? { ...cue, startMs: source.startMs, endMs: source.endMs }
+        ? {
+            ...cue,
+            startMs: source.startMs,
+            endMs: source.endMs,
+            ...(source.detectedFromAudio === true
+              ? { detectedFromAudio: true }
+              : {}),
+          }
         : cue,
     ),
   };

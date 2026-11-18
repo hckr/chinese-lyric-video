@@ -12,3 +12,9 @@ python-dotenv==1.2.4
 httpx2==2.16.0
 # Native filesystem events for Streamlit reloads.
 watchdog==7.1.0
+
+# Local word-timestamp transcription; model weights are installed separately.
+openai-whisper==20250625
+
+# Intel macOS PyTorch wheels require the NumPy 1.x ABI.
+numpy<2; platform_system == "Darwin" and platform_machine == "x86_64"

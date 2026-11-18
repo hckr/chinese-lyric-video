@@ -3,7 +3,7 @@ import { RepeatLyricDialog } from "./RepeatLyricDialog";
 import { orderGroupedProject } from "./lyric-groups.ts";
 import { DictionaryLookup } from "./DictionaryLookup";
 import { RemoveAppearanceDialog } from "./RemoveAppearanceDialog";
-import { draftRawLyrics } from "./raw-import";
+import { draftDetectedWords, draftRawLyrics } from "./raw-import";
 import { TimingEditor } from "./TimingEditor";
 import {
   attachAudioMetadata,
@@ -26,10 +26,12 @@ import {
   removeAppearance,
   conflictingLyrics,
   parseProject,
+  serializeProject,
   projectSchema,
   newId,
   pending,
   phraseIssues,
+  phrasesInAppearanceOrder,
   hanzi,
   fixSpacing,
   joinReadings,
@@ -52,7 +54,9 @@ function loadSession(): History | null {
   }
 }
 function initial(project: Project): History {
-  project = withTimingBaseline(orderGroupedProject(project));
+  project = withTimingBaseline(
+    project.timingRun ? project : orderGroupedProject(project),
+  );
   return {
     present: {
       project,
@@ -170,7 +174,7 @@ export function App() {
   useEffect(() => {
     if (!project) return;
     try {
-      localStorage.setItem(STORE, JSON.stringify(project));
+      localStorage.setItem(STORE, serializeProject(project));
       setSaved("Saved in this browser · download JSON for a portable copy");
     } catch {
       setSaved("Browser storage unavailable — download project JSON to save");
@@ -220,12 +224,18 @@ export function App() {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
-  const change = (p: Project, selection: Partial<Snapshot> = {}) =>
+  const change = (
+    p: Project,
+    selection: Partial<Snapshot> = {},
+    preserveOrder = false,
+  ) =>
     setHistory((h) =>
       h
         ? commit(h, {
             ...h.present,
-            project: projectSchema.parse(orderGroupedProject(p)),
+            project: projectSchema.parse(
+              preserveOrder ? p : orderGroupedProject(p),
+            ),
             ...selection,
           })
         : initial(p),
@@ -328,6 +338,33 @@ export function App() {
       );
     } finally {
       setImporting(false);
+    }
+  }
+  async function restoreDetectedReadings() {
+    if (!project || !phrase || phrase.words.length || editingStructure) return;
+    const base = project;
+    setEditingStructure(true);
+    setError("");
+    try {
+      const words = await draftDetectedWords(phrase.lyricKey);
+      if (projectRef.current !== base)
+        throw Error(
+          "The project changed while preparing readings. Try again on the current lyric.",
+        );
+      change(
+        {
+          ...base,
+          phrases: base.phrases.map((item) =>
+            item.id === phrase.id ? { ...pending(item), words } : item,
+          ),
+        },
+        { phraseId: phrase.id, tokenId: words[0]?.id ?? "" },
+        true,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEditingStructure(false);
     }
   }
   async function createLyric() {
@@ -503,13 +540,10 @@ export function App() {
               disabled={!project}
               onClick={() =>
                 project &&
-                download(
-                  "song.workbench.json",
-                  JSON.stringify(project, null, 2),
-                )
+                download("song.workbench.json", serializeProject(project, 2))
               }
             >
-              Save project JSON
+              Download project JSON
             </button>
           </div>
         </header>
@@ -676,7 +710,7 @@ export function App() {
                     />
                   </label>
                   <div className="phrase-list">
-                    {project.phrases
+                    {phrasesInAppearanceOrder(project)
                       .filter((p) =>
                         `${p.lyricKey} ${p.translation.en} ${p.translation.pl}`
                           .toLowerCase()
@@ -763,6 +797,20 @@ export function App() {
                         </p>
                       )}
                       <h2>Word breakdown</h2>
+                      {phrase.words.length === 0 &&
+                        hanzi(phrase.lyricKey) &&
+                        project.occurrences.some(
+                          (cue) =>
+                            cue.phraseId === phrase.id && cue.detectedFromAudio,
+                        ) && (
+                          <button
+                            disabled={editingStructure}
+                            onClick={() => void restoreDetectedReadings()}
+                          >
+                            Draft words and Pinyin
+                          </button>
+                        )}
+
                       <div className="actions wrap">
                         <button
                           onClick={() => {
@@ -975,6 +1023,12 @@ export function App() {
                                   }}
                                 >
                                   <span className="lyric-timing-copy">
+                                    {o.detectedFromAudio === true &&
+                                      phrase.review !== "reviewed" && (
+                                        <span className="detected-audio-badge">
+                                          Detected from audio
+                                        </span>
+                                      )}
                                     <span className="lyric-timing-range">
                                       {o.startMs === null && o.endMs === null
                                         ? "Timing not set"
@@ -1062,7 +1116,7 @@ export function App() {
                   onClick={() =>
                     download(
                       "song.workbench.json",
-                      JSON.stringify(project, null, 2),
+                      serializeProject(project, 2),
                     )
                   }
                 >
@@ -1096,18 +1150,22 @@ export function App() {
                       : h,
                   )
                 }
-                onChange={(p, id) => {
+                onChange={(p, id, preserveOrder) => {
                   if (p !== project) {
                     const occurrence = p.occurrences.find((o) => o.id === id);
                     const selectedPhrase =
                       p.phrases.find(
                         (phrase) => phrase.id === occurrence?.phraseId,
                       ) ?? p.phrases[0];
-                    change(p, {
-                      occurrenceId: occurrence?.id,
-                      phraseId: selectedPhrase?.id ?? "",
-                      tokenId: selectedPhrase?.words[0]?.id ?? "",
-                    });
+                    change(
+                      p,
+                      {
+                        occurrenceId: occurrence?.id,
+                        phraseId: selectedPhrase?.id ?? "",
+                        tokenId: selectedPhrase?.words[0]?.id ?? "",
+                      },
+                      preserveOrder,
+                    );
                   }
                 }}
                 onRemove={setRemovalId}

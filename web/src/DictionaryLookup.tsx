@@ -4,6 +4,7 @@ import {
   type DictionaryEntry,
 } from "./dictionary-service.ts";
 import { dictionaryParts } from "./dictionary-text.ts";
+import { readingParts } from "./reading-parts.ts";
 import type { Word } from "./domain.ts";
 
 export function DictionaryLookup({
@@ -59,21 +60,24 @@ export function DictionaryLookup({
       ) : (
         <>
           <div className="dictionary-lookup-header">
-            {readings.size > 0 && (
-              <p className="dictionary-source">
-                Source:{" "}
-                <a
-                  href="https://www.mdbg.net/chinese/dictionary?page=cc-cedict"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  CC-CEDICT via MDBG
-                </a>
-              </p>
-            )}
-            <div className="dictionary-word">
-              <strong lang="zh-Hans">{word.hanzi}</strong>
-              {reading && <span>{reading}</span>}
+            <div
+              className={`dictionary-word ${readings.size === 1 ? "single-reading" : ""}`}
+            >
+              {readings.size === 1 && reading ? (
+                readingParts({ ...word, pinyin: reading }).map(
+                  (part, index) => (
+                    <span className="dictionary-reading-part" key={index}>
+                      <span>{part.pinyin}</span>
+                      <strong lang="zh-Hans">{part.hanzi}</strong>
+                    </span>
+                  ),
+                )
+              ) : (
+                <>
+                  <strong lang="zh-Hans">{word.hanzi}</strong>
+                  {reading && <span>{reading}</span>}
+                </>
+              )}
             </div>
             <button
               className="dictionary-wiktionary"
@@ -145,6 +149,18 @@ export function DictionaryLookup({
               </p>
             )}
           </div>
+          {readings.size > 0 && (
+            <p className="dictionary-source">
+              Source:{" "}
+              <a
+                href="https://www.mdbg.net/chinese/dictionary?page=cc-cedict"
+                target="_blank"
+                rel="noreferrer"
+              >
+                CC-CEDICT via MDBG
+              </a>
+            </p>
+          )}
         </>
       )}
     </section>

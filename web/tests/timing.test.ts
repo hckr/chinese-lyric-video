@@ -23,6 +23,7 @@ import {
   snappedTime,
   timingNotices,
   withTimingBaseline,
+  reviewTiming,
 } from "../src/timing.ts";
 import { waveformAllowed, waveformPeaks } from "../src/waveform.ts";
 
@@ -33,7 +34,11 @@ function fixture() {
     startMs: 10000 * (i + 1),
     endMs: 10000 * (i + 1) + 2000,
   }));
-  return withTimingBaseline(project);
+  return reviewTiming(
+    withTimingBaseline(project),
+    new Set(project.occurrences.map((o) => o.id)),
+    true,
+  );
 }
 test("exact authored milliseconds and baseline survive JSON and legacy TS round trips", () => {
   const project = fixture();
@@ -168,13 +173,13 @@ test("waveform bins include stereo peaks, remain bounded and do not omit final s
   assert.deepEqual(waveformPeaks([new Float32Array([0, 0, 1])], 2), [0, 1]);
   assert.deepEqual(waveformPeaks([]), []);
   assert.equal(waveformPeaks([new Float32Array(10000)]).length, 1600);
-  assert.ok(waveformAllowed(1000, 180000));
-  assert.ok(!waveformAllowed(33 * 1024 * 1024, 180000));
-  assert.ok(!waveformAllowed(1000, 9 * 60000));
+  assert.ok(waveformAllowed(180000));
+  assert.ok(!waveformAllowed(Number.NaN));
+  assert.ok(!waveformAllowed(9 * 60000));
   assert.equal(formatTime(12345), "0:12.345");
   assert.equal(formatTime(null), "Unassigned");
 });
-test("JSON validates audio metadata and reset baseline identity", () => {
+test("JSON validates audio metadata and retires old baseline", () => {
   const project = fixture();
   project.audio = {
     name: "local.wav",
@@ -191,13 +196,14 @@ test("JSON validates audio metadata and reset baseline identity", () => {
       }),
     ),
   );
-  assert.throws(() =>
+  assert.equal(
     parseProject(
       JSON.stringify({
         ...project,
         timingBaseline: [{ ...project.occurrences[0], id: "wrong" }],
       }),
-    ),
+    ).timingBaseline,
+    undefined,
   );
 });
 
@@ -334,6 +340,8 @@ test("ruler density increases with zoom using readable regular intervals", () =>
     for (let i = 1; i < ticks.length; i++)
       assert.ok(((ticks[i] - ticks[i - 1]) / 184516) * width >= 60);
   }
+  const endTicks = rulerTicks(6000, 4800);
+  assert.ok(((6000 - endTicks.at(-2)!) / 6000) * 4800 >= 128);
   assert.deepEqual(rulerTicks(0, 800), []);
 });
 
@@ -375,5 +383,21 @@ test("overlapping repeats can be nudged in either direction", () => {
       false,
     ).startMs,
     10,
+  );
+});
+
+test("reset retains the reviewed reference when shorter linked audio cannot contain it", () => {
+  const project = editTiming(fixture(), "line-0", {
+    startMs: 1000,
+    endMs: 2000,
+  });
+  assert.throws(
+    () => resetTiming(project, "line-0", 3000),
+    /outside the loaded audio/,
+  );
+  assert.equal(project.occurrences[0].endMs, 2000);
+  assert.equal(
+    resetTiming(project, "line-0", 13000).occurrences[0].endMs,
+    12000,
   );
 });

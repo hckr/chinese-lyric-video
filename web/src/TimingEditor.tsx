@@ -1,3 +1,4 @@
+import { AutomaticTiming } from "./AutomaticTiming";
 import { timelineLayout, type TimelineLayout } from "./timeline-layout.ts";
 import {
   orderGroupedProject,
@@ -12,21 +13,30 @@ import { GroupSidebar } from "./GroupSidebar";
 import { GroupTimeline, type DuplicatePreview } from "./GroupTimeline";
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useMemo,
   type CSSProperties,
 } from "react";
 import type { Occurrence, Project } from "./domain.ts";
-import { linePinyin } from "./domain.ts";
+import { useWeakEstimate } from "./automatic-timing.ts";
+import { defaultTimingSettings, linePinyin } from "./domain.ts";
+import { LyricReading } from "./LyricReading";
 import {
+  validTiming,
+  timingStatus,
+  reviewTiming,
+  nextUnreviewed,
+  latestAutomatic,
   editTiming,
   formatTime,
   rulerTicks,
   formatRulerTime,
   followPlayhead,
   mediaMs,
-  moveTiming,
+  moveProjectTiming,
+  activeLyrics,
   resetTiming,
   timingNotices,
   type Boundary,
@@ -50,7 +60,7 @@ type Props = {
   active: boolean;
   selectedId?: string;
   onSelect: (id: string) => void;
-  onChange: (project: Project, id: string) => void;
+  onChange: (project: Project, id: string, preserveOrder?: boolean) => void;
   onReview: (phraseId: string) => void;
   onRemove: (id: string) => void;
   onAudioMetadata: (audio: NonNullable<Project["audio"]>) => void;
@@ -63,7 +73,8 @@ type Gesture = {
   x: number;
   scale: number;
   pointer: number;
-  draft: Occurrence;
+  draft: Project;
+  linkEdges: boolean;
 };
 function TimingFields({
   cue,
@@ -181,6 +192,17 @@ export function TimingEditor({
     project.occurrences.findIndex((o) => o.id === selectedId),
   );
   const cue = project.occurrences[index];
+  const automatic = cue?.automaticTiming;
+  const automaticDiffers =
+    !!automatic &&
+    (automatic.startMs !== cue?.startMs || automatic.endMs !== cue?.endMs);
+  const resetTarget = cue?.reviewedTiming ?? cue?.automaticTiming;
+  const resetDiffers =
+    !!cue &&
+    !!resetTarget &&
+    (cue.startMs !== resetTarget.startMs ||
+      cue.endMs !== resetTarget.endMs ||
+      (!!cue.reviewedTiming && cue.timingReview !== "reviewed"));
   const phrase = project.phrases.find((p) => p.id === cue?.phraseId);
   const selectedGroup = project.lyricGroups?.find((group) =>
     group.occurrenceIds.includes(cue?.id ?? ""),
@@ -189,11 +211,109 @@ export function TimingEditor({
   const lockedScroll = useRef(0);
   const pan = useRef<{ x: number; left: number; pointer: number } | null>(null);
   const [panning, setPanning] = useState(false);
-  const [zoom, setZoom] = useState(8),
-    [snap, setSnap] = useState<Snap>("edges"),
-    [boundary, setBoundary] = useState<Boundary>("both");
+  const settings = project.timingSettings ?? defaultTimingSettings;
+  const { zoom, snap, linkEdges } = settings;
+  const updateSettings = (patch: Partial<typeof settings>) =>
+    onChange(
+      { ...project, timingSettings: { ...settings, ...patch } },
+      cue?.id ?? "",
+      true,
+    );
+  const setZoom = (zoom: typeof settings.zoom) => updateSettings({ zoom });
+  const setSnap = (snap: Snap) => updateSettings({ snap });
+  const setLinkEdges = (linkEdges: boolean) => updateSettings({ linkEdges });
+  const [boundary, setBoundary] = useState<Boundary>("both");
+  const [showTranslations, setShowTranslations] = useState(true);
   const [loopEnabled, setLoopEnabled] = useState(false),
-    [draft, setDraft] = useState<Occurrence | null>(null);
+    [draft, setDraft] = useState<Project | null>(null);
+  const [identityReady, setIdentityReady] = useState(false);
+  const [automaticTimingOpen, setAutomaticTimingOpen] = useState(false);
+  const automaticTimingTrigger = useRef<HTMLButtonElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsPosition, setSettingsPosition] = useState<{
+    left: number;
+    top: number;
+  }>();
+  const settingsDialog = useRef<HTMLDivElement>(null);
+  const settingsTrigger = useRef<HTMLButtonElement>(null);
+  const closeSettings = (restoreFocus: boolean) => {
+    setSettingsOpen(false);
+    if (restoreFocus) settingsTrigger.current?.focus({ preventScroll: true });
+  };
+  useLayoutEffect(() => {
+    if (!settingsOpen || !active || duplicate) return;
+    const panel = settingsDialog.current!,
+      trigger = settingsTrigger.current!;
+    const position = () => {
+      const anchor = trigger.getBoundingClientRect();
+      const { width, height } = panel.getBoundingClientRect();
+      const above = anchor.top - height - 8,
+        right = anchor.right + 8;
+      const headerBottom =
+        document.querySelector("main > header")?.getBoundingClientRect()
+          .bottom ?? 0;
+      if (above >= headerBottom + 8 && anchor.top <= innerHeight)
+        setSettingsPosition({
+          top: above,
+          left: Math.max(
+            8,
+            Math.min(anchor.right - width, innerWidth - width - 8),
+          ),
+        });
+      else if (
+        right + width + 8 <= innerWidth &&
+        anchor.bottom >= 0 &&
+        anchor.top < innerHeight
+      )
+        setSettingsPosition({
+          top: Math.max(
+            headerBottom + 8,
+            Math.min(anchor.top, innerHeight - height - 8),
+          ),
+          left: right,
+        });
+      else
+        setSettingsPosition({
+          top: Math.max(
+            headerBottom + 8,
+            Math.min(anchor.bottom + 8, innerHeight - height - 8),
+          ),
+          left: Math.max(
+            8,
+            Math.min(anchor.right - width, innerWidth - width - 8),
+          ),
+        });
+    };
+    position();
+    panel.querySelector("select")?.focus({ preventScroll: true });
+    const dismiss = (event: PointerEvent) => {
+      if (
+        !panel.contains(event.target as Node) &&
+        !trigger.contains(event.target as Node)
+      )
+        setSettingsOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]"))
+        return;
+      event.preventDefault();
+      setSettingsOpen(false);
+      trigger.focus({ preventScroll: true });
+    };
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [settingsOpen, active, duplicate]);
+  useEffect(() => {
+    if (!active || duplicate) setSettingsOpen(false);
+  }, [active, duplicate]);
   const scroll = useRef<HTMLDivElement>(null),
     track = useRef<HTMLDivElement>(null),
     gesture = useRef<Gesture | null>(null);
@@ -209,36 +329,72 @@ export function TimingEditor({
     observer.observe(board);
     return () => observer.disconnect();
   }, []);
-  const loop =
-    loopEnabled &&
-    cue &&
-    cue.startMs !== null &&
-    cue.endMs !== null &&
-    cue.endMs > cue.startMs
-      ? { startMs: cue.startMs, endMs: cue.endMs }
-      : null;
   const audio = useLocalAudio(
     active,
     (metadata) => {
       if (!duplicate) onAudioMetadata(metadata);
     },
-    loop,
+    null,
   );
+  useEffect(() => {
+    audio.cancelBounded();
+    setLoopEnabled(false);
+  }, [
+    cue?.id,
+    cue?.startMs,
+    cue?.endMs,
+    active,
+    audio.url,
+    settings.preRollMs,
+    settings.postRollMs,
+  ]);
   const duration = audio.durationMs;
+  const resetOutsideAudio =
+    !!resetTarget && !validTiming(resetTarget, duration);
+  const canReset = resetDiffers && !resetOutsideAudio;
+  const listen = (bounds: { startMs: number; endMs: number }, repeat = false) =>
+    audio.playSegment(
+      {
+        startMs: bounds.startMs - settings.preRollMs,
+        endMs: bounds.endMs + settings.postRollMs,
+      },
+      repeat,
+    );
   const baseTimelineMs = Math.max(
     duration ?? 30000,
     1000,
     ...project.occurrences.map((o) => Math.max(o.startMs ?? 0, o.endMs ?? 0)),
   );
   const timelineMs = duplicate?.extent ?? baseTimelineMs;
+  const ticks = useMemo(
+    () => rulerTicks(timelineMs, rulerWidth),
+    [timelineMs, rulerWidth],
+  );
+  useEffect(() => {
+    const viewport = scroll.current;
+    if (!viewport || !active) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries)
+          (entry.target as HTMLElement).style.visibility =
+            entry.intersectionRatio >= 0.99 ? "visible" : "hidden";
+      },
+      { root: viewport, threshold: 0.99 },
+    );
+    viewport
+      .querySelectorAll(".timing-ruler-label")
+      .forEach((label) => observer.observe(label));
+    return () => observer.disconnect();
+  }, [active, ticks]);
   const available = duration !== undefined;
   const groupPreview =
     groupDraft && groupDraft.base === project
       ? shiftGroup(project, groupDraft.id, groupDraft.offset)
       : project;
-  const displayed = groupPreview.occurrences.map((o) =>
-    o.id === draft?.id ? draft : o,
-  );
+  const displayed = (draft ?? groupPreview).occurrences;
+  const playingLyrics = available
+    ? activeLyrics(displayed, audio.positionMs)
+    : [];
   const layoutHistory = useRef(new WeakMap<Project, TimelineLayout>());
   const layout = useMemo(
     () => layoutHistory.current.get(project) ?? timelineLayout(project),
@@ -247,7 +403,22 @@ export function TimingEditor({
   useEffect(() => {
     layoutHistory.current.set(project, layout);
   }, [layout, project]);
+  const sidebar = useRef<HTMLDivElement>(null);
   const notices = timingNotices(project.occurrences, index, duration);
+  const remainingUntimed = project.occurrences.filter(
+    (o) => !validTiming(o, duration),
+  ).length;
+  const nextReviewId =
+    cue && settings.autoAdvance && cue.timingReview !== "reviewed"
+      ? nextUnreviewed(project.occurrences, cue.id, duration)
+      : undefined;
+  const allTimedReviewed = project.occurrences.every(
+    (o) => !validTiming(o, duration) || o.timingReview === "reviewed",
+  );
+  const [showReviewCompletion, setShowReviewCompletion] = useState(false);
+  useEffect(() => {
+    if (!allTimedReviewed) setShowReviewCompletion(false);
+  }, [allTimedReviewed]);
   const attempt = (action: () => void) => {
     try {
       setError("");
@@ -269,21 +440,25 @@ export function TimingEditor({
   const nudge = (delta: number, edge = boundary) => {
     if (!cue) return;
     attempt(() => {
-      const moved = moveTiming(
-        cue,
-        delta,
-        edge,
-        duration,
-        "off",
-        project.occurrences.filter((o) => o.id !== cue.id),
-        false,
+      onChange(
+        moveProjectTiming(
+          project,
+          cue.id,
+          delta,
+          edge,
+          duration,
+          "off",
+          linkEdges,
+        ),
+        cue.id,
       );
-      onChange(editTiming(project, cue.id, moved, duration), cue.id);
     });
   };
   useEffect(() => {
     if (!active || !cue) return;
-    const list = document.querySelector<HTMLElement>(".timing-occurrence-list");
+    const list = sidebar.current?.querySelector<HTMLElement>(
+      ".timing-occurrence-list",
+    );
     const item =
       list &&
       [...list.querySelectorAll<HTMLElement>("[data-occurrence]")].find(
@@ -332,18 +507,26 @@ export function TimingEditor({
           smoothScroll(scroller, {
             top: scroller.scrollTop + blockRect.top - viewportRect.top - 24,
           });
-        // Also reveal the timeline when the page itself is scrolled past it.
-        if (blockRect.bottom > window.innerHeight || blockRect.top < 0)
-          block.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "nearest",
+        // Page reveal must not race the timeline's own horizontal and vertical scroll.
+        const headerBottom =
+          document.querySelector("main > header")?.getBoundingClientRect()
+            .bottom ?? 0;
+        if (
+          viewportRect.top > window.innerHeight - 180 ||
+          viewportRect.bottom < headerBottom
+        ) {
+          window.scrollTo({
+            top: window.scrollY + viewportRect.top - headerBottom - 12,
+            behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? "instant"
+              : "smooth",
           });
+        }
       }
     }
     // Selection changes reveal panels; dragging must retain its pointer coordinate space.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cue?.id, active, timelineMs]);
+  }, [cue?.id, project.timingRun?.id, active]);
   useEffect(() => {
     const panel = scroll.current;
     if (!panel) return;
@@ -368,6 +551,8 @@ export function TimingEditor({
     }
   }, [audio.positionMs, audio.playing, active, timelineMs, zoom]);
   const select = (id: string, seek = true) => {
+    audio.cancelBounded();
+    setLoopEnabled(false);
     if (duplicate) return;
     onSelect(id);
     setError("");
@@ -398,11 +583,20 @@ export function TimingEditor({
         }
         return;
       }
+      if (event.key === "Escape" && gesture.current) {
+        gesture.current = null;
+        setDraft(null);
+        event.preventDefault();
+        return;
+      }
       const value = event.key.toLowerCase();
-      if (value === " " && target.closest("button")) return;
+      if (value === " " && target.closest("button, summary")) return;
       if ([" ", "s", "e", "arrowleft", "arrowright", "[", "]"].includes(value))
         event.preventDefault();
-      if (value === " ") audio.toggle();
+      if (value === " ") {
+        setLoopEnabled(false);
+        audio.toggle();
+      }
       if (value === "s") capture("startMs");
       if (value === "e") capture("endMs");
       if (value === "[") step(-1);
@@ -425,7 +619,7 @@ export function TimingEditor({
     gesture.current = null;
     setDraft(null);
   }, [project, active]);
-  const zoomTo = (value: number) => {
+  const zoomTo = (value: typeof settings.zoom) => {
     const scroller = scroll.current,
       board = track.current;
     const ratio = Math.min(
@@ -474,22 +668,23 @@ export function TimingEditor({
       x: event.clientX,
       scale: timelineMs / track.current.getBoundingClientRect().width,
       pointer: event.pointerId,
-      draft: original,
+      draft: project,
+      linkEdges,
     };
-    setDraft(original);
+    setDraft(project);
   };
   const pointerMove = (event: React.PointerEvent) => {
     const current = gesture.current;
     if (!current || current.pointer !== event.pointerId) return;
     attempt(() => {
-      current.draft = moveTiming(
-        current.original,
+      current.draft = moveProjectTiming(
+        project,
+        current.original.id,
         Math.round((event.clientX - current.x) * current.scale),
         current.boundary,
         duration,
         snap,
-        project.occurrences.filter((o) => o.id !== current.original.id),
-        false, // Preview overlaps in separate lanes; editTiming validates the drop.
+        current.linkEdges,
       );
       setDraft(current.draft);
     });
@@ -500,17 +695,7 @@ export function TimingEditor({
     gesture.current = null;
     setDraft(null);
     if (event.type === "pointerup")
-      attempt(() =>
-        onChange(
-          editTiming(
-            project,
-            current.original.id,
-            { startMs: current.draft.startMs, endMs: current.draft.endMs },
-            duration,
-          ),
-          current.original.id,
-        ),
-      );
+      attempt(() => onChange(current.draft, current.original.id));
   };
   const blockKey = (
     event: React.KeyboardEvent,
@@ -521,16 +706,18 @@ export function TimingEditor({
     event.preventDefault();
     event.stopPropagation();
     attempt(() => {
-      const moved = moveTiming(
-        original,
-        (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 100 : 10),
-        edge,
-        duration,
-        "off",
-        project.occurrences.filter((o) => o.id !== original.id),
-        false,
+      onChange(
+        moveProjectTiming(
+          project,
+          original.id,
+          (event.key === "ArrowLeft" ? -1 : 1) * (event.shiftKey ? 100 : 10),
+          edge,
+          duration,
+          "off",
+          linkEdges,
+        ),
+        original.id,
       );
-      onChange(editTiming(project, original.id, moved, duration), original.id);
     });
   };
   return (
@@ -553,7 +740,10 @@ export function TimingEditor({
           <button
             className="primary"
             disabled={!available}
-            onClick={audio.toggle}
+            onClick={() => {
+              setLoopEnabled(false);
+              audio.toggle();
+            }}
           >
             {audio.playing ? "Pause" : "Play"}
           </button>
@@ -593,9 +783,22 @@ export function TimingEditor({
                 cue.endMs <= cue.startMs ||
                 cue.endMs > (duration ?? 0)
               }
-              onChange={(e) => setLoopEnabled(e.target.checked)}
+              onChange={(e) => {
+                setLoopEnabled(e.target.checked);
+                if (e.target.checked && validTiming(cue, duration))
+                  listen({ startMs: cue.startMs!, endMs: cue.endMs! }, true);
+                else audio.cancelBounded();
+              }}
             />
             Loop selected
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={showTranslations}
+              onChange={(e) => setShowTranslations(e.target.checked)}
+            />
+            Show translations
           </label>
         </div>
         <div className="timing-source">
@@ -645,11 +848,66 @@ export function TimingEditor({
           {error || audio.error}
         </p>
       )}
+      {available && (
+        <div
+          className={`timing-live-preview ${showTranslations ? "with-translations" : ""}`}
+          role="region"
+          aria-label="Current lyrics"
+        >
+          {playingLyrics.length ? (
+            playingLyrics.map((o) => {
+              const text = project.phrases.find((p) => p.id === o.phraseId);
+              return text ? (
+                <div key={o.id} data-playing-lyric={o.id}>
+                  <LyricReading phrase={text} />
+                  {showTranslations && (
+                    <div className="playback-translations">
+                      <p>{text.translation.en || "\u00a0"}</p>
+                      <p>{text.translation.pl || "\u00a0"}</p>
+                    </div>
+                  )}
+                </div>
+              ) : null;
+            })
+          ) : (
+            <p className="muted">
+              {available
+                ? "No lyrics at this time"
+                : "Load audio to preview lyrics"}
+            </p>
+          )}
+        </div>
+      )}
+      <AutomaticTiming
+        expanded={automaticTimingOpen}
+        onCollapse={() => setAutomaticTimingOpen(false)}
+        revealTiming={automaticTimingTrigger}
+        project={sourceProject}
+        file={audio.file.current}
+        duration={duration}
+        selectedId={cue?.id}
+        onViewLyric={(id) => {
+          select(id);
+          requestAnimationFrame(() => {
+            const block = scroll.current?.querySelector<HTMLElement>(
+              `[data-cue="${CSS.escape(id)}"] .timing-block-label`,
+            );
+            block?.focus({ preventScroll: true });
+          });
+        }}
+        onChange={onChange}
+        onListen={listen}
+        onIdentityReady={setIdentityReady}
+      />
       <div className="timing-grid">
-        <div className="group-sidebar-wrapper" inert={!!duplicate}>
+        <div
+          ref={sidebar}
+          className="group-sidebar-wrapper"
+          inert={!!duplicate}
+        >
           <GroupSidebar
             project={project}
-            selectedId={selectedId}
+            selectedId={cue?.id}
             selectedGroup={selectedGroup}
             duration={duration}
             onSelect={(id) => select(id)}
@@ -685,31 +943,148 @@ export function TimingEditor({
                 </p>
               )}
             </div>
-            <label>
-              Zoom
-              <select
-                aria-label="Timeline zoom"
-                value={zoom}
-                onChange={(e) => zoomTo(Number(e.target.value))}
+            <div className="timing-toolbar-actions">
+              {project.timingRun && (
+                <button
+                  ref={automaticTimingTrigger}
+                  aria-controls="automatic-timing-content"
+                  aria-expanded={automaticTimingOpen}
+                  onClick={() => {
+                    setAutomaticTimingOpen(!automaticTimingOpen);
+                    if (!automaticTimingOpen)
+                      requestAnimationFrame(() => {
+                        const panel = document.getElementById(
+                          "automatic-timing-content",
+                        );
+                        const headerBottom =
+                          document
+                            .querySelector("main > header")
+                            ?.getBoundingClientRect().bottom ?? 0;
+                        if (
+                          panel &&
+                          panel.getBoundingClientRect().bottom <= headerBottom
+                        )
+                          panel.scrollIntoView({
+                            block: "start",
+                            behavior: "instant",
+                          });
+                      });
+                  }}
+                >
+                  {automaticTimingOpen
+                    ? "Hide automatic timing"
+                    : "Regenerate timing…"}
+                </button>
+              )}
+              <button
+                ref={settingsTrigger}
+                className="timing-settings-trigger"
+                aria-haspopup="dialog"
+                aria-expanded={settingsOpen}
+                aria-controls="timing-settings-panel"
+                onClick={() => {
+                  setSettingsPosition(undefined);
+                  setSettingsOpen(!settingsOpen);
+                }}
               >
-                {[1, 2, 4, 8, 16, 32].map((value) => (
-                  <option key={value} value={value}>
-                    {value}×
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Snap
-              <select
-                aria-label="Timing snap"
-                value={snap}
-                onChange={(e) => setSnap(e.target.value as Snap)}
-              >
-                <option value="off">Off</option>
-                <option value="edges">Neighboring edges</option>
-              </select>
-            </label>
+                <span className="timing-settings-label">
+                  <span aria-hidden="true">⚙</span> Timing settings
+                </span>
+                <span className="timing-settings-summary">
+                  {zoom}× · {snap === "edges" ? "Edge snap" : "Snap off"} ·{" "}
+                  {linkEdges ? "Edges linked" : "Edges unlinked"}
+                </span>
+              </button>
+            </div>
+            <div
+              hidden={!settingsOpen}
+              ref={settingsDialog}
+              role={settingsOpen ? "dialog" : undefined}
+              id="timing-settings-panel"
+              className="timing-settings"
+              aria-labelledby="timing-settings-title"
+              style={
+                settingsPosition
+                  ? { position: "fixed", ...settingsPosition }
+                  : { position: "fixed", top: 0 }
+              }
+            >
+              <h2 id="timing-settings-title">Timing settings</h2>
+              <label>
+                Zoom
+                <select
+                  aria-label="Timeline zoom"
+                  value={zoom}
+                  onChange={(e) =>
+                    zoomTo(Number(e.target.value) as typeof settings.zoom)
+                  }
+                >
+                  {[1, 2, 4, 8, 16, 32].map((value) => (
+                    <option key={value} value={value}>
+                      {value}×
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Snap
+                <select
+                  aria-label="Timing snap"
+                  value={snap}
+                  onChange={(e) => setSnap(e.target.value as Snap)}
+                >
+                  <option value="off">Off</option>
+                  <option value="edges">Neighboring edges</option>
+                </select>
+              </label>
+              <label className="check">
+                Link touching edges
+                <input
+                  type="checkbox"
+                  checked={linkEdges}
+                  onChange={(e) => setLinkEdges(e.target.checked)}
+                />
+              </label>
+              <label>
+                Before lyric (ms)
+                <input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  value={settings.preRollMs}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (Number.isInteger(n) && n >= 0 && n <= 5000)
+                      updateSettings({ preRollMs: n });
+                  }}
+                />
+              </label>
+              <label>
+                After lyric (ms)
+                <input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  value={settings.postRollMs}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (Number.isInteger(n) && n >= 0 && n <= 5000)
+                      updateSettings({ postRollMs: n });
+                  }}
+                />
+              </label>
+              <label className="check">
+                Auto-advance after review
+                <input
+                  type="checkbox"
+                  checked={settings.autoAdvance}
+                  onChange={(e) =>
+                    updateSettings({ autoAdvance: e.target.checked })
+                  }
+                />
+              </label>
+              <button onClick={() => closeSettings(true)}>Done</button>
+            </div>
           </div>
           <div
             className={`timing-scroll ${panning ? "is-panning" : ""} ${audio.playing ? "is-playing" : ""}`}
@@ -802,26 +1177,27 @@ export function TimingEditor({
                   );
                 }}
               >
-                {rulerTicks(timelineMs, rulerWidth).flatMap(
-                  (time, index, ticks) =>
-                    index === 0
-                      ? []
-                      : [1, 2, 3].map((part) => (
-                          <i
-                            aria-hidden="true"
-                            key={`${index}-${part}`}
-                            style={{
-                              left: `${((ticks[index - 1] + ((time - ticks[index - 1]) * part) / 4) / timelineMs) * 100}%`,
-                            }}
-                          />
-                        )),
+                {ticks.flatMap((time, index, ticks) =>
+                  index === 0
+                    ? []
+                    : [1, 2, 3].map((part) => (
+                        <i
+                          aria-hidden="true"
+                          key={`${index}-${part}`}
+                          style={{
+                            left: `${((ticks[index - 1] + ((time - ticks[index - 1]) * part) / 4) / timelineMs) * 100}%`,
+                          }}
+                        />
+                      )),
                 )}
-                {rulerTicks(timelineMs, rulerWidth).map((time) => (
+                {ticks.map((time) => (
                   <span
                     key={time}
                     style={{ left: `${(time / timelineMs) * 100}%` }}
                   >
-                    {formatRulerTime(time)}
+                    <span className="timing-ruler-label">
+                      {formatRulerTime(time)}
+                    </span>
                   </span>
                 ))}
               </div>
@@ -909,6 +1285,8 @@ export function TimingEditor({
                     <div
                       key={o.id}
                       data-cue={o.id}
+                      data-timing-status={timingStatus(o, duration)}
+                      title={`${project.phrases.find((p) => p.id === o.phraseId)?.lyricKey ?? ""} · ${formatTime(o.startMs)}–${formatTime(o.endMs)} · ${timingStatus(o, duration)}`}
                       className={`timing-block ${o.id === cue?.id ? "selected" : ""} ${project.lyricGroups?.some((g) => g.occurrenceIds.includes(o.id)) ? "group-member" : ""} ${project.lyricGroups?.find((g) => g.id === selectedGroup)?.occurrenceIds.includes(o.id) ? "group-member-selected" : ""}`}
                       inert={!!duplicate}
                       style={
@@ -926,6 +1304,7 @@ export function TimingEditor({
                       onPointerMove={pointerMove}
                       onPointerUp={pointerEnd}
                       onPointerCancel={pointerEnd}
+                      onLostPointerCapture={pointerEnd}
                     >
                       <button
                         className="timing-handle"
@@ -1115,12 +1494,74 @@ export function TimingEditor({
                 </button>
               </div>
               <div className="timing-text-preview">
-                <p>{linePinyin(phrase)}</p>
-                <strong>{phrase.lyricKey}</strong>
-                <p>{phrase.translation.en}</p>
-                <p>{phrase.translation.pl}</p>
-                <small>Text layout only · not a Remotion preview</small>
+                <LyricReading phrase={phrase} />
+                {phrase.translation.en && <p>{phrase.translation.en}</p>}
+                {phrase.translation.pl && <p>{phrase.translation.pl}</p>}
               </div>
+              <p className="timing-review-status">
+                {timingStatus(cue, duration)}
+              </p>
+              <div className="timing-controls timing-review-actions">
+                <button
+                  aria-describedby={
+                    !available || !validTiming(cue, duration)
+                      ? "timing-play-hint"
+                      : undefined
+                  }
+                  disabled={!available || !validTiming(cue, duration)}
+                  onClick={() =>
+                    listen(
+                      { startMs: cue.startMs!, endMs: cue.endMs! },
+                      loopEnabled,
+                    )
+                  }
+                >
+                  Play lyric
+                </button>
+                <button
+                  className={
+                    cue.timingReview !== "reviewed" ? "primary" : undefined
+                  }
+                  disabled={!validTiming(cue, duration)}
+                  onClick={() => {
+                    const marking = cue.timingReview !== "reviewed";
+                    const next = reviewTiming(
+                      project,
+                      new Set([cue.id]),
+                      marking,
+                      duration,
+                    );
+                    const nextId = marking ? nextReviewId : undefined;
+                    setShowReviewCompletion(
+                      marking && settings.autoAdvance && !nextId,
+                    );
+                    audio.cancelBounded();
+                    audio.ref.current?.pause();
+                    onChange(next, nextId ?? cue.id, true);
+                  }}
+                >
+                  {cue.timingReview === "reviewed"
+                    ? "Mark as needing review"
+                    : "Mark reviewed"}
+                  {nextReviewId && (
+                    <span className="timing-review-next"> → Next</span>
+                  )}
+                </button>
+              </div>
+              {(!available || !validTiming(cue, duration)) && (
+                <p id="timing-play-hint" className="muted timing-play-hint">
+                  {!validTiming(cue, duration)
+                    ? "Set a valid start and end to play this lyric."
+                    : "Load audio to play this lyric."}
+                </p>
+              )}
+              {showReviewCompletion && allTimedReviewed && (
+                <p className="timing-completion" role="status">
+                  {remainingUntimed
+                    ? `Timed lyrics reviewed. ${remainingUntimed} untimed.`
+                    : "All lyrics reviewed."}
+                </p>
+              )}
               <TimingFields
                 cue={cue}
                 onApply={(start, end) =>
@@ -1152,21 +1593,114 @@ export function TimingEditor({
               </ul>
               <div className="timing-reset">
                 <button
+                  aria-label="Reset timing for this lyric"
+                  disabled={!canReset}
+                  title="Restore the last-reviewed interval, otherwise the latest automatic interval. Undo reverses the reset."
+                  onClick={() =>
+                    attempt(() =>
+                      onChange(resetTiming(project, cue.id, duration), cue.id),
+                    )
+                  }
+                >
+                  {resetOutsideAudio
+                    ? "Reset reference outside loaded audio"
+                    : canReset
+                      ? cue.reviewedTiming
+                        ? "Reset to last reviewed"
+                        : "Reset to automatic"
+                      : resetTarget
+                        ? cue.reviewedTiming
+                          ? "Already at reviewed timing"
+                          : "Already at automatic timing"
+                        : "No reset reference"}
+                </button>
+              </div>
+              <div className="timing-diagnostics">
+                {cue.timingIssue && !cue.weakTiming && (
+                  <p className="timing-notice">
+                    Last generation: {cue.timingIssue.reasons.join(" ")}
+                  </p>
+                )}
+                {automatic &&
+                  (automaticDiffers ||
+                    automatic.reasons.some((reason) => reason.trim()) ||
+                    (automatic.matched !== undefined &&
+                      automatic.total !== undefined)) && (
+                    <details className="timing-suggestion-details">
+                      <summary>Automatic timing details</summary>
+                      {automaticDiffers && (
+                        <p>
+                          {formatTime(automatic.startMs)}–
+                          {formatTime(automatic.endMs)}
+                        </p>
+                      )}
+                      {automatic.matched !== undefined &&
+                        automatic.total !== undefined && (
+                          <p>
+                            {automatic.matched}/{automatic.total} matching units
+                          </p>
+                        )}
+                      {automatic.reasons.some((reason) => reason.trim()) && (
+                        <p>{automatic.reasons.join(" ")}</p>
+                      )}
+                    </details>
+                  )}
+                {cue.weakTiming && (
+                  <div className="timing-weak-estimate">
+                    <p>
+                      Weak estimate: {formatTime(cue.weakTiming.startMs)}–
+                      {formatTime(cue.weakTiming.endMs)}
+                    </p>
+                    <p>{cue.weakTiming.reasons.join(" ")}</p>
+                    {cue.weakTiming.matched !== undefined &&
+                      cue.weakTiming.total !== undefined && (
+                        <p>
+                          {cue.weakTiming.matched}/{cue.weakTiming.total}{" "}
+                          matching units
+                        </p>
+                      )}
+                    <button
+                      disabled={!available || !identityReady}
+                      onClick={() => listen(cue.weakTiming!)}
+                    >
+                      Listen to weak estimate
+                    </button>
+                    <button
+                      disabled={!identityReady}
+                      onClick={() =>
+                        attempt(() =>
+                          onChange(
+                            useWeakEstimate(project, cue.id, duration),
+                            cue.id,
+                          ),
+                        )
+                      }
+                    >
+                      Use estimate anyway
+                    </button>
+                  </div>
+                )}
+                {cue.reviewedTiming && cue.automaticTiming && (
+                  <button
+                    onClick={() =>
+                      attempt(() =>
+                        onChange(
+                          latestAutomatic(project, cue.id, duration),
+                          cue.id,
+                        ),
+                      )
+                    }
+                  >
+                    Use latest automatic suggestion
+                  </button>
+                )}
+              </div>
+              <div className="timing-remove">
+                <button
                   aria-label="Remove this appearance"
                   onClick={() => onRemove(cue.id)}
                 >
                   Remove lyric
-                </button>
-                <button
-                  aria-label="Reset timing for this lyric"
-                  title="Restore this occurrence’s imported timing. Undo reverses the reset."
-                  onClick={() =>
-                    attempt(() =>
-                      onChange(resetTiming(project, cue.id), cue.id),
-                    )
-                  }
-                >
-                  Reset timing
                 </button>
               </div>
             </>

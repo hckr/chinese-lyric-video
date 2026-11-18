@@ -1,3 +1,4 @@
+import { automaticTiming, cachedTimingModels } from "./timing-api.ts";
 import http from "node:http";
 import { importLyrics } from "./import-api.ts";
 // Separate loopback-only file editor. Uses the explicitly declared esbuild development dependency.
@@ -45,6 +46,14 @@ import fs from "node:fs/promises";
       port: 0,
     });
     frontend.server = http.createServer((req, res) => {
+      if (req.url === "/api/timing-models") {
+        void cachedTimingModels(req, res);
+        return;
+      }
+      if (req.url === "/api/automatic-timing") {
+        void automaticTiming(req, res, process.cwd());
+        return;
+      }
       if (req.url === "/api/import-lyrics" || req.url === "/api/dictionary") {
         void importLyrics(
           req,

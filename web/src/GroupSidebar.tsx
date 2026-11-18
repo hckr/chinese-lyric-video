@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { TimingConfirmDialog } from "./TimingConfirmDialog";
+import {
+  useEffect,
+  useLayoutEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
 import { type Project, removeAppearance } from "./domain.ts";
 import {
@@ -9,7 +17,13 @@ import {
   sidebarUnits,
   type LyricGroup,
 } from "./lyric-groups.ts";
-import { formatTime, timingNotices } from "./timing.ts";
+import {
+  formatTime,
+  timingNotices,
+  timingStatus,
+  validTiming,
+  reviewTiming,
+} from "./timing.ts";
 
 function GroupWarning({ text }: { text: string }) {
   const id = useId();
@@ -131,10 +145,22 @@ export function GroupSidebar({
   selectedId?: string;
   selectedGroup?: string;
   onSelect: (id: string) => void;
-  onChange: (project: Project, id: string) => void;
+  onChange: (project: Project, id: string, preserveOrder?: boolean) => void;
   onDuplicate: (group: LyricGroup) => void;
   duration?: number;
 }) {
+  const [bulkConfirm, setBulkConfirm] = useState<HTMLButtonElement>();
+  useLayoutEffect(() => {
+    if (!selectedGroup) return;
+    setCollapsed((previous) => {
+      if (!previous.has(selectedGroup)) return previous;
+      const next = new Set(previous);
+      next.delete(selectedGroup);
+      return next;
+    });
+  }, [selectedId, selectedGroup]);
+  const [multiple, setMultiple] = useState(false);
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [range, setRange] = useState<{
     first?: string;
@@ -156,6 +182,11 @@ export function GroupSidebar({
     trigger = useRef<HTMLButtonElement | null>(null);
   const units = sidebarUnits(project),
     rows = units.flatMap((unit) => unit.members);
+  const bulkIds = new Set(
+    rows
+      .filter((o) => chosen.has(o.id) && validTiming(o, duration))
+      .map((o) => o.id),
+  );
   const first = rows.findIndex((cue) => cue.id === range?.first),
     last = rows.findIndex((cue) => cue.id === (hovered ?? range?.last));
   const included = range?.first
@@ -218,7 +249,7 @@ export function GroupSidebar({
       key={cue.id}
       data-occurrence={cue.id}
       className={`${cue.id === selectedId ? "selected" : ""} ${included.includes(cue.id) ? "range-selected" : ""}`}
-      aria-pressed={cue.id === selectedId}
+      aria-pressed={multiple ? chosen.has(cue.id) : cue.id === selectedId}
       onMouseEnter={() => {
         if (range?.first && !range.last) {
           const target = rows.findIndex((item) => item.id === cue.id);
@@ -238,6 +269,16 @@ export function GroupSidebar({
       }}
       onMouseLeave={() => setHovered(undefined)}
       onClick={() => {
+        if (multiple) {
+          if (validTiming(cue, duration))
+            setChosen((old) => {
+              const next = new Set(old);
+              if (next.has(cue.id)) next.delete(cue.id);
+              else next.add(cue.id);
+              return next;
+            });
+          return;
+        }
         if (range) {
           if (range.last || cue.id === range.first) return;
           setHovered(undefined);
@@ -269,9 +310,22 @@ export function GroupSidebar({
             : ""}
         </span>
       )}
+      <span className="timing-review-status">
+        {multiple && validTiming(cue, duration)
+          ? chosen.has(cue.id)
+            ? "☑ "
+            : "☐ "
+          : ""}
+        {timingStatus(cue, duration)}
+      </span>
       <strong>
         {project.phrases.find((p) => p.id === cue.phraseId)?.lyricKey}
       </strong>
+      {cue.detectedFromAudio === true &&
+        project.phrases.find((p) => p.id === cue.phraseId)?.review !==
+          "reviewed" && (
+          <span className="detected-audio-badge">Detected from audio</span>
+        )}
       <span>
         {formatTime(cue.startMs)} → {formatTime(cue.endMs)}
       </span>
@@ -294,6 +348,7 @@ export function GroupSidebar({
         </h2>
         <button
           onClick={() => {
+            setMultiple(false);
             setHovered(undefined);
             setRange({
               name: "",
@@ -309,6 +364,74 @@ export function GroupSidebar({
           + Group
         </button>
       </div>
+      <p className="timing-review-counts">
+        {rows.filter((o) => timingStatus(o, duration) === "Reviewed").length}{" "}
+        reviewed ·{" "}
+        {
+          rows.filter((o) => timingStatus(o, duration) === "Needs review")
+            .length
+        }{" "}
+        need review · {rows.filter((o) => !validTiming(o, duration)).length}{" "}
+        untimed
+      </p>
+      <button
+        onClick={() => {
+          setMultiple((v) => !v);
+          setChosen(new Set());
+          setRange(null);
+        }}
+      >
+        {multiple ? "Finish selection" : "Select multiple"}
+      </button>
+      {multiple && (
+        <div className="bulk-timing-review">
+          <p>
+            {
+              rows.filter((o) => chosen.has(o.id) && validTiming(o, duration))
+                .length
+            }{" "}
+            timed lyrics selected
+          </p>
+          <button
+            disabled={!bulkIds.size}
+            onClick={(event) => setBulkConfirm(event.currentTarget)}
+          >
+            Mark selected reviewed…
+          </button>
+          <button
+            disabled={!bulkIds.size}
+            onClick={() =>
+              onChange(
+                reviewTiming(project, bulkIds, false, duration),
+                selectedId ?? rows[0]?.id ?? "",
+                true,
+              )
+            }
+          >
+            Mark selected as needing review
+          </button>
+        </div>
+      )}
+      {bulkConfirm && (
+        <TimingConfirmDialog
+          title="Approve selected timings?"
+          action="Mark selected reviewed"
+          trigger={bulkConfirm}
+          onCancel={() => setBulkConfirm(undefined)}
+          onConfirm={() => {
+            setBulkConfirm(undefined);
+            if (bulkIds.size)
+              onChange(
+                reviewTiming(project, bulkIds, true, duration),
+                selectedId ?? rows[0]?.id ?? "",
+                true,
+              );
+          }}
+        >
+          Mark {bulkIds.size} timed lyrics reviewed using their current start
+          and end times. You can undo this as one change.
+        </TimingConfirmDialog>
+      )}
       {range && (
         <form
           className="group-range-form"
@@ -401,7 +524,24 @@ export function GroupSidebar({
                   <span className="group-summary">
                     <strong>{group.name}</strong>
                     <span>
-                      {unit.members.length} lyrics
+                      {unit.members.length} lyrics ·{" "}
+                      {
+                        unit.members.filter(
+                          (o) => timingStatus(o, duration) === "Reviewed",
+                        ).length
+                      }{" "}
+                      reviewed ·{" "}
+                      {
+                        unit.members.filter(
+                          (o) => timingStatus(o, duration) === "Needs review",
+                        ).length
+                      }{" "}
+                      need review ·{" "}
+                      {
+                        unit.members.filter((o) => !validTiming(o, duration))
+                          .length
+                      }{" "}
+                      untimed
                       {bounds.start !== null
                         ? ` · ${formatTime(bounds.start)} → ${formatTime(bounds.end)}`
                         : " · Unassigned"}

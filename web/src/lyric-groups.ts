@@ -1,5 +1,5 @@
 import { newId, parseProject, type Project } from "./domain.ts";
-import { snappedTime, timingNotices, type Snap } from "./timing.ts";
+import { editTiming, snappedTime, timingNotices, type Snap } from "./timing.ts";
 
 export function createGroup(
   project: Project,
@@ -170,18 +170,15 @@ export function shiftGroup(
   const group = project.lyricGroups?.find((g) => g.id === groupId);
   if (!group) throw Error("Group not found");
   const delta = groupOffset(project, group, offset, "off");
-  return orderGroupedProject({
-    ...project,
-    occurrences: project.occurrences.map((cue) =>
-      group.occurrenceIds.includes(cue.id)
-        ? {
-            ...cue,
-            startMs: cue.startMs === null ? null : cue.startMs + delta,
-            endMs: cue.endMs === null ? null : cue.endMs + delta,
-          }
-        : cue,
-    ),
-  });
+  let next = project;
+  for (const cue of project.occurrences) {
+    if (group.occurrenceIds.includes(cue.id))
+      next = editTiming(next, cue.id, {
+        startMs: cue.startMs === null ? null : cue.startMs + delta,
+        endMs: cue.endMs === null ? null : cue.endMs + delta,
+      });
+  }
+  return orderGroupedProject(next);
 }
 export function duplicateGroup(
   project: Project,
@@ -195,12 +192,22 @@ export function duplicateGroup(
   const members = group.occurrenceIds.map(
     (id) => project.occurrences.find((cue) => cue.id === id)!,
   );
-  const copies = members.map((cue) => ({
-    ...cue,
-    id: newId(),
-    startMs: cue.startMs === null ? null : cue.startMs + delta,
-    endMs: cue.endMs === null ? null : cue.endMs + delta,
-  }));
+  const copies = members.map((original) => {
+    const {
+      reviewedTiming: _reviewed,
+      automaticTiming: _automatic,
+      weakTiming: _weak,
+      timingIssue: _issue,
+      ...cue
+    } = original;
+    return {
+      ...cue,
+      timingReview: "needs-review" as const,
+      id: newId(),
+      startMs: cue.startMs === null ? null : cue.startMs + delta,
+      endMs: cue.endMs === null ? null : cue.endMs + delta,
+    };
+  });
   const copy = {
     ...group,
     id: newId(),

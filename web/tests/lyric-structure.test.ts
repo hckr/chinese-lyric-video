@@ -41,7 +41,7 @@ test("adding a repeat inserts independently without altering shared annotations 
     next.occurrences.filter((o) => o.id !== "new-repeat"),
     p.occurrences,
   );
-  assert.equal(next.timingBaseline![1].id, "new-repeat");
+  assert.equal(next.timingBaseline, undefined);
   assert.deepEqual(parseProject(JSON.stringify(next)), next);
 });
 test("new lyrics get a first appearance; identical text reuses existing manual content", () => {
@@ -70,14 +70,13 @@ test("deleting a repeat keeps its phrase; deleting the last removes the phrase a
   const last = removeAppearance(next, "line-2");
   assert.equal(last.phrases.length, 1);
   assert.equal(last.phrases[0].lyricKey, "世界");
-  assert.deepEqual(
-    last.timingBaseline!.map((o) => o.id),
-    ["line-1"],
-  );
+  assert.equal(last.timingBaseline, undefined);
   const roundTrip = importLegacy(exportLegacy(last));
   const resolved = (project: typeof last) =>
-    project.occurrences.map(({ phraseId, ...timing }) => ({
-      ...timing,
+    project.occurrences.map(({ phraseId, id, startMs, endMs }) => ({
+      id,
+      startMs,
+      endMs,
       lyric: project.phrases.find((phrase) => phrase.id === phraseId)!.lyricKey,
     }));
   assert.deepEqual(resolved(roundTrip), resolved(last));
@@ -124,12 +123,14 @@ test("new lyric timing follows its predecessor, fits available space, and stays 
   assert.deepEqual(insert(p).occurrences.at(-1), {
     id: "new-cue",
     phraseId: "new",
+    timingReview: "needs-review",
     startMs: 2500,
     endMs: 4500,
   });
   assert.deepEqual(insert(p, "line-0").occurrences[1], {
     id: "new-cue",
     phraseId: "new",
+    timingReview: "needs-review",
     startMs: 500,
     endMs: 1000,
   });
@@ -154,12 +155,7 @@ test("new lyric timing follows its predecessor, fits available space, and stays 
     })),
   };
   assert.equal(insert(raw).occurrences.at(-1)!.startMs, null);
-  assert.deepEqual(insert(p).timingBaseline!.at(-1), {
-    id: "new-cue",
-    phraseId: "new",
-    startMs: null,
-    endMs: null,
-  });
+  assert.equal(insert(p).timingBaseline, undefined);
 });
 
 test("older saved dictionary references are discarded without changing lyric edits", () => {

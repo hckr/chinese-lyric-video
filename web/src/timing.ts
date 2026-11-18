@@ -1,4 +1,10 @@
-import type { History, Occurrence, Project, Snapshot } from "./domain.ts";
+import {
+  projectSchema,
+  type History,
+  type Occurrence,
+  type Project,
+  type Snapshot,
+} from "./domain.ts";
 
 export type Boundary = "start" | "end" | "both";
 export type Snap = "off" | "edges";
@@ -9,13 +15,81 @@ export function formatTime(ms: number | null): string {
   return `${Math.floor(value / 60000)}:${String(Math.floor(value / 1000) % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
 }
 export function withTimingBaseline(project: Project): Project {
-  return project.timingBaseline
-    ? project
-    : {
-        ...project,
-        timingBaseline: project.occurrences.map((o) => ({ ...o })),
-      };
+  return projectSchema.parse(project);
 }
+export const validTiming = (
+  o: Pick<Occurrence, "startMs" | "endMs">,
+  duration?: number,
+): boolean =>
+  o.startMs !== null &&
+  o.endMs !== null &&
+  o.endMs > o.startMs &&
+  Number.isSafeInteger(o.startMs) &&
+  Number.isSafeInteger(o.endMs) &&
+  o.startMs >= 0 &&
+  (duration === undefined || o.endMs <= duration);
+export function timingStatus(
+  o: Occurrence,
+  duration?: number,
+): "Untimed" | "Reviewed" | "Needs review" {
+  return !validTiming(o, duration)
+    ? "Untimed"
+    : o.timingReview === "reviewed"
+      ? "Reviewed"
+      : "Needs review";
+}
+export function reviewTiming(
+  project: Project,
+  ids: Set<string>,
+  reviewed: boolean,
+  duration?: number,
+): Project {
+  return {
+    ...project,
+    occurrences: project.occurrences.map((o) => {
+      if (!ids.has(o.id) || !validTiming(o, duration)) return o;
+      return {
+        ...o,
+        timingReview: reviewed ? "reviewed" : "needs-review",
+        ...(reviewed
+          ? { reviewedTiming: { startMs: o.startMs!, endMs: o.endMs! } }
+          : {}),
+      };
+    }),
+  };
+}
+export function nextUnreviewed(
+  ordered: Occurrence[],
+  id: string,
+  duration?: number,
+): string | undefined {
+  const at = ordered.findIndex((o) => o.id === id);
+  for (let step = 1; step <= ordered.length; step++) {
+    const o = ordered[(at + step) % ordered.length];
+    if (
+      o.id !== id &&
+      validTiming(o, duration) &&
+      o.timingReview !== "reviewed"
+    )
+      return o.id;
+  }
+}
+export function latestAutomatic(
+  project: Project,
+  id: string,
+  duration?: number,
+): Project {
+  const o = project.occurrences.find((o) => o.id === id);
+  if (!o?.automaticTiming) throw Error("No automatic suggestion available.");
+  const next = editTiming(project, id, o.automaticTiming, duration);
+  return {
+    ...next,
+    occurrences: next.occurrences.map((o) =>
+      o.id === id ? { ...o, timingReview: "needs-review" } : o,
+    ),
+  };
+}
+
 export function timingError(
   cue: Occurrence,
   durationMs?: number,
@@ -38,27 +112,48 @@ export function editTiming(
 ): Project {
   const original = project.occurrences.find((o) => o.id === id);
   if (!original) throw Error("Occurrence not found.");
-  const updated = { ...original, ...patch };
+  const updated = {
+    ...original,
+    ...(patch.startMs !== undefined ? { startMs: patch.startMs } : {}),
+    ...(patch.endMs !== undefined ? { endMs: patch.endMs } : {}),
+  };
   const error = timingError(updated, durationMs);
   if (error) throw Error(error);
   if (original.startMs === updated.startMs && original.endMs === updated.endMs)
     return project;
   return {
-    ...withTimingBaseline(project),
-    occurrences: project.occurrences.map((o) => (o.id === id ? updated : o)),
-  };
-}
-export function resetTiming(project: Project, id: string): Project {
-  const original = project.timingBaseline?.find((o) => o.id === id);
-  if (!original)
-    throw Error("No original timing is available for this occurrence.");
-  return {
     ...project,
     occurrences: project.occurrences.map((o) =>
-      o.id === id ? { ...original } : o,
+      o.id === id ? { ...updated, timingReview: "needs-review" } : o,
     ),
   };
 }
+export function resetTiming(
+  project: Project,
+  id: string,
+  durationMs?: number,
+): Project {
+  const cue = project.occurrences.find((o) => o.id === id);
+  const target = cue?.reviewedTiming ?? cue?.automaticTiming;
+  if (!target)
+    throw Error("No reset reference is available for this occurrence.");
+  if (!validTiming(target, durationMs))
+    throw Error("The reset reference is outside the loaded audio.");
+  return {
+    ...project,
+    occurrences: project.occurrences.map((o) =>
+      o.id === id
+        ? {
+            ...o,
+            startMs: target.startMs,
+            endMs: target.endMs,
+            timingReview: cue?.reviewedTiming ? "reviewed" : "needs-review",
+          }
+        : o,
+    ),
+  };
+}
+
 export function snappedTime(
   ms: number,
   snap: Snap,
@@ -141,6 +236,82 @@ export function moveTiming(
   }
   return { ...cue, startMs, endMs };
 }
+export function activeLyrics(
+  cues: Occurrence[],
+  positionMs: number,
+): Occurrence[] {
+  return cues.filter(
+    (o) =>
+      o.startMs !== null &&
+      o.endMs !== null &&
+      o.startMs <= positionMs &&
+      positionMs < o.endMs,
+  );
+}
+
+/** Only an unambiguous, exactly touching pair can share an edge edit. */
+export function moveProjectTiming(
+  project: Project,
+  id: string,
+  deltaMs: number,
+  boundary: Boundary,
+  durationMs?: number,
+  snap: Snap = "off",
+  linkEdges = false,
+): Project {
+  const cue = project.occurrences.find((o) => o.id === id);
+  if (!cue) throw Error("Occurrence not found.");
+  const valid = project.occurrences.filter(
+    (o) => o.startMs !== null && o.endMs !== null && o.endMs > o.startMs,
+  );
+  const time = boundary === "start" ? cue.startMs : cue.endMs;
+  const left = valid.filter((o) => o.endMs === time);
+  const right = valid.filter((o) => o.startMs === time);
+  if (
+    linkEdges &&
+    boundary !== "both" &&
+    valid.includes(cue) &&
+    left.length === 1 &&
+    right.length === 1 &&
+    (boundary === "start" ? right[0] === cue : left[0] === cue)
+  ) {
+    const others = project.occurrences.filter(
+      (o) => o !== left[0] && o !== right[0],
+    );
+    const lower = left[0].startMs! + 1;
+    const upper = Math.min(
+      right[0].endMs! - 1,
+      durationMs ?? Number.MAX_SAFE_INTEGER,
+    );
+    if (lower > upper)
+      throw Error("Not enough room to move the shared boundary.");
+    const edge = Math.max(
+      lower,
+      Math.min(upper, snappedTime(time! + deltaMs, snap, others)),
+    );
+    return editTiming(
+      editTiming(project, left[0].id, { endMs: edge }, durationMs),
+      right[0].id,
+      { startMs: edge },
+      durationMs,
+    );
+  }
+  return editTiming(
+    project,
+    id,
+    moveTiming(
+      cue,
+      deltaMs,
+      boundary,
+      durationMs,
+      snap,
+      project.occurrences.filter((o) => o.id !== id),
+      false,
+    ),
+    durationMs,
+  );
+}
+
 export function timingNotices(
   cues: Occurrence[],
   index: number,
@@ -238,9 +409,10 @@ export function rulerTicks(
   );
   const ticks: number[] = [];
   for (let time = 0; time < durationMs; time += step) ticks.push(time);
-  if (
+  // The end label sits to the left of its tick. Reserve space for both labels.
+  while (
     ticks.length > 1 &&
-    ((durationMs - ticks[ticks.length - 1]) / durationMs) * width < spacing
+    ((durationMs - ticks[ticks.length - 1]) / durationMs) * width < 2 * spacing
   )
     ticks.pop();
   ticks.push(durationMs);

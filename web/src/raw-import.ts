@@ -1,4 +1,4 @@
-import { parseProject, type Project } from "./domain.ts";
+import { hanzi, newId, parseProject, type Project } from "./domain.ts";
 
 export async function draftRawLyrics(
   raw: string,
@@ -23,4 +23,20 @@ export async function draftRawLyrics(
   if (!response.ok)
     throw Error(data.error || "Local dictionary import failed.");
   return parseProject(text);
+}
+
+/** Recover the local dictionary draft for a passage saved before drafts were retained. */
+export async function draftDetectedWords(text: string) {
+  const expected = hanzi(text);
+  if (!expected) return [];
+  const draft = await draftRawLyrics(text);
+  const words = draft.occurrences.flatMap(
+    ({ phraseId }) =>
+      draft.phrases.find((phrase) => phrase.id === phraseId)?.words ?? [],
+  );
+  if (hanzi(words.map((word) => word.hanzi).join("")) !== expected)
+    throw Error(
+      "The dictionary draft changed the lyric text. Edit its word breakdown manually.",
+    );
+  return words.map((word) => ({ ...word, id: newId() }));
 }

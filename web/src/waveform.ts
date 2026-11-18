@@ -13,7 +13,8 @@ export function waveformPeaks(channels: Float32Array[], bins = 1600): number[] {
   }
   return peaks;
 }
-export function waveformAllowed(bytes: number, durationMs: number): boolean {
-  // Bound encoded input and estimated stereo 48 kHz float PCM (~176 MiB).
-  return bytes <= 32 * 1024 * 1024 && durationMs <= 8 * 60 * 1000;
+export function waveformAllowed(durationMs: number): boolean {
+  return (
+    Number.isFinite(durationMs) && durationMs > 0 && durationMs <= 8 * 60 * 1000
+  );
 }
