@@ -1,24 +1,8 @@
 """Preview generation scope without changing the project or contacting a model."""
-from typing import TypedDict
 from .vocabulary import usable_vocabulary
 
 
-class GenerationReport(TypedDict):
-    model: str
-    scope: str
-    action: str
-    requested: int
-    updated: dict[str, list[str]]
-    saved: int
-    requests: int
-    errors: list[str]
-    attempts: list[str]
-    responses: list[dict]
-    path: str
-
-
 STAGES = ('vocabulary', 'en', 'pl')
-LABELS = {'vocabulary': 'Vocabulary and Pinyin', 'en': 'English', 'pl': 'Polish'}
 
 
 def plan_generation(project, stages, phrase_ids=None, replace=False):

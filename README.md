@@ -1,7 +1,7 @@
 Local tools (Node 22.20.0+; `.n-node-version` pins the verified version). With `n`, prefix commands with `n exec auto`, for example `n exec auto npm run workbench`. The render command is unchanged:
 
 - **React editor:** `npm run workbench` → http://127.0.0.1:5173. [Import, editing and export](web/README.md).
-- **Python / Streamlit workbench:** retained for translation generation and review. [Setup and usage](python-src/README.md); dependencies are in `python-src/requirements.txt`.
+- **Python backend:** local workers support the React editor. [Setup and tests](python-src/README.md).
 - **Remotion Studio:** `npm run dev`. Existing compositions and source songs remain unchanged.
 
 The React app supports file editing, manual timing/grouping and local Python draft/dictionary helpers. AI generation/revision and renderer/preset integration remain unfinished in [the active roadmap](agent-docs/ROADMAP.md).

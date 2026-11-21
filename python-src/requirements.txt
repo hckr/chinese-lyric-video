@@ -1,7 +1,6 @@
 # Application dependencies verified on 2026-11-12; packaging baseline on 2026-11-14.
 # Modern Setuptools lets Jieba use its filesystem resource loader without pkg_resources.
 setuptools==84.2.1
-streamlit==1.67.0
 pydantic==2.14.3
 opencc-python-reimplemented==0.1.7
 jieba==0.42.1
@@ -10,8 +9,6 @@ pytest==9.2.0
 python-dotenv==1.2.4
 # Imported directly by the generation transport for transient network errors.
 httpx2==2.16.0
-# Native filesystem events for Streamlit reloads.
-watchdog==7.1.0
 
 # Local word-timestamp transcription; model weights are installed separately.
 openai-whisper==20250625

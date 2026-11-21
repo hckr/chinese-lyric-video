@@ -1,3 +1,0 @@
-[server]
-# Print the local URL and let the user choose when to open it.
-headless = true
