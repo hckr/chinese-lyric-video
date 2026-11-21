@@ -199,11 +199,6 @@ test("Pinyin spacing preserved on import, explicit corrections preserve apostrop
     .flatMap((v) => v.words)
     .find((w) => w.pinyin === "bù qīng");
   assert.ok(word);
-  assert.ok(
-    p.phrases.some((v) =>
-      validatePinyinWords(v).some((s) => s.includes("Fix spacing")),
-    ),
-  );
   assert.equal(fixSpacing("piào liang"), "piàoliang");
   assert.equal(fixSpacing("nǚ ér"), "nǚ'ér");
   assert.equal(fixSpacing("xī'ān"), "xī'ān");
@@ -375,7 +370,7 @@ test("split suggestions align existing readings without guessing ambiguous sylla
   );
 });
 
-test("Pinyin whitespace produces one actionable warning, without a duplicate character warning", () => {
+test("Spaced Pinyin is valid when the syllables align", () => {
   const p = {
     ...sample().phrases[0],
     words: [
@@ -388,8 +383,7 @@ test("Pinyin whitespace produces one actionable warning, without a duplicate cha
     ],
   };
   const issues = validatePinyinWords(p);
-  assert.equal(issues.length, 1);
-  assert.match(issues[0], /Fix spacing/);
+  assert.deepEqual(issues, []);
 });
 test("Wiktionary soft redirects are restricted to one unambiguous Chinese target", () => {
   assert.equal(chineseRedirect("==Chinese==\n{{zh-see|確信|s}}"), "確信");

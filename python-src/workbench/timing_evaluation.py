@@ -12,6 +12,7 @@ import unicodedata
 from pathlib import Path
 
 from opencc import OpenCC
+
 from .boundary_alignment import assigned_lines
 from .pinyin import normalize
 from .songs import ROOT, dictionary_entries
@@ -99,18 +100,17 @@ def evaluate(song, transcript, clip_end_ms):
         ],
         "modes": {},
     }
+
+    def tokens(char, mode):
+        if mode == "characters":
+            return {char}
+        values = readings.get(char, set())
+        return {toneless(v) for v in values} if mode == "toneless_pinyin" else values
+
     for mode in ("characters", "pinyin", "toneless_pinyin"):
-
-        def tokens(char):
-            if mode == "characters":
-                return {char}
-            values = readings.get(char, set())
-            return (
-                {toneless(v) for v in values} if mode == "toneless_pinyin" else values
-            )
-
         pairs = matches(
-            [tokens(c) for _, c in expected], [tokens(c) for c, _, _ in observed]
+            [tokens(c, mode) for _, c in expected],
+            [tokens(c, mode) for c, _, _ in observed],
         )
         lines = []
         for cue in cues:
@@ -136,25 +136,25 @@ def evaluate(song, transcript, clip_end_ms):
                 if cue.get("endMs") is not None:
                     row["endDeltaMs"] = end - cue["endMs"]
             lines.append(row)
-        result["modes"][mode] = dict(
-            matched=len(pairs),
-            expected=len(expected),
-            observed=len(observed),
-            lines=lines,
-        )
+        result["modes"][mode] = {
+            "matched": len(pairs),
+            "expected": len(expected),
+            "observed": len(observed),
+            "lines": lines,
+        }
     assigned = assigned_lines(cues, transcript, converter, readings, toneless)
-    result["modes"]["assigned_toneless"] = dict(
-        matched=sum(r["matched"] for r in assigned),
-        expected=sum(r["total"] for r in assigned),
-        lines=assigned,
-        parameters=dict(
-            substitutionCost=2,
-            insertionCost=3,
-            deletionCost=3,
-            minimumAnchorFraction=0.5,
-            maximumUnverifiedGapMs=3000,
-        ),
-    )
+    result["modes"]["assigned_toneless"] = {
+        "matched": sum(r["matched"] for r in assigned),
+        "expected": sum(r["total"] for r in assigned),
+        "lines": assigned,
+        "parameters": {
+            "substitutionCost": 2,
+            "insertionCost": 3,
+            "deletionCost": 3,
+            "minimumAnchorFraction": 0.5,
+            "maximumUnverifiedGapMs": 3000,
+        },
+    }
     return result
 
 

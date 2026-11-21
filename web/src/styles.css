@@ -1983,3 +1983,75 @@ main > header[inert],
 #automatic-timing-content {
   scroll-margin-top: 90px;
 }
+
+.translation-toolbar {
+  display: grid;
+  gap: 0.65rem;
+  margin-block: 0.75rem 1rem;
+}
+.translation-options > summary {
+  cursor: pointer;
+}
+.translation-options[open] {
+  flex-basis: 100%;
+}
+.translation-options fieldset {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+}
+.translation-options label:has(input[type="checkbox"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline-end: 1rem;
+}
+.translation-options fieldset > div {
+  margin-block: 0.5rem;
+}
+.translation-review-actions {
+  margin-block: 0.75rem;
+  padding-block: 0.5rem;
+}
+
+.translation-run-details > summary,
+.translation-review-actions summary {
+  cursor: pointer;
+}
+.translation-run-details[open] > ul {
+  max-block-size: 16rem;
+  overflow: auto;
+}
+.draft-field,
+.token .gloss-input[data-draft] {
+  border-color: var(--accent);
+}
+.draft-previous {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.translation-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+.translation-status p {
+  margin: 0.25rem 0;
+}
+
+.field-draft-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-block: 0.35rem;
+}
+.token .word-revision {
+  grid-column: 2 / -1;
+  justify-self: start;
+}

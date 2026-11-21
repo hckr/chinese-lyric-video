@@ -299,7 +299,10 @@ export async function timingReviewAcceptance(
       () =>
         document.querySelector<HTMLElement>("#automatic-timing-content")!
           .hidden &&
-        !document.querySelector<HTMLDetailsElement>(".timing-candidates")!.open,
+        !document.querySelector<HTMLDetailsElement>(".timing-candidates")!
+          .open &&
+        !!document.querySelector(".timing-candidates summary")?.getClientRects()
+          .length,
     ),
     true,
   );
@@ -503,7 +506,6 @@ export async function timingReviewAcceptance(
   await click("Undo");
   // Open and inspect seven candidates at the minimum supported review width.
   await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 });
-  await revealTiming();
   await page.evaluate(() =>
     document.querySelector<HTMLElement>(".timing-candidates summary")!.click(),
   );
@@ -973,5 +975,45 @@ export async function timingReviewAcceptance(
   await loadAudio("long.wav");
   await click("Reset to last reviewed");
   assert.equal((await read()).occurrences[0].endMs, 2500);
+  await upload("groq-timing.json", JSON.stringify(p));
+  await click("Timing");
+  await loadAudio("groq.wav");
+  await installFake();
+  await wait(
+    () =>
+      page.evaluate(
+        () =>
+          !!document.querySelector<HTMLOptionElement>(
+            'option[value="groq"]:enabled',
+          ),
+      ),
+    "Groq configured",
+  );
+  await page.evaluate(() => {
+    const selector = document.querySelector<HTMLOptionElement>(
+      'option[value="groq"]',
+    )!.parentElement as HTMLSelectElement;
+    selector.value = "groq";
+    selector.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await wait(
+    () =>
+      page.evaluate(
+        () =>
+          document.querySelector<HTMLOptionElement>(
+            'option[value="whisper-large-v3-turbo"]',
+          )?.selected === true,
+      ),
+    "Groq Turbo default",
+  );
+  await generate();
+  await wait(
+    async () => (await read()).timingRun?.provider === "groq",
+    "Groq timing run saved",
+  );
+  assert.equal((await read()).timingRun!.model, "whisper-large-v3-turbo");
+  await page.evaluate(() => {
+    window.fetch = window.__timingFetch;
+  });
   await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
 }

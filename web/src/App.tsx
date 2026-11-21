@@ -1,3 +1,8 @@
+import {
+  TranslateLyrics,
+  type TranslationExchange,
+} from "./TranslateLyrics.tsx";
+import { translationState } from "./translation.ts";
 import { version } from "../../package.json";
 import { RepeatLyricDialog } from "./RepeatLyricDialog";
 import { orderGroupedProject } from "./lyric-groups.ts";
@@ -135,6 +140,9 @@ export function App() {
     [leftGloss, setLeftGloss] = useState(""),
     [rightGloss, setRightGloss] = useState("");
   const [projectSession, setProjectSession] = useState(0);
+  const [translationExchanges, setTranslationExchanges] = useState<
+    TranslationExchange[]
+  >([]);
   const [dictionaryTerm, setDictionaryTerm] = useState<string | null>(null);
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const snapshot = history?.present,
@@ -288,6 +296,7 @@ export function App() {
     setRemovalId(null);
     setRepeatOpen(false);
     setProjectSession((version) => version + 1);
+    setTranslationExchanges([]);
     setHistory(initial(p));
     setDialog(null);
     setScreen("Lyric editor");
@@ -511,7 +520,9 @@ export function App() {
           ) : (
             <p>Import a song to begin.</p>
           )}
-          <small>Files stay local. No automatic AI requests.</small>
+          <small>
+            AI requests start only when you choose a generation action.
+          </small>
         </div>
       </aside>
       <main>
@@ -598,13 +609,13 @@ export function App() {
                 <p>
                   Legacy imports retain all metadata, translations, repetitions
                   and exact timestamps. Manual Pinyin is preserved, including
-                  spacing warnings.
+                  spaces inside readings.
                 </p>
                 <p>
                   Raw import uses local Python, OpenCC, Jieba and CC-CEDICT to
-                  create editable word drafts. Dictionary readings and glosses
-                  need review; ambiguous or unknown readings stay blank.
-                  Sentence translations are not generated.
+                  create editable word rows. Glosses start empty and dictionary
+                  senses appear in the inspector; ambiguous or unknown readings
+                  stay blank. Sentence translations are not generated.
                 </p>
               </section>
               <section>
@@ -632,32 +643,15 @@ export function App() {
               </section>
             </div>
           )}
-          {project && ["Lyric editor", "Timing"].includes(screen) && (
+          {project && screen === "Timing" && (
             <div className="lyric-structure-actions">
-              {screen === "Timing" ? (
-                <button
-                  disabled={editingStructure || !project.phrases.length}
-                  aria-haspopup="dialog"
-                  onClick={() => setRepeatOpen(true)}
-                >
-                  Repeat
-                </button>
-              ) : (
-                <button
-                  aria-expanded={lyricAction}
-                  aria-controls="lyric-structure-panel"
-                  disabled={editingStructure}
-                  onClick={() => setLyricAction(!lyricAction)}
-                >
-                  Add lyric
-                </button>
-              )}
-              {project.source === "raw-dictionary-draft" && (
-                <span className="muted">
-                  Dictionary word drafts · review readings and meanings;
-                  English/Polish sentences are still empty.
-                </span>
-              )}
+              <button
+                disabled={editingStructure || !project.phrases.length}
+                aria-haspopup="dialog"
+                onClick={() => setRepeatOpen(true)}
+              >
+                Repeat
+              </button>
             </div>
           )}
           {project && lyricAction && screen === "Lyric editor" && (
@@ -692,378 +686,571 @@ export function App() {
               </form>
             </section>
           )}
-          {screen === "Lyric editor" &&
-            (!project ? (
-              <section>Import a song first.</section>
-            ) : (
-              <div className="workspace">
-                <section className="phrases">
-                  <h2>
-                    Unique phrases <small>{project.phrases.length}</small>
-                  </h2>
-                  <label>
-                    Search
-                    <input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Hanzi or translation"
-                    />
-                  </label>
-                  <div className="phrase-list">
-                    {phrasesInAppearanceOrder(project)
-                      .filter((p) =>
-                        `${p.lyricKey} ${p.translation.en} ${p.translation.pl}`
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                      )
-                      .map((p, i) => (
-                        <button
-                          className={`phrase ${phrase?.id === p.id ? "selected" : ""}`}
-                          key={p.id}
-                          onClick={() => selectPhrase(p)}
-                        >
-                          <small>
-                            {i + 1} ·{" "}
-                            {
-                              project.occurrences.filter(
-                                (o) => o.phraseId === p.id,
-                              ).length
-                            }{" "}
-                            occurrences · {p.review}
-                          </small>
-                          <strong>{p.lyricKey}</strong>
-                          <span lang="en">
-                            {p.translation.en || "No English translation"}
-                          </span>
-                          <span lang="pl">
-                            {p.translation.pl || "Brak tłumaczenia"}
-                          </span>
-                          {[...hanzi(p.lyricKey)].length > 11 && (
-                            <small className="warning">
-                              Long phrase · consider a manual phrase split later
-                            </small>
-                          )}
-                        </button>
-                      ))}
-                  </div>
-                </section>
-                {phrase && (
-                  <>
-                    <section className="editor">
-                      <div className="two sentence-fields">
-                        <label>
-                          English
-                          <input
-                            aria-label="English sentence"
-                            value={phrase.translation.en}
-                            onChange={(e) =>
-                              editPhrase({
-                                ...phrase,
-                                review: "pending",
-                                translation: {
-                                  ...phrase.translation,
-                                  en: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Polish
-                          <input
-                            aria-label="Polish sentence"
-                            value={phrase.translation.pl}
-                            onChange={(e) =>
-                              editPhrase({
-                                ...phrase,
-                                review: "pending",
-                                translation: {
-                                  ...phrase.translation,
-                                  pl: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </label>
-                      </div>
-                      {project.phrases.some(
-                        (other) =>
-                          other.id !== phrase.id &&
-                          other.lyricKey === phrase.lyricKey,
-                      ) && (
-                        <p role="status" className="warning">
-                          Duplicate lyric text. Keep translations and word
-                          breakdowns consistent before TypeScript export.
-                        </p>
-                      )}
-                      <h2>Word breakdown</h2>
-                      {phrase.words.length === 0 &&
-                        hanzi(phrase.lyricKey) &&
-                        project.occurrences.some(
-                          (cue) =>
-                            cue.phraseId === phrase.id && cue.detectedFromAudio,
-                        ) && (
-                          <button
-                            disabled={editingStructure}
-                            onClick={() => void restoreDetectedReadings()}
-                          >
-                            Draft words and Pinyin
-                          </button>
-                        )}
-
-                      <div className="actions wrap">
-                        <button
-                          onClick={() => {
-                            const id = newId();
-                            editPhrase(
-                              {
-                                ...pending(phrase),
-                                words: [
-                                  ...phrase.words,
-                                  {
-                                    id,
-                                    hanzi: "",
-                                    pinyin: "",
-                                    translation: { en: "" },
-                                  },
-                                ],
-                              },
-                              id,
-                            );
-                          }}
-                        >
-                          Add word
-                        </button>
-                        <button
-                          disabled={
-                            !selected ||
-                            [...selected.hanzi].length < 2 ||
-                            hanzi(selected.hanzi) !== selected.hanzi
-                          }
-                          onClick={() => openDialog("split")}
-                        >
-                          Split word
-                        </button>
-                        <button
-                          disabled={!selected?.hanzi || !next?.hanzi}
-                          onClick={() => openDialog("merge")}
-                        >
-                          Merge with next
-                        </button>
-                        <button
-                          disabled={!selected}
-                          onClick={() => {
-                            editPhrase(
-                              {
-                                ...pending(phrase),
-                                words: phrase.words.filter(
-                                  (w) => w.id !== selected?.id,
-                                ),
-                              },
-                              phrase.words[index - 1]?.id ?? "",
-                            );
-                          }}
-                        >
-                          Remove selected
-                        </button>
-                      </div>
-                      <div className="tokens">
-                        <div className="token headings">
-                          <span aria-hidden="true"></span>
-                          <span>Hanzi</span>
-                          <span>Pinyin</span>
-                          <span>English gloss</span>
-                          <span>Move</span>
-                        </div>
-                        {phrase.words.map((w, i) => (
-                          <div
-                            className={`token ${selected?.id === w.id ? "selected" : ""}`}
-                            key={w.id}
-                            onFocusCapture={() =>
-                              setHistory((h) =>
-                                h
-                                  ? {
-                                      ...h,
-                                      present: { ...h.present, tokenId: w.id },
-                                    }
-                                  : h,
-                              )
-                            }
-                          >
-                            <span className="word-index" aria-hidden="true">
-                              {i + 1}
-                            </span>
-                            <input
-                              aria-label={`Hanzi ${i + 1}`}
-                              value={w.hanzi}
-                              placeholder="Hanzi"
-                              onChange={(e) =>
-                                updateWord(w.id, { hanzi: e.target.value })
-                              }
-                            />
-                            <div>
-                              <input
-                                aria-label={`Pinyin ${i + 1}`}
-                                value={w.pinyin}
-                                placeholder={
-                                  w.hanzi ? "Reading needs review" : ""
-                                }
-                                onChange={(e) =>
-                                  updateWord(w.id, { pinyin: e.target.value })
-                                }
-                              />
-                              {w.hanzi && /\s/u.test(w.pinyin) && (
-                                <button
-                                  className="compact"
-                                  onClick={() =>
-                                    updateWord(w.id, {
-                                      pinyin: fixSpacing(w.pinyin),
-                                    })
-                                  }
-                                >
-                                  Fix spacing
-                                </button>
+          {screen === "Lyric editor" && !project && (
+            <section>Import a song first.</section>
+          )}
+          {project && (
+            <TranslateLyrics
+              key={projectSession}
+              hidden={screen !== "Lyric editor"}
+              project={project}
+              phrase={phrase}
+              exchanges={translationExchanges}
+              setExchanges={setTranslationExchanges}
+              secondaryAction={
+                <button
+                  aria-expanded={lyricAction}
+                  aria-controls="lyric-structure-panel"
+                  disabled={editingStructure}
+                  onClick={() => setLyricAction(!lyricAction)}
+                >
+                  Add lyric
+                </button>
+              }
+              selectPhrase={(target) => {
+                setQuery("");
+                selectPhrase(target);
+              }}
+              update={(edit, phraseId) =>
+                setHistory((h) => {
+                  if (
+                    !h ||
+                    (phraseId &&
+                      !h.present.project.phrases.some(
+                        (item) => item.id === phraseId,
+                      ))
+                  )
+                    return h;
+                  return {
+                    ...h,
+                    present: {
+                      ...h.present,
+                      project: {
+                        ...h.present.project,
+                        translationWork: edit(
+                          translationState(h.present.project),
+                        ),
+                      },
+                    },
+                  };
+                })
+              }
+              apply={(edit) =>
+                setHistory((h) => {
+                  if (!h) return h;
+                  const updated = edit(h.present.project);
+                  if (updated === h.present.project) return h;
+                  const words =
+                    updated.phrases.find(
+                      (item) => item.id === h.present.phraseId,
+                    )?.words ?? [];
+                  return commit(h, {
+                    ...h.present,
+                    project: projectSchema.parse(updated),
+                    tokenId: words.some((word) => word.id === h.present.tokenId)
+                      ? h.present.tokenId
+                      : (words[0]?.id ?? ""),
+                  });
+                })
+              }
+            >
+              {(preview, reviewActions) => {
+                const proposedWords = preview.vocabulary;
+                const words =
+                  proposedWords?.words.map((word, i) => ({
+                    ...word,
+                    id:
+                      phrase?.words[i]?.hanzi === word.hanzi
+                        ? phrase.words[i].id
+                        : `proposal-${i}`,
+                  })) ??
+                  phrase?.words ??
+                  [];
+                const inspectorWord =
+                  words.find((word) => word.id === snapshot?.tokenId) ??
+                  words[0];
+                const reviewIssues = phrase
+                  ? phraseIssues({
+                      ...phrase,
+                      words,
+                      translation: {
+                        en:
+                          preview.sentences.en?.value ?? phrase.translation.en,
+                        pl:
+                          preview.sentences.pl?.value ?? phrase.translation.pl,
+                      },
+                    })
+                  : [];
+                return (
+                  <div className="workspace">
+                    <section className="phrases">
+                      <h2>
+                        Unique phrases <small>{project.phrases.length}</small>
+                      </h2>
+                      <label>
+                        Search
+                        <input
+                          value={query}
+                          onChange={(e) => setQuery(e.target.value)}
+                          placeholder="Hanzi or translation"
+                        />
+                      </label>
+                      <div className="phrase-list">
+                        {phrasesInAppearanceOrder(project)
+                          .filter((p) =>
+                            `${p.lyricKey} ${p.translation.en} ${p.translation.pl}`
+                              .toLowerCase()
+                              .includes(query.toLowerCase()),
+                          )
+                          .map((p, i) => (
+                            <button
+                              className={`phrase ${phrase?.id === p.id ? "selected" : ""}`}
+                              key={p.id}
+                              onClick={() => selectPhrase(p)}
+                            >
+                              <small>
+                                {i + 1} ·{" "}
+                                {
+                                  project.occurrences.filter(
+                                    (o) => o.phraseId === p.id,
+                                  ).length
+                                }{" "}
+                                occurrences · {p.review}
+                              </small>
+                              {project.translationWork?.drafts.some(
+                                (draft) => draft.phraseId === p.id,
+                              ) && <small> · Draft ready</small>}
+                              <strong>{p.lyricKey}</strong>
+                              <span lang="en">
+                                {p.translation.en || "No English translation"}
+                              </span>
+                              <span lang="pl">
+                                {p.translation.pl || "Brak tłumaczenia"}
+                              </span>
+                              {[...hanzi(p.lyricKey)].length > 11 && (
+                                <small className="warning">
+                                  Long phrase · consider a manual phrase split
+                                  later
+                                </small>
                               )}
-                            </div>
-                            <GlossInput
-                              aria-label={`Gloss ${i + 1}`}
-                              value={w.translation.en}
-                              onChange={(e) =>
-                                updateWord(w.id, {
-                                  translation: { en: e.target.value },
-                                })
-                              }
-                            />
-                            <div className="move">
-                              {[-1, 1].map((d) => (
-                                <button
-                                  key={d}
-                                  aria-label={`${d < 0 ? "Move up" : "Move down"} word ${i + 1}`}
-                                  disabled={!phrase.words[i + d]}
-                                  onClick={() => {
-                                    const words = [...phrase.words];
-                                    [words[i], words[i + d]] = [
-                                      words[i + d],
-                                      words[i],
-                                    ];
-                                    editPhrase({ ...pending(phrase), words });
-                                  }}
-                                >
-                                  {d < 0 ? "↑" : "↓"}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                            </button>
+                          ))}
                       </div>
-                      {phraseIssues(phrase).length > 0 && (
-                        <details className="review-warnings">
-                          <summary className="warning">
-                            {phraseIssues(phrase).length} review warnings
-                          </summary>
-                          <ul>
-                            {phraseIssues(phrase).map((s, i) => (
-                              <li key={i}>{s}</li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                      <button
-                        className="primary"
-                        onClick={() =>
-                          act(() => {
-                            const issues = phraseIssues(phrase);
-                            if (issues.length) throw Error(issues.join("; "));
-                            editPhrase({
-                              ...phrase,
-                              review: "reviewed",
-                              segmentationApproved: true,
-                            });
-                          })
-                        }
-                      >
-                        Mark phrase reviewed
-                      </button>
                     </section>
-                    <section className="inspector">
-                      <DictionaryLookup
-                        word={selected}
-                        onOpenWiktionary={setDictionaryTerm}
-                      />
-                      <hr />
-                      <h2>Timing</h2>
-                      <p>
-                        Edit timing for each appearance of this lyric.
-                        Translation changes apply to all.
-                      </p>
-                      <ol className="lyric-timing-list">
-                        {project.occurrences
-                          .filter((o) => o.phraseId === phrase.id)
-                          .map((o, appearanceIndex) => (
-                            <li key={o.id}>
-                              <div className="lyric-timing-row">
-                                <button
-                                  className="lyric-timing-link"
-                                  data-timing-id={o.id}
-                                  onClick={() => {
+                    {phrase && (
+                      <>
+                        <section className="editor">
+                          <div className="two sentence-fields">
+                            {(["en", "pl"] as const).map((language) => {
+                              const draft = preview.sentences[language];
+                              const label =
+                                language === "en" ? "English" : "Polish";
+                              return (
+                                <div key={language}>
+                                  <label>
+                                    {label}
+                                    {draft && " · Draft"}
+                                    <input
+                                      aria-label={`${label} sentence`}
+                                      className={draft && "draft-field"}
+                                      readOnly={draft?.readOnly}
+                                      value={
+                                        draft?.value ??
+                                        phrase.translation[language]
+                                      }
+                                      onChange={(e) =>
+                                        draft
+                                          ? draft.edit(e.target.value)
+                                          : editPhrase({
+                                              ...phrase,
+                                              review: "pending",
+                                              translation: {
+                                                ...phrase.translation,
+                                                [language]: e.target.value,
+                                              },
+                                            })
+                                      }
+                                    />
+                                    {draft?.previous &&
+                                      draft.previous !== draft.value && (
+                                        <small className="draft-previous">
+                                          Previous · {draft.previous}
+                                        </small>
+                                      )}
+                                  </label>
+                                  {preview.actions[language]}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {project.phrases.some(
+                            (other) =>
+                              other.id !== phrase.id &&
+                              other.lyricKey === phrase.lyricKey,
+                          ) && (
+                            <p role="status" className="warning">
+                              Duplicate lyric text. Keep translations and word
+                              breakdowns consistent before TypeScript export.
+                            </p>
+                          )}
+                          {reviewActions}
+                          <h2>
+                            Word breakdown{" "}
+                            {proposedWords && <small>· Draft</small>}
+                          </h2>
+                          {preview.actions.vocabulary}
+                          {proposedWords?.previousBoundaries && (
+                            <p className="draft-previous">
+                              Previous word boundaries ·{" "}
+                              {proposedWords.previousBoundaries}
+                            </p>
+                          )}
+                          {!proposedWords &&
+                            phrase.words.length === 0 &&
+                            hanzi(phrase.lyricKey) &&
+                            project.occurrences.some(
+                              (cue) =>
+                                cue.phraseId === phrase.id &&
+                                cue.detectedFromAudio,
+                            ) && (
+                              <button
+                                disabled={editingStructure}
+                                onClick={() => void restoreDetectedReadings()}
+                              >
+                                Draft words and Pinyin
+                              </button>
+                            )}
+
+                          {!proposedWords && (
+                            <div className="actions wrap">
+                              <button
+                                onClick={() => {
+                                  const id = newId();
+                                  editPhrase(
+                                    {
+                                      ...pending(phrase),
+                                      words: [
+                                        ...phrase.words,
+                                        {
+                                          id,
+                                          hanzi: "",
+                                          pinyin: "",
+                                          translation: { en: "" },
+                                        },
+                                      ],
+                                    },
+                                    id,
+                                  );
+                                }}
+                              >
+                                Add word
+                              </button>
+                              <button
+                                disabled={
+                                  !selected ||
+                                  [...selected.hanzi].length < 2 ||
+                                  hanzi(selected.hanzi) !== selected.hanzi
+                                }
+                                onClick={() => openDialog("split")}
+                              >
+                                Split word
+                              </button>
+                              <button
+                                disabled={!selected?.hanzi || !next?.hanzi}
+                                onClick={() => openDialog("merge")}
+                              >
+                                Merge with next
+                              </button>
+                              <button
+                                disabled={!selected}
+                                onClick={() => {
+                                  editPhrase(
+                                    {
+                                      ...pending(phrase),
+                                      words: phrase.words.filter(
+                                        (w) => w.id !== selected?.id,
+                                      ),
+                                    },
+                                    phrase.words[index - 1]?.id ?? "",
+                                  );
+                                }}
+                              >
+                                Remove selected
+                              </button>
+                            </div>
+                          )}
+                          <div className="tokens">
+                            <div className="token headings">
+                              <span aria-hidden="true"></span>
+                              <span>Hanzi</span>
+                              <span>Pinyin</span>
+                              <span>English gloss</span>
+                              <span>Move</span>
+                            </div>
+                            {words.map((w, i) => {
+                              const reading = proposedWords?.pinyin(i);
+                              const gloss = proposedWords?.gloss(i);
+                              return (
+                                <div
+                                  className={`token ${inspectorWord?.id === w.id ? "selected" : ""}`}
+                                  key={w.id}
+                                  onFocusCapture={() =>
                                     setHistory((h) =>
                                       h
                                         ? {
                                             ...h,
                                             present: {
                                               ...h.present,
-                                              occurrenceId: o.id,
+                                              tokenId: w.id,
                                             },
                                           }
                                         : h,
-                                    );
-                                    setScreen("Timing");
-                                    setError("");
-                                    setDialog(null);
-                                  }}
+                                    )
+                                  }
                                 >
-                                  <span className="lyric-timing-copy">
-                                    {o.detectedFromAudio === true &&
-                                      phrase.review !== "reviewed" && (
-                                        <span className="detected-audio-badge">
-                                          Detected from audio
-                                        </span>
-                                      )}
-                                    <span className="lyric-timing-range">
-                                      {o.startMs === null && o.endMs === null
-                                        ? "Timing not set"
-                                        : `${formatTime(o.startMs)} → ${formatTime(o.endMs)}`}
-                                    </span>
-                                  </span>
-                                  <svg
+                                  <span
+                                    className="word-index"
                                     aria-hidden="true"
-                                    width="18"
-                                    height="18"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
                                   >
-                                    <path d="m9 5 7 7-7 7" />
-                                  </svg>
-                                </button>
-                                <button
-                                  className="lyric-timing-remove"
-                                  aria-label={`Remove appearance ${appearanceIndex + 1}`}
-                                  title="Remove this appearance"
-                                  onClick={() => setRemovalId(o.id)}
-                                >
-                                  <span aria-hidden="true">×</span>
-                                </button>
-                              </div>
-                            </li>
-                          ))}
-                      </ol>
-                    </section>
-                  </>
-                )}
-              </div>
-            ))}
+                                    {i + 1}
+                                  </span>
+                                  <input
+                                    aria-label={`Hanzi ${i + 1}`}
+                                    value={w.hanzi}
+                                    readOnly={!!proposedWords}
+                                    placeholder="Hanzi"
+                                    onChange={(e) =>
+                                      updateWord(w.id, {
+                                        hanzi: e.target.value,
+                                      })
+                                    }
+                                  />
+                                  <div>
+                                    <input
+                                      aria-label={`Pinyin ${i + 1}`}
+                                      className={
+                                        reading &&
+                                        reading.value !== reading.previous
+                                          ? "draft-field"
+                                          : undefined
+                                      }
+                                      readOnly={
+                                        proposedWords
+                                          ? (reading?.readOnly ?? true)
+                                          : undefined
+                                      }
+                                      value={w.pinyin}
+                                      placeholder={
+                                        w.hanzi ? "Reading needs review" : ""
+                                      }
+                                      onChange={(e) =>
+                                        reading
+                                          ? reading.edit(e.target.value)
+                                          : updateWord(w.id, {
+                                              pinyin: e.target.value,
+                                            })
+                                      }
+                                    />
+                                    {reading?.previous &&
+                                      reading.previous !== reading.value && (
+                                        <small className="draft-previous">
+                                          Previous · {reading.previous}
+                                        </small>
+                                      )}
+                                    {!proposedWords &&
+                                      w.hanzi &&
+                                      /\s/u.test(w.pinyin) && (
+                                        <button
+                                          className="compact"
+                                          onClick={() =>
+                                            updateWord(w.id, {
+                                              pinyin: fixSpacing(w.pinyin),
+                                            })
+                                          }
+                                        >
+                                          Fix spacing
+                                        </button>
+                                      )}
+                                  </div>
+                                  <div>
+                                    <GlossInput
+                                      aria-label={`Gloss ${i + 1}`}
+                                      data-draft={
+                                        gloss && gloss.value !== gloss.previous
+                                          ? true
+                                          : undefined
+                                      }
+                                      readOnly={
+                                        proposedWords
+                                          ? (gloss?.readOnly ?? true)
+                                          : undefined
+                                      }
+                                      value={w.translation.en}
+                                      onChange={(e) =>
+                                        gloss
+                                          ? gloss.edit(e.target.value)
+                                          : updateWord(w.id, {
+                                              translation: {
+                                                en: e.target.value,
+                                              },
+                                            })
+                                      }
+                                    />
+                                    {gloss?.previous &&
+                                      gloss.previous !== gloss.value && (
+                                        <small className="draft-previous">
+                                          Previous · {gloss.previous}
+                                        </small>
+                                      )}
+                                  </div>
+                                  <div className="move">
+                                    {[-1, 1].map((d) => (
+                                      <button
+                                        key={d}
+                                        aria-label={`${d < 0 ? "Move up" : "Move down"} word ${i + 1}`}
+                                        disabled={
+                                          !!proposedWords ||
+                                          !phrase.words[i + d]
+                                        }
+                                        onClick={() => {
+                                          const words = [...phrase.words];
+                                          [words[i], words[i + d]] = [
+                                            words[i + d],
+                                            words[i],
+                                          ];
+                                          editPhrase({
+                                            ...pending(phrase),
+                                            words,
+                                          });
+                                        }}
+                                      >
+                                        {d < 0 ? "↑" : "↓"}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {inspectorWord?.id === w.id &&
+                                    preview.wordAction?.(i)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {reviewIssues.length > 0 && (
+                            <details className="review-warnings">
+                              <summary className="warning">
+                                {reviewIssues.length} review warnings
+                              </summary>
+                              <ul>
+                                {reviewIssues.map((s, i) => (
+                                  <li key={i}>{s}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
+                          <button
+                            className="primary"
+                            disabled={
+                              !!proposedWords ||
+                              Object.keys(preview.sentences).length > 0
+                            }
+                            onClick={() =>
+                              act(() => {
+                                const issues = phraseIssues(phrase);
+                                if (issues.length)
+                                  throw Error(issues.join("; "));
+                                editPhrase({
+                                  ...phrase,
+                                  review: "reviewed",
+                                  segmentationApproved: true,
+                                });
+                              })
+                            }
+                          >
+                            Mark phrase reviewed
+                          </button>
+                        </section>
+                        <section className="inspector">
+                          <DictionaryLookup
+                            word={inspectorWord}
+                            onOpenWiktionary={setDictionaryTerm}
+                          />
+                          <hr />
+                          <h2>Timing</h2>
+                          <p>
+                            Edit timing for each appearance of this lyric.
+                            Translation changes apply to all.
+                          </p>
+                          <ol className="lyric-timing-list">
+                            {project.occurrences
+                              .filter((o) => o.phraseId === phrase.id)
+                              .map((o, appearanceIndex) => (
+                                <li key={o.id}>
+                                  <div className="lyric-timing-row">
+                                    <button
+                                      className="lyric-timing-link"
+                                      data-timing-id={o.id}
+                                      onClick={() => {
+                                        setHistory((h) =>
+                                          h
+                                            ? {
+                                                ...h,
+                                                present: {
+                                                  ...h.present,
+                                                  occurrenceId: o.id,
+                                                },
+                                              }
+                                            : h,
+                                        );
+                                        setScreen("Timing");
+                                        setError("");
+                                        setDialog(null);
+                                      }}
+                                    >
+                                      <span className="lyric-timing-copy">
+                                        {o.detectedFromAudio === true &&
+                                          phrase.review !== "reviewed" && (
+                                            <span className="detected-audio-badge">
+                                              Detected from audio
+                                            </span>
+                                          )}
+                                        <span className="lyric-timing-range">
+                                          {o.startMs === null &&
+                                          o.endMs === null
+                                            ? "Timing not set"
+                                            : `${formatTime(o.startMs)} → ${formatTime(o.endMs)}`}
+                                        </span>
+                                      </span>
+                                      <svg
+                                        aria-hidden="true"
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                      >
+                                        <path d="m9 5 7 7-7 7" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      className="lyric-timing-remove"
+                                      aria-label={`Remove appearance ${appearanceIndex + 1}`}
+                                      title="Remove this appearance"
+                                      onClick={() => setRemovalId(o.id)}
+                                    >
+                                      <span aria-hidden="true">×</span>
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                          </ol>
+                        </section>
+                      </>
+                    )}
+                  </div>
+                );
+              }}
+            </TranslateLyrics>
+          )}
           {screen === "Export data" && project && (
             <div className="two">
               <section>

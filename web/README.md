@@ -11,11 +11,11 @@ Open **http://127.0.0.1:5173** yourself. The command never opens a browser. The 
 1. Open **Import lyrics**, choose either repository song `.ts`, raw `.txt`, or a workbench project `.json`. You can also paste lyrics. A successful import replaces the open project; download its JSON first if you want another copy. Failed imports retain the open project.
 2. **Lyric editor** lists every unique phrase. Occurrence counts and timestamps are in the inspector; repeated occurrences share edits. Edit English, Polish and word rows directly. Changes save in this browser; download JSON for a portable backup. JSON restores stable IDs, review status and approved segmentation. The old Python project JSON is a different format and is deliberately rejected rather than misread.
 3. Select a word row, then **Split word** or **Merge with next** above the word table. Choose a Hanzi boundary for splitting and review the editable readings/glosses before confirming. **Undo/Redo** restores the previous edit. See [the segmentation contract](../agent-docs/react-workbench/WORD_SEGMENTATION.md) for identities, preservation and Pinyin rules.
-4. Use **Fix spacing** on a flagged row to correct that reading explicitly. Review warnings identify missing/invalid readings, glosses and Chinese character coverage.
+4. Use **Fix spacing** to explicitly join a word’s supplied readings. Meaningful idioms can keep spaced Pinyin. Review warnings identify missing/invalid readings, glosses and Chinese character coverage.
 5. **Mark phrase reviewed** records review and segmentation approval once validation passes. Editing a sentence invalidates review without erasing segmentation approval. Editing word structure invalidates its approval. Download project JSON to retain workbench metadata; legacy TS carries only the renderer's established data contract.
 6. **Export data** lists warnings and previews the actual TS. Download the legacy module, manually place/reference it under `src/`, and use the existing Remotion workflow. Missing raw timings remain null in JSON and become warned zero placeholders in a TS draft. Incomplete/unreviewed/invalid manual data requires explicit acknowledgement before draft download; it is never silently normalized. The app never overwrites source files.
 
-Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word readings/glosses while preserving repetitions. English/Polish sentence translations remain manual. There is no paid AI request or browser API key. Raw import does not upload audio/media. Automatic timing and occurrence review are available in Timing. Video settings and synchronized Remotion Player integration remain later checkpoints.
+Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word rows and unambiguous readings while preserving repetitions. Contextual glosses and English/Polish sentences start empty. The dictionary inspector shows reference definitions. There is no paid AI request or browser API key. Raw import does not upload audio/media. Automatic timing and occurrence review are available in Timing. Video settings and synchronized Remotion Player integration remain later checkpoints.
 
 Browser recovery stores the current project, not the undo stack. History is bounded to 100 edits; source imports begin a new history. Reselecting a phrase preserves its committed edits. Save a portable JSON before clearing browser data. The browser's static TypeScript parser adds bundle size (roughly 11 MB unminified development JS); this avoids introducing an API/server merely for local file parsing.
 
@@ -39,6 +39,47 @@ play the media. No media is uploaded.
 The JSON schema remains version 1 with optional timing review, run, settings, and audio metadata. Old `timingBaseline` data is retired on save. Existing version-1 projects load; older strict workbench versions may reject files with these new fields. Legacy TS omits workbench metadata. The text preview is layout only; Remotion media assignment and rendering remain explicit manual steps.
 
 Beat detection is deferred after the fixed-tempo experiment proved unreliable on real music. The review workflow and its verification record are documented in [Automatic Timing & Review](../agent-docs/react-workbench/features/automatic-timing-review/SPEC.md).
+
+## Automatic translation
+
+Select a configured provider and model beside the translation action. To switch after a limited run, select the other model and retry unfinished work. Custom Gemini model IDs remain available in Model settings.
+
+Translation waits and retries temporary provider errors automatically. For Gemini HTTP 429 it waits at least one minute and honors longer Gemini retry delays. Groq starts with batches of up to four lyrics. Repeated rate limits can shrink a multi-lyric batch after the provider retry delay. Gemini also shrinks batches after repeated input-token limits. Progress shows the operation being retried and the number of validated drafts. Run details explain when an incomplete or invalid response triggered another request. Vocabulary prompts prioritize segmented words within an 800-character dictionary excerpt per lyric. Run details follows new messages while scrolled to the bottom. Expand **Debug prompts and responses** there to inspect batch prompts and model text. The debug history lives in browser memory for the open project and clears on reload or when opening a project. Use **Cancel translation** to stop waiting. Confirmed daily quota exhaustion and zero allowance end the run with the provider reason.
+
+Choose **Translate whole song** after importing lyrics. It drafts missing word
+readings, contextual glosses, and English and Polish sentences. Repeated
+appearances share a draft, and the whole song supplies lyric context. Existing
+readings, glosses, and word boundaries are protected during fill-missing runs.
+For a narrower scope or the model settings, open **Translation options**.
+For projects that already contain dictionary definitions in gloss fields,
+choose **Draft replacement glosses** to propose contextual wording for the
+current word breakdown.
+
+Translation actions send lyrics and optional song notes to the selected provider through the
+loopback server. Set `GROQ_API_KEY` or `GEMINI_API_KEY` in the Python process environment,
+`python-src/.env`, or the repository `.env`. Import, editing, review, and export
+work locally. For Groq, select **Thinking effort** beside the model. Groq defaults to Off for Qwen and Medium for GPT-OSS. Higher effort can consume more tokens. The choice applies to generation and revision. You can edit, dismiss, and apply a lyric’s drafts once its requests finish. Model revisions become available when the run ends. Translation continues when you switch Workbench tabs. **Cancel translation** stops the worker and retains received
+drafts. A partial run shows counts for vocabulary, English, and Polish.
+On resume, the worker drafts missing sentences for lyrics with usable vocabulary first. Each new vocabulary batch is followed by its requested sentence translations before the next batch starts.
+Open **Run details** for grouped provider failures and sentences waiting for
+vocabulary. **Retry unfinished** skips drafts already received.
+
+Choose **Review drafts** to jump to a lyric with proposals. Use **Next draft**
+or select a marked phrase. Proposed readings and glosses appear in the word
+table, with changes highlighted and previous values shown when available.
+English and Polish sentence drafts convey a metaphor’s intended meaning in context. The English word gloss gives both its literal image and its figurative sense on separate lines. Proposed sentences appear in the English and Polish fields. **Apply draft**
+saves the eligible proposals for the selected lyric. A sentence that uses draft
+vocabulary can be applied together with that vocabulary or after it. Use **Revise** or **Dismiss** beside the sentence or word breakdown, **Revise this word** on the selected row, and **Fill missing fields with … drafts** beside **Review drafts for … lyrics**. Applying content supports
+Undo. Generation scope controls which lyrics receive new drafts. Fill missing skips valid replacement drafts too. Draft replacements can regenerate selected parts again. Song-wide application accepts eligible fill-missing drafts across all lyrics without contacting the model. **Revise lyric…** lets you select one or more parts and give them a shared instruction. The form identifies the selected translation model. Sentence revisions use the current sentence drafts and valid vocabulary draft even before application. Revision results appear beside the lyric’s review controls. **Draft sources** lists each original model separately. Drafts and applied provenance persist in autosave and Workbench JSON.
+Legacy TypeScript contains the applied lyric content.
+
+Run the offline browser acceptance with `node web/tests/browser.ts --translation`.
+For an optional live quality check, the following command sends the sample to
+Gemini and writes results to an ignored output directory.
+
+```sh
+python-src/venv/bin/python python-src/evaluate_translation.py python-src/tests/fixtures/translation-evaluation.txt --live --output out/workbench/translation-evaluation
+```
 
 ## Application versioning
 
@@ -112,12 +153,25 @@ Timeline rows stay fixed during a drag and compact after a drop. Selection revea
 
 ## Automatic timing and review
 
-Choose local audio and a cached Whisper model, then **Generate timings**. Import a matching word-timestamp JSON under **Advanced** when needed. After generation, **Regenerate timing…** beside **Timing settings** toggles the results and generation panel. Generation starts from inside that panel. Regular suggestions populate the existing timeline atomically as Needs review. Preserve-reviewed is the default; replace-all requires confirmation. Missing results never erase current bounds. Weak estimates remain in the occurrence inspector until **Use estimate anyway**. Imported transcript provenance is unverified.
+Choose local audio and a cached Whisper model, then **Generate timings**. With Local Whisper selected, import a matching word-timestamp JSON under **Advanced** when needed. After generation, **Detected from audio** stays visible in Timing whenever passages are available. **Regenerate timing…** beside **Timing settings** toggles the generation controls. Generation starts from inside that panel. Regular suggestions populate the existing timeline atomically as Needs review. Preserve-reviewed is the default; replace-all requires confirmation. Missing results never erase current bounds. Weak estimates remain in the occurrence inspector until **Use estimate anyway**. Imported transcript provenance is unverified.
 
 Use **Play lyric** to audition the padded interval, adjust boundaries and **Mark reviewed**. Auto-advance wraps through timed rows needing review; disable it in the Timing settings button. The settings panel also holds zoom, snap, linked edges and independent 0–5000 ms padding. Defaults are 250 ms before/after and auto-advance on. **Use latest automatic suggestion** remains separate from reviewed-first Reset. Bulk review is a secondary sidebar selection mode with explicit approval.
 
 Open **Detected from audio** to listen to and add passages individually. **Add to lyrics** leaves you in the list. **View lyric** reveals the newly added occurrence. **Dismiss** or **Clear detected passages** removes pending candidates from the saved project and supports Undo. Outstanding candidates, weak estimates, review/reset snapshots, run identity and settings survive JSON/browser recovery; relink audio and **Check linked audio** before reusing pending data, or explicitly allow reuse with a different/unchecked recording. The normalized SHA-256 audio identity does not authenticate an independently imported transcript. Project JSON stores neither audio nor full transcripts. Legacy TS remains unchanged and does not carry the new review metadata.
 
-Generation/checking sends audio only to the local loopback process and removes temporary inputs. Use existing cached weights; no downloads run automatically. Compressed audio/video requires a working local FFmpeg decoder. This machine's bundled Remotion decoder is incompatible with its macOS version; a mono 16kHz PCM WAV works for generation without FFmpeg. Playback/waveform availability remains independent.
+Local Whisper is the default. With GROQ_API_KEY configured, select Groq in Automatic timing and choose Large V3 Turbo or Large V3. Generate timings sends normalized mono WAV audio to Groq and uses returned Mandarin word timestamps for local lyric alignment. Recordings up to the existing eight-minute limit fit in one request. Identity checks and imported transcripts run locally. Temporary audio inputs are removed after generation. Use existing cached weights; no downloads run automatically. Compressed audio/video requires a working local FFmpeg decoder. This machine's bundled Remotion decoder is incompatible with its macOS version; a mono 16kHz PCM WAV works for generation without FFmpeg. Playback/waveform availability remains independent.
 
 Run `node web/tests/browser.ts --timing-review` for deterministic review/generation and native WAV replay coverage. Add `--capture-timing-ux` to save review screenshots under `out/workbench/timing-ux/`. [Automatic Timing & Review](../agent-docs/react-workbench/features/automatic-timing-review/SPEC.md#16-implementation-and-verification-record) records all checks and limitations. The [evaluation record](../agent-docs/react-workbench/ASSISTED_TIMING.md) retains listening evidence; automated recognition counts do not certify acoustic accuracy.
+
+### Translation providers
+
+Set either credential in `python-src/.env` or the repository-root `.env` file. Both providers use the same loader.
+
+```dotenv
+GROQ_API_KEY=
+GEMINI_API_KEY=
+```
+
+New projects prefer Groq Qwen when configured. Choose Groq or Gemini and the model in the editor. Previously saved Gemini settings continue to select Gemini. Groq models are allowlisted against the published free-plan limits in `python-src/workbench/translation_providers.py`. Review that list when Groq updates its catalog. GPT-OSS uses structured schema output when enabled. Cached input tokens appear in run details when the API reports them. Percent complete counts validated vocabulary, English and Polish drafts requested in this run. Canceling preserves received drafts.
+
+Groq access failures show the HTTP status and recognized API or gateway reason in the translation status. For authentication failures, the worker uses the exported process credential first, then the Python configuration file, then the repository configuration file. Restart the workbench from the intended environment after changing an exported key.

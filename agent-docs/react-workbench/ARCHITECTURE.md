@@ -7,7 +7,7 @@ flowchart TD
   A[Raw lyrics .txt / old song .ts] --> B[React workbench in web/]
   B --> S[Canonical editing model: project JSON]
   B <-->|local draft/dictionary routes| P[Python helpers: existing NLP and dictionary]
-  B -. proposed AI bridge .-> L[Existing Python LLM core]
+  B -->|opt-in translation routes| L[Existing Python LLM core]
   S --> G[Safe compatibility exporter]
   G --> T[Legacy song .ts — manual copy into src/]
   S --> J[Portable project .json — manual save/open]
@@ -30,9 +30,9 @@ Use a lightweight React + TypeScript app in `web/`, preserving existing Remotion
 
 The source contracts are [React domain schemas](../../web/src/domain.ts), [legacy importer/exporter](../../web/src/legacy.ts), and [Python models](../../python-src/workbench/models.py). Do not copy an illustrative model into application code.
 
-React project JSON uses `format: "lyric-workbench"`, `schemaVersion: 1`, metadata, phrases, occurrences and source. Phrases have stable token IDs, a `pending`/`reviewed` state and `segmentationApproved`; occurrences reference phrase IDs and allow null timing. Optional timing baselines, lightweight audio metadata and fixed-membership lyric groups persist. Local media bytes/object URLs, dictionary results and view layout do not persist. Old phrase notes/dictionary fields are discarded on load. Visual configuration and video/image media references are not implemented schema fields.
+React project JSON uses `format: "lyric-workbench"`, `schemaVersion: 1`, metadata, phrases, occurrences and source. Phrases have stable token IDs, a `pending`/`reviewed` state and `segmentationApproved`; occurrences reference phrase IDs and allow null timing. Optional timing baselines, lightweight audio metadata and fixed-membership lyric groups persist. Optional translation work stores draft values, source and vocabulary fingerprints, dictionary evidence for vocabulary proposals, generation settings, and applied provenance. Local media bytes/object URLs, on-demand dictionary lookup results and view layout stay in the session. Old phrase notes/dictionary fields are discarded on load. Visual configuration and video/image media references are not implemented schema fields.
 
-Python projects use `version: 1`, phrase text, separate vocabulary/translation states and provenance, plus a timeline keyed by lyric text with non-null zero placeholders. They have no token IDs. They are not interchangeable with React JSON; C needs explicit adapters that preserve identities, authored edits and timing.
+Python projects use `version: 1`, phrase text, separate vocabulary/translation states and provenance, plus a timeline keyed by lyric text with non-null zero placeholders. They have no token IDs. The translation adapter creates a temporary Python model for prompts and validation. React owns project persistence, stable token and occurrence IDs, authored edits, and timing.
 
 Browser files use session-local File/Blob object URLs and require relinking after reload. Remotion currently resolves named assets with `staticFile` from `public/`; project downloads do not bundle those assets. Asset persistence, preview resolution and a possible local asset service remain future work, not guarantees that arbitrary filesystem paths will resolve.
 
@@ -79,29 +79,32 @@ Three levels, in precedence order: **built-in safe defaults < named video preset
 
 [web/dev.ts](../../web/dev.ts) serves loopback-only React tooling and delegates two POST routes through [import-api.ts](../../web/import-api.ts):
 
-- `/api/import-lyrics` invokes `workbench.react_ingest` for OpenCC/Jieba/CC-CEDICT word drafts; sentence EN/PL translations remain manual.
+- `/api/import-lyrics` invokes `workbench.react_ingest` for OpenCC/Jieba word rows and unambiguous CC-CEDICT readings. Contextual glosses and sentence EN/PL fields start empty.
 - `/api/dictionary` invokes `workbench.react_dictionary` on demand. Results are memory-cached in React, attributed to CC-CEDICT/MDBG and excluded from saved songs/projects.
 
-These bounded subprocess routes reject cross-origin browser requests, preserve the open project on failure and do not perform AI generation. A standalone static bundle does not supply these development-server routes. Keep dictionary senses distinct from future model-inferred contextual meanings; never claim a sense match without identifying one.
+These bounded subprocess routes reject cross-origin browser requests, preserve the open project on failure and do not perform AI generation. A standalone static bundle does not supply these development-server routes. The dictionary inspector displays CC-CEDICT entries as reference evidence for the selected word. The editor displays proposed contextual glosses with the current word breakdown.
 
-Automatic timing is planned separately in [Automatic Timing & Review](features/automatic-timing-review/SPEC.md).
-Its Python worker and local API are not part of the committed baseline; the
-implemented routes above cover raw lyric drafts and dictionary lookup only.
+See [Automatic Timing & Review](features/automatic-timing-review/SPEC.md) for the local timing API.
 
-## Proposed AI interface and backend reuse
+## Translation API and backend reuse
 
-Reuse UI-independent `python-src/workbench/` models/storage, songs, generation, generation_plan, prompts, pinyin, vocabulary, responses and transport modules. Preserve retries, validation and checkpointing; do not recreate the core or remove Streamlit until migration is verified. A minimal HTTP framework is an option, not an approved dependency or prerequisite for existing routes.
+[translation-api.ts](../../web/translation-api.ts) dispatches same-origin JSON
+POSTs to [workbench.react_translation](../../python-src/workbench/react_translation.py).
+`/api/translation/generate` accepts selected jobs by component and unique phrase
+ID plus the ordered song lyrics. `/api/translation/revise` adds instructions and
+an optional word index for a single lyric. Both return newline-delimited progress,
+drafts, and actionable errors. The Python worker uses the existing prompt,
+dictionary, and response validation. The worker selects Gemini or Groq from project settings. A local capabilities endpoint reports configured providers and their model choices. Credentials are
+resolved by Python. Empty jobs complete before dictionary or provider calls.
 
-The following routes are proposals, not implemented APIs:
-
-- `POST /api/lyrics/normalize` — normalization and segmentation suggestions.
-- `POST /api/translation/generate` — per-unique-phrase AI draft with prompt/model metadata.
-- `POST /api/translation/revise` — selected phrase/token only, with user instructions.
-- `GET /api/dictionary?term=...` — CC-CEDICT and provenance.
-
-Generate/revise per unique phrase, reusing results across occurrences. Show dictionary evidence and store provider/model/prompt provenance. Acceptance or replacement must be explicit and undoable, retain occurrence timing and phrase IDs, and preserve manual changes on failure/cancellation/retry. Apply the [segmentation contract](WORD_SEGMENTATION.md) to backend output and proposal acceptance. C is complete when a draft can be generated, corrected, saved and exported without losing those protections.
-
-Never send credentials to React. Keep generated suggestions separate from accepted edits, support cancellation, retries and invalidation. Manual browser timing and compatible local file import/export do not require a provider backend; raw dictionary import uses local Python routes, and planned automatic timing will require its own local route. Any paid API call must be deliberate, especially while developing.
+React saves drafts independently of lyric content. A draft records its source and
+target snapshots, and a sentence draft records the vocabulary it used. Before
+applying, React validates the proposal and checks those snapshots. Sentence
+drafts may be applied with their supporting vocabulary or once that vocabulary
+has been applied. Apply creates an undo entry. Cancellation terminates the
+worker and retains draft events already saved. No provider is needed to review
+or export those results. [Workflow](../../web/README.md#automatic-translation) ·
+[Offline verification](TEST_PLAN.md#m3--python-ai)
 
 ## Preservation and deferred scope
 

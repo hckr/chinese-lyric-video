@@ -54,7 +54,7 @@ def draft_project(raw, title="", artist="", dictionary_path=None):
             for chinese in HAN.findall(segment):
                 for token in lexical(chinese):
                     candidates = entries.get(token, [])
-                    readings, glosses = set(), []
+                    readings = set()
                     for entry in candidates:
                         match = re.match(r"\S+ \[(.*?)\] /(.*)/$", entry)
                         if not match:
@@ -67,7 +67,6 @@ def draft_project(raw, title="", artist="", dictionary_path=None):
                                 spelling += "'"
                             spelling += syllable
                         readings.add(spelling)
-                        glosses.extend(match[2].split("/"))
                     words.append(
                         {
                             "id": f"word-{number}-{len(words)}",
@@ -75,7 +74,7 @@ def draft_project(raw, title="", artist="", dictionary_path=None):
                             "pinyin": next(iter(readings))
                             if len(readings) == 1
                             else "",
-                            "translation": {"en": "\n".join(dict.fromkeys(glosses))},
+                            "translation": {"en": ""},
                         }
                     )
         phrases.append(
@@ -122,6 +121,7 @@ if __name__ == "__main__":
                 ensure_ascii=False,
             )
         )
-    except Exception as exc:
+    # Report unexpected failures through the worker protocol.
+    except Exception as exc:  # noqa: BLE001
         print(str(exc), file=sys.stderr)
         sys.exit(1)

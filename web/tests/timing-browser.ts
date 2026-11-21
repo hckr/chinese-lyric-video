@@ -691,11 +691,10 @@ export async function timingAcceptance(
       .click(),
   );
   await select("line-1");
-  // Capture known values again for the exported fixture.
-  await seek(23);
-  await key("s");
-  await seek(24.75);
-  await key("e");
+  // Keyboard capture was verified above. Set exact bounds for the export fixture.
+  await fill('[aria-label="Start milliseconds"]', "23000");
+  await fill('[aria-label="End milliseconds"]', "24750");
+  await click("Apply timing");
   await page.evaluate(() => window.scrollTo(0, 0));
   const activeShot = await page
     ._client()

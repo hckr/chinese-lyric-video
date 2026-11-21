@@ -4,7 +4,9 @@ import json
 import re
 import sys
 from pathlib import Path
+
 from opencc import OpenCC
+
 from .pinyin import normalize
 from .songs import ROOT, dictionary_entries
 
@@ -41,6 +43,7 @@ if __name__ == "__main__":
     try:
         data = json.load(sys.stdin)
         print(json.dumps(lookup(data.get("term")), ensure_ascii=False))
-    except Exception as exc:
+    # Report unexpected failures through the worker protocol.
+    except Exception as exc:  # noqa: BLE001
         print(str(exc), file=sys.stderr)
         sys.exit(1)

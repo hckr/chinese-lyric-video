@@ -47,10 +47,12 @@ export function AutomaticTiming({
   onIdentityReady: (ready: boolean) => void;
 }) {
   const settings = project.timingSettings ?? defaultTimingSettings;
+  const groq = settings.provider === "groq";
   const [models, setModels] = useState<string[]>([]);
   const [policy, setPolicy] = useState<GenerationPolicy>("preserve-reviewed");
-  const [transcript, setTranscript] =
+  const [localTranscript, setTranscript] =
     useState<ReturnType<typeof parseWhisperTranscript>>();
+  const transcript = groq ? undefined : localTranscript;
   const [transcriptName, setTranscriptName] = useState("");
   const [readingTranscript, setReadingTranscript] = useState(false);
   const [confirm, setConfirm] = useState<{
@@ -112,6 +114,18 @@ export function AutomaticTiming({
     focusRerun.current = false;
     revealTiming.current?.focus({ preventScroll: true });
   }, [project.timingRun, expanded, revealTiming]);
+  const [groqAvailable, setGroqAvailable] = useState(false);
+  const model = groq
+    ? (settings.groqModel ?? "whisper-large-v3-turbo")
+    : settings.model;
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/translation/providers", { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => setGroqAvailable(Array.isArray(data.Groq)))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const previous = useRef(file);
   const input = useRef<HTMLInputElement>(null);
   const transcriptVersion = useRef(0);
@@ -169,7 +183,8 @@ export function AutomaticTiming({
           JSON.stringify({
             project,
             durationMs: duration,
-            model: settings.model,
+            model,
+            provider: settings.provider ?? "local",
             transcript: identityOnly ? undefined : transcript,
             identityOnly,
             ids: project.occurrences.map((o) => o.id),
@@ -229,7 +244,8 @@ export function AutomaticTiming({
           throw Error("Timing ended without results; project retained.");
         const next = applyGeneration(project, result, duration, policy, {
           id: crypto.randomUUID(),
-          model: transcript ? "imported transcript" : settings.model,
+          model: transcript ? "imported transcript" : model,
+          provider: transcript ? undefined : (settings.provider ?? "local"),
           transcriptProvenance: transcript
             ? "external-unverified"
             : "generated",
@@ -275,12 +291,11 @@ export function AutomaticTiming({
       : undefined;
   const disabled =
     busy ||
-    readingTranscript ||
-    !!transcriptError ||
+    (!groq && (readingTranscript || !!transcriptError)) ||
     !file ||
     !duration ||
     !project.occurrences.length ||
-    (!transcript && !models.includes(settings.model));
+    (!transcript && (groq ? !groqAvailable : !models.includes(settings.model)));
   const dismissCandidates = (id?: string) => {
     const run = project.timingRun;
     if (!run) return;
@@ -305,149 +320,218 @@ export function AutomaticTiming({
   };
   return (
     <section
-      id="automatic-timing-content"
       className="automatic-timing"
       aria-label="Automatic timing"
-      hidden={!!project.timingRun && !expanded}
+      hidden={
+        !!project.timingRun && !expanded && !candidates.length && !lastAdded
+      }
     >
-      <div className="automatic-timing-header">
-        <div>
-          <h2>Automatic timing</h2>
-          <p className="muted">
-            {counts.Reviewed} reviewed · {counts["Needs review"]} need review ·{" "}
-            {counts.Untimed} untimed
-          </p>
+      <div
+        id="automatic-timing-content"
+        hidden={!!project.timingRun && !expanded}
+      >
+        <div className="automatic-timing-header">
+          <div>
+            <h2>Automatic timing</h2>
+            <p className="muted">
+              {counts.Reviewed} reviewed · {counts["Needs review"]} need review
+              · {counts.Untimed} untimed
+            </p>
+          </div>
         </div>
-      </div>
-      <div id="automatic-timing-setup">
-        <div className="timing-controls automatic-timing-setup">
-          <label>
-            Cached model
-            <select
-              value={settings.model}
-              disabled={busy}
-              onChange={(e) =>
-                onChange(
-                  {
-                    ...project,
-                    timingSettings: {
-                      ...settings,
-                      model: e.target.value as typeof settings.model,
-                    },
-                  },
-                  selectedId ?? project.occurrences[0]?.id ?? "",
-                  true,
-                )
-              }
-            >
-              {!models.includes(settings.model) && (
-                <option value={settings.model}>
-                  {settings.model} (not cached)
-                </option>
-              )}
-              {models.map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
-          </label>
-          {(project.timingRun ||
-            project.occurrences.some(
-              (o) => o.startMs !== null || o.endMs !== null,
-            )) && (
+        <div id="automatic-timing-setup">
+          <div className="timing-controls automatic-timing-setup">
             <label>
-              Regeneration
+              Transcription provider
               <select
-                value={policy}
                 disabled={busy}
-                onChange={(e) => setPolicy(e.target.value as GenerationPolicy)}
+                value={settings.provider ?? "local"}
+                onChange={(e) =>
+                  onChange(
+                    {
+                      ...project,
+                      timingSettings: {
+                        ...settings,
+                        provider: e.target.value as "local" | "groq",
+                      },
+                    },
+                    selectedId ?? project.occurrences[0]?.id ?? "",
+                    true,
+                  )
+                }
               >
-                <option value="preserve-reviewed">
-                  Preserve reviewed timings
-                </option>
-                <option value="replace-all">
-                  Replace all regular timings…
+                <option value="local">Local Whisper</option>
+                <option value="groq" disabled={!groqAvailable}>
+                  Groq{groqAvailable ? "" : " (requires GROQ_API_KEY)"}
                 </option>
               </select>
             </label>
-          )}
-          <button
-            className="primary"
-            disabled={disabled}
-            onClick={(e) => {
-              if (policy === "replace-all")
-                setConfirm({ kind: "replace", trigger: e.currentTarget });
-              else if (candidates.length)
-                setConfirm({ kind: "regenerate", trigger: e.currentTarget });
-              else void run();
-            }}
-          >
-            Generate timings
-          </button>
-        </div>
-        <details className="timing-advanced">
-          <summary>
-            Advanced
-            {transcriptError
-              ? " · Transcript needs attention"
-              : transcriptName
-                ? " · Transcript selected"
-                : ""}
-          </summary>
-          <div className="timing-controls">
-            <label>
-              Optional Whisper transcript
-              <input
-                ref={input}
-                type="file"
-                accept=".json"
-                disabled={busy}
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) {
-                    clearTranscript();
-                    return;
+            {groq ? (
+              <label>
+                Groq Whisper model
+                <select
+                  disabled={busy}
+                  value={model}
+                  onChange={(e) =>
+                    onChange(
+                      {
+                        ...project,
+                        timingSettings: {
+                          ...settings,
+                          groqModel: e.target
+                            .value as typeof settings.groqModel,
+                        },
+                      },
+                      selectedId ?? project.occurrences[0]?.id ?? "",
+                      true,
+                    )
                   }
-                  const version = ++transcriptVersion.current;
-                  setTranscriptName(f.name);
-                  setReadingTranscript(true);
-                  setTranscript(undefined);
-                  setTranscriptError("");
-                  try {
-                    if (f.size > 4_000_000)
-                      throw Error(
-                        "Choose a transcript under 4 MB, or clear the transcript.",
-                      );
-                    const value = parseWhisperTranscript(await f.text());
-                    if (version === transcriptVersion.current)
-                      setTranscript(value);
-                  } catch (error) {
-                    if (version === transcriptVersion.current)
-                      setTranscriptError(
-                        error instanceof Error ? error.message : String(error),
-                      );
-                  } finally {
-                    if (version === transcriptVersion.current)
-                      setReadingTranscript(false);
+                >
+                  <option value="whisper-large-v3-turbo">Large V3 Turbo</option>
+                  <option value="whisper-large-v3">Large V3</option>
+                </select>
+              </label>
+            ) : (
+              <label>
+                Cached model
+                <select
+                  value={settings.model}
+                  disabled={busy}
+                  onChange={(e) =>
+                    onChange(
+                      {
+                        ...project,
+                        timingSettings: {
+                          ...settings,
+                          model: e.target.value as typeof settings.model,
+                        },
+                      },
+                      selectedId ?? project.occurrences[0]?.id ?? "",
+                      true,
+                    )
                   }
-                }}
-              />
-            </label>
-            {transcriptName && (
-              <button
-                disabled={busy}
-                onClick={() => {
-                  input.current?.focus();
-                  clearTranscript();
-                }}
-              >
-                Clear transcript
-              </button>
+                >
+                  {!models.includes(settings.model) && (
+                    <option value={settings.model}>
+                      {settings.model} (not cached)
+                    </option>
+                  )}
+                  {models.map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
+                </select>
+              </label>
             )}
+            {(project.timingRun ||
+              project.occurrences.some(
+                (o) => o.startMs !== null || o.endMs !== null,
+              )) && (
+              <label>
+                Regeneration
+                <select
+                  value={policy}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setPolicy(e.target.value as GenerationPolicy)
+                  }
+                >
+                  <option value="preserve-reviewed">
+                    Preserve reviewed timings
+                  </option>
+                  <option value="replace-all">
+                    Replace all regular timings…
+                  </option>
+                </select>
+              </label>
+            )}
+            <button
+              className="primary"
+              disabled={disabled}
+              onClick={(e) => {
+                if (policy === "replace-all")
+                  setConfirm({ kind: "replace", trigger: e.currentTarget });
+                else if (candidates.length)
+                  setConfirm({ kind: "regenerate", trigger: e.currentTarget });
+                else void run();
+              }}
+            >
+              Generate timings
+            </button>
           </div>
-          <p className="muted">
-            Use a Whisper JSON with word timestamps from this recording.
-          </p>
-        </details>
+          {groq && (
+            <p className="muted">
+              Generating timings sends the linked audio to Groq.
+            </p>
+          )}
+          {!groq && (
+            <details className="timing-advanced">
+              <summary>
+                Advanced
+                {transcriptError
+                  ? " · Transcript needs attention"
+                  : transcriptName
+                    ? " · Transcript selected"
+                    : ""}
+              </summary>
+              <div className="timing-controls">
+                <label>
+                  Optional Whisper transcript
+                  <input
+                    ref={input}
+                    type="file"
+                    accept=".json"
+                    disabled={busy}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) {
+                        clearTranscript();
+                        return;
+                      }
+                      const version = ++transcriptVersion.current;
+                      setTranscriptName(f.name);
+                      setReadingTranscript(true);
+                      setTranscript(undefined);
+                      setTranscriptError("");
+                      try {
+                        if (f.size > 4_000_000)
+                          throw Error(
+                            "Choose a transcript under 4 MB, or clear the transcript.",
+                          );
+                        const value = parseWhisperTranscript(await f.text());
+                        if (version === transcriptVersion.current)
+                          setTranscript(value);
+                      } catch (error) {
+                        if (version === transcriptVersion.current)
+                          setTranscriptError(
+                            error instanceof Error
+                              ? error.message
+                              : String(error),
+                          );
+                      } finally {
+                        if (version === transcriptVersion.current)
+                          setReadingTranscript(false);
+                      }
+                    }}
+                  />
+                </label>
+                {transcriptName && (
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      input.current?.focus();
+                      clearTranscript();
+                    }}
+                  >
+                    Clear transcript
+                  </button>
+                )}
+              </div>
+              <p className="muted">
+                Use a Whisper JSON with word timestamps from this recording.
+              </p>
+            </details>
+          )}
+        </div>
       </div>
       <div className="automatic-timing-feedback">
         {busy && (
@@ -475,9 +559,9 @@ export function AutomaticTiming({
         )}
         <p
           role="status"
-          className={transcriptError ? "timing-notice" : "muted"}
+          className={!groq && transcriptError ? "timing-notice" : "muted"}
         >
-          {transcriptError || status}
+          {(!groq && transcriptError) || status}
         </p>
       </div>
       {file &&

@@ -48,6 +48,18 @@ export async function importWorkflow(
   });
   assert.equal(imported.phrases.length, 22);
   assert.equal(imported.occurrences.length, 73);
+  assert.ok(
+    await page.evaluate(() => {
+      const primary = document.querySelector<HTMLButtonElement>(
+        ".translation-toolbar button.primary",
+      );
+      return (
+        primary?.textContent?.trim() === "Translate whole song" &&
+        !primary.disabled &&
+        primary.getBoundingClientRect().height > 0
+      );
+    }),
+  );
   const expected = raw.trim().split("\n").slice(4);
   assert.deepEqual(
     imported.occurrences.map(
@@ -61,6 +73,7 @@ export async function importWorkflow(
       hanzi(phrase.lyricKey),
     );
     assert.ok(phrase.words.length);
+    assert.ok(phrase.words.every((word) => word.translation.en === ""));
     assert.ok(phrase.words.every((word) => !/\s/u.test(word.pinyin)));
     assert.equal(phrase.review, "pending");
     assert.equal(phrase.segmentationApproved, false);
@@ -463,7 +476,11 @@ export async function importWorkflow(
   assert.deepEqual(await read(), edited);
   await click("Export data");
   await page.evaluate(() =>
-    document.querySelector<HTMLInputElement>("input[type=checkbox]")!.click(),
+    document
+      .querySelector<HTMLInputElement>(
+        ".warnings + label input[type=checkbox]",
+      )!
+      .click(),
   );
   await click("Download legacy TypeScript");
   const ts = (await page.evaluate(() => Promise.all(window.__downloads))).at(

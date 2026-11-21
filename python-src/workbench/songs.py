@@ -1,10 +1,12 @@
 import json
-from functools import lru_cache
 import re
 import subprocess
+from functools import lru_cache
 from pathlib import Path
+
 from opencc import OpenCC
-from .models import Project, Phrase, Timing
+
+from .models import Phrase, Project, Timing
 from .vocabulary import validate_vocabulary
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,7 @@ def import_song(path=None):
             str(ROOT / "scripts/import-song.mts"),
             str(path or ROOT / "src/Macchiato_Special_Affection_for_You.ts"),
         ],
+        check=False,
         capture_output=True,
         text=True,
         timeout=20,
@@ -47,7 +50,7 @@ def ingest(raw, title="", artist=""):
         r"(?m)^\s*(?:\[[^\]\n]+\]|【[^】\n]+】|(?:Verse|Chorus|Bridge|Intro|Outro)\s*\d*:?|主歌|副歌)\s*$",
         "",
         raw,
-        flags=re.I,
+        flags=re.IGNORECASE,
     )
     parts = [s.strip() for s in re.split(r"[\n，。！？；,!?;]+", raw) if s.strip()]
     unique = list(dict.fromkeys(parts))

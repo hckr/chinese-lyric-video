@@ -3,6 +3,7 @@
 import json
 import sys
 from pathlib import Path
+
 from .timing_evaluation import evaluate
 
 
@@ -13,6 +14,7 @@ def emit(value):
 def normalized_audio(audio_path):
     import hashlib
     import wave
+
     import numpy as np
 
     audio = audio_path
@@ -136,9 +138,18 @@ def run(request):
     identity = None
     if request.get("audioPath"):
         audio, identity = normalized_audio(request["audioPath"])
-    if transcript is None:
-        import whisper
+    provider = request.get("provider", "local")
+    if provider not in ("local", "groq"):
+        raise ValueError("Unsupported timing provider")
+    if transcript is None and provider == "groq":
+        from .groq_whisper import transcribe
+
+        transcript = transcribe(
+            audio, request.get("model", "whisper-large-v3-turbo"), emit
+        )
+    elif transcript is None:
         import torch
+        import whisper
 
         torch.set_num_threads(4)
         model_name = request.get("model", "medium")
@@ -163,12 +174,12 @@ def run(request):
     if not isinstance(transcript, dict) or not isinstance(
         transcript.get("segments"), list
     ):
-        raise ValueError("Expected a Whisper JSON with segments and word timestamps")
+        raise ValueError("Expected a Whisper JSON with segments and word timestamps")  # noqa: TRY004
     segments = []
     for segment in transcript["segments"]:
         words = segment.get("words")
         if not isinstance(words, list):
-            raise ValueError("Transcript requires word timestamps")
+            raise ValueError("Transcript requires word timestamps")  # noqa: TRY004
         kept = []
         for word in words:
             a, b = word["start"], word["end"]
@@ -202,8 +213,9 @@ def run(request):
     lines = result["modes"]["assigned_toneless"]["lines"]
     owned = {(a["startMs"], a["endMs"]) for line in lines for a in line["assignment"]}
     additions = []
-    from .react_ingest import draft_project
     from uuid import uuid4
+
+    from .react_ingest import draft_project
 
     for segment in segments:
         words = segment["words"]
@@ -249,6 +261,7 @@ def run(request):
 if __name__ == "__main__":
     try:
         run(json.loads(sys.stdin.read()))
-    except Exception as error:
+    # Report unexpected failures through the worker protocol.
+    except Exception as error:  # noqa: BLE001
         emit({"error": str(error)})
         sys.exit(1)

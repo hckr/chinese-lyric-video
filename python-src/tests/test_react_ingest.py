@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from workbench.react_ingest import draft_project
 
 
@@ -42,6 +41,7 @@ def test_credits_title_repetitions_and_word_drafts(dictionary):
     assert phrase["words"][0]["pinyin"] == "piàoliang"
     assert phrase["words"][1]["pinyin"] == "de"
     assert phrase["translation"] == {"en": "", "pl": ""}
+    assert all(word["translation"] == {"en": ""} for word in phrase["words"])
     assert "dictionaryEntries" not in phrase
     assert phrase["review"] == "pending"
     assert not phrase["segmentationApproved"]

@@ -1,3 +1,4 @@
+import { translationSchema } from "./translation-schema.ts";
 import { syllableCounts } from "./pinyin-validation.ts";
 import { z } from "zod";
 
@@ -52,6 +53,10 @@ export const timingSettingsSchema = z
       .default(8),
     snap: z.enum(["off", "edges"]).default("edges"),
     linkEdges: z.boolean().default(false),
+    provider: z.enum(["local", "groq"]).optional(),
+    groqModel: z
+      .enum(["whisper-large-v3-turbo", "whisper-large-v3"])
+      .optional(),
     model: z
       .enum(["base", "small", "medium", "large-v3-turbo"])
       .default("medium"),
@@ -116,6 +121,7 @@ export const projectSchema = z
       .object({
         id: z.string(),
         model: z.string(),
+        provider: z.enum(["groq", "local"]).optional(),
         transcriptProvenance: z.enum(["generated", "external-unverified"]),
         audioIdentity: audioIdentitySchema.optional(),
         candidates: z.array(
@@ -134,6 +140,7 @@ export const projectSchema = z
       .strict()
       .optional(),
     source: z.string(),
+    translationWork: translationSchema.optional(),
     lyricGroups: z
       .array(
         z
@@ -195,6 +202,21 @@ export const projectSchema = z
   })
   .transform((p) => {
     const { timingBaseline: _retired, ...rest } = p;
+    if (rest.translationWork) {
+      const translation = rest.translationWork;
+      const livePhrases = new Set(p.phrases.map((phrase) => phrase.id));
+      rest.translationWork = {
+        ...translation,
+        drafts: translation.drafts.filter((draft) =>
+          livePhrases.has(draft.phraseId),
+        ),
+        accepted: Object.fromEntries(
+          Object.entries(translation.accepted).filter(([id]) =>
+            livePhrases.has(id),
+          ),
+        ),
+      };
+    }
     return {
       ...rest,
       occurrences: p.occurrences.map((input) => {
@@ -254,10 +276,6 @@ export function validatePinyinWords(p: Phrase): string[] {
     if (!w.translation.en.trim()) issues.push(`${name}: missing gloss`);
     if (w.hanzi) {
       if (!w.pinyin.trim()) issues.push(`${name}: missing Pinyin`);
-      if (/\s/u.test(w.pinyin))
-        issues.push(
-          `${name}: remove spaces inside this word’s Pinyin using Fix spacing`,
-        );
       if (w.pinyin.trim()) {
         const counts = syllableCounts(w.pinyin);
         const characters = [...hanzi(w.hanzi)];

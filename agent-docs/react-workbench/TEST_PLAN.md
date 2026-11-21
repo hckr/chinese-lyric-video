@@ -68,6 +68,52 @@ and is not required to close this Timing extension.
 - [ ] AI output and proposal acceptance satisfy the [segmentation/Pinyin contract](WORD_SEGMENTATION.md).
 - [ ] Repeated phrase reuses the same translation; individual occurrence timing survives translation edits.
 
+**Checkpoint C offline verification.** The [Python fixture](../../python-src/tests/test_react_translation.py)
+exercises ordered repeats, vocabulary validation and corrective retries, direct
+Chinese-to-Polish prompting, incomplete responses, and selected-word boundaries
+with fake transports. The [loopback tests](../../web/tests/translation-api.test.ts)
+cover empty jobs, request errors, and worker termination on disconnect.
+`node web/tests/browser.ts --translation` covers saved draft recovery, retries
+using already received vocabulary, stale protection, timing, undo, and revision.
+The [domain tests](../../web/tests/translation.test.ts) exercise an idiom through
+preview reading alignment, project JSON, and legacy TypeScript. Live wording,
+pronunciation, and contextual gloss quality remain open for owner review.
+
+The workbench type checks and production bundle passed, along with 117 Node
+tests, three focused Python translation tests, and the translation browser
+acceptance. A broader Python run reached 94 passes, with six failures in the
+known local OpenSSL and NumPy/PyArrow paths and eight deselected. The default
+browser suite passed the lyrics acceptance and failed its manual timing export
+assertions by 1–4 ms on three runs. The same default suite passed on a clean
+HEAD checkout using the local browser, virtual environment, and dictionary.
+All translation verification used fake provider responses or empty jobs.
+
+The post-import UX follow-up adds checks for empty contextual glosses after raw
+import, whole-song draft generation from a mix of empty and presegmented lyrics,
+and resuming only unfinished sentences. The browser fixture covers the in-editor
+review, saved draft recovery, narrow layout, and explicit replacement of an
+existing gloss while keeping its reading. The Python fixture confirms that
+fill-missing retries preserve authored word boundaries, readings, and glosses.
+The workbench type checks, production build, 117 Node tests, 18 focused Python
+tests, default browser suite, and focused import and translation browser checks
+passed during the follow-up.
+
+The partial-run follow-up fixture simulates a timeout and rate-limited requests
+in a 22-lyric run. It verifies that 12 vocabulary drafts survive, the other
+10 lyrics receive vocabulary requests on retry, and 54 outstanding drafts
+can be completed. The browser checks cover collapsed diagnostics, inline
+review, draft edits, stale drafts, and Undo at desktop and narrow widths.
+
+**Pre-commit review, 2026-11-21.** The workbench build, type checks, lint,
+118 Node tests, and the default, synthetic import, and offline translation browser
+suites passed. Export tests now select the warning acknowledgment in the export
+screen. Keyboard capture is checked separately from exact export/reimport values,
+which the fixture enters through the millisecond fields. Python accepted traditional
+and simplified erhua readings. After Streamlit retirement and restoration of
+OpenSSL access, all 115 Python tests passed in the full working tree and all 96
+passed in the isolated retirement checkout. Both runs blocked imports of
+Streamlit, PyArrow, and Watchdog. Credential tests used temporary fixtures.
+
 ## M4 — Remotion consolidation
 
 - [ ] Every preexisting composition ID, FPS, dimensions, duration behavior, output mode and thumbnail remains available.

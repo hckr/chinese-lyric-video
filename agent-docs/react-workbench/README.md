@@ -4,7 +4,7 @@
 
 ## What the workbench does
 
-Local-first React UI for importing raw lyrics or compatible legacy song `.ts` files; reviewing shared Chinese/EN/PL lyric phrases and word glosses; assigning independently editable timing to repeated occurrences; and exporting legacy `.ts` plus workbench project JSON. Python remains the source of existing NLP/dictionary/AI logic; Remotion remains the video renderer. Provider-backed translation generation and real renderer preview are planned, not implemented; local Python dictionary drafts exist; automatic timing remains feature work.
+Local-first React UI for importing raw lyrics or compatible legacy song `.ts` files; reviewing shared Chinese/EN/PL lyric phrases and word glosses; assigning independently editable timing to repeated occurrences; and exporting legacy `.ts` plus workbench project JSON. Python remains the source of existing NLP/dictionary/AI logic; Remotion remains the video renderer. Provider-backed translation drafts and revisions are implemented. Automatic timing and occurrence review are complete. Live Remotion preview remains planned.
 
 ## Current reference documents
 
@@ -15,7 +15,7 @@ Local-first React UI for importing raw lyrics or compatible legacy song `.ts` fi
 - [features/lyrics-grouping/SPEC.md](features/lyrics-grouping/SPEC.md) — grouping behavior and UI references.
 - [features/lyrics-import-enhancements/SPEC.md](features/lyrics-import-enhancements/SPEC.md) — proposed replacement protection and live structure preview.
 - [ASSISTED_TIMING.md](ASSISTED_TIMING.md) — evaluation evidence and safeguards; not the authority for the proposed review UI.
-- [Automatic Timing & Review](features/automatic-timing-review/SPEC.md) — desired flow, integration constraints, assets, complete completion plan and approved owner decisions; implementation pending.
+- [Automatic Timing & Review](features/automatic-timing-review/SPEC.md) — workflow, integration constraints, approved owner decisions, and implementation verification.
 - [Workflow navigation](features/workflow-navigation/SPEC.md) — separate unprioritized app-shell proposal and relocated header reference.
 - [REMOTION_REFACTOR.md](REMOTION_REFACTOR.md) — requirements for checkpoint D.
 - [TEST_PLAN.md](TEST_PLAN.md) — verification gates, including items still open from early checkpoints.

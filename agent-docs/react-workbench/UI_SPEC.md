@@ -6,7 +6,7 @@ The included HTML is an **interactive visual reference** with sample phrases, si
 
 ## Current implementation and authority
 
-Source inspected on 2026-11-14: import, lyric review, local dictionary and manual timing/grouping are implemented. Video settings is a placeholder directing users to the existing Remotion workflow; there is no actual Player or settings adapter. The screens below combine implemented requirements and explicitly future design. Assets communicate visual intent, not proof of pixel fidelity.
+The workbench supports import, lyric review, local dictionary lookup, grouping, manual and automatic timing, and AI translation drafts and revisions. Video settings is a placeholder directing users to the existing Remotion workflow; there is no actual Player or settings adapter. The screens below combine implemented requirements and explicitly future design. Assets communicate visual intent, not proof of pixel fidelity.
 
 This reference owns shared visual/product choices. [Segmentation](WORD_SEGMENTATION.md), [timing](TIMING_EDITOR.md), [grouping](features/lyrics-grouping/SPEC.md) and [import proposals](features/lyrics-import-enhancements/SPEC.md) own feature interactions; [ROADMAP](../ROADMAP.md) owns scheduling.
 
@@ -76,7 +76,7 @@ These supersede contradictory prototype or early checkpoint details:
 - Focusing any word field selects its token. One Add word action creates an empty row; empty-Hanzi notes remain editable.
 - Gloss fields grow to three lines and then scroll. Sentence fields remain single-line at 16px. The accepted preview uses 26px Hanzi, 16px Pinyin/translations and an 11px caption. The desktop inspector is 360px with responsive layout protection.
 - Phrase subtitles/search include English and Polish. Review validation has padding and separation from the review action; disclosure arrows rotate without shifting labels. Spacing errors have one actionable warning with explicit Fix spacing.
-- Dictionary lookup is on demand, with CC-CEDICT/MDBG attribution and Pinyin hover/focus bubbles. Editable gloss and dictionary senses remain distinct. Model-inferred contextual sense/provenance is future C work.
+- Dictionary lookup is on demand, with CC-CEDICT/MDBG attribution and Pinyin hover/focus bubbles. Editable gloss and dictionary senses remain distinct. Translation drafts propose contextual glosses and retain dictionary evidence. Applying a draft records its provenance. Live translation quality review remains open.
 - Wiktionary uses the actual page in an in-app iframe dialog, resolves a unique Chinese soft redirect on demand and retains a separate-page link. Its loading badge overlays reserved space without shifting layout.
 - Timing and grouping use the accepted B interaction rules in their feature references. B's owner acceptance on 2026-11-14 does not certify touch operation or perceptual synchronization. Optional inspector resizing and timeline overview are undelivered proposals, not reasons to reopen B.
 

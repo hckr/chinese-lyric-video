@@ -1,5 +1,6 @@
 """Ordered observation ownership, retaining substitutions rather than trimming edges."""
 
+import itertools
 import re
 
 TOKEN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]|[a-zA-Z]+")
@@ -78,25 +79,25 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
         owned = [(i, j, equal) for i, j, equal in pairs if expected[i][0] == cue["id"]]
         anchors = sum(equal for _, _, equal in owned)
         reasons = []
-        row = dict(
-            id=cue["id"],
-            text=cue["lyricKey"],
-            matched=anchors,
-            total=len(positions),
-            reasons=reasons,
-            boundaryMethod="ordered-edit-alignment-v1",
-            assignedObservedText="".join(observed[j][0] for _, j, _ in owned),
-            assignment=[
-                dict(
-                    expected=expected[i][1],
-                    observed=observed[j][0],
-                    startMs=observed[j][1],
-                    endMs=observed[j][2],
-                    substitution=not equal,
-                )
+        row = {
+            "id": cue["id"],
+            "text": cue["lyricKey"],
+            "matched": anchors,
+            "total": len(positions),
+            "reasons": reasons,
+            "boundaryMethod": "ordered-edit-alignment-v1",
+            "assignedObservedText": "".join(observed[j][0] for _, j, _ in owned),
+            "assignment": [
+                {
+                    "expected": expected[i][1],
+                    "observed": observed[j][0],
+                    "startMs": observed[j][1],
+                    "endMs": observed[j][2],
+                    "substitution": not equal,
+                }
                 for i, j, equal in owned
             ],
-        )
+        }
         # Keep low-match spans separate from normal proposals; never invent boundaries.
         low_match = anchors < max(1, (len(positions) + 1) // 2)
         if not owned or low_match:
@@ -121,7 +122,8 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
                 "Extra observations between assigned units; audition for ad-libs."
             )
         if any(
-            observed[b][1] - observed[a][2] > 3000 for a, b in zip(indices, indices[1:])
+            observed[b][1] - observed[a][2] > 3000
+            for a, b in itertools.pairwise(indices)
         ):
             reasons.append(
                 "Unresolved: assigned units cross an unverified gap over three seconds."
@@ -131,7 +133,7 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
         start, end = observed[indices[0]][1], observed[indices[-1]][2]
         if end > start:
             if low_match:
-                row["weakEstimate"] = dict(startMs=start, endMs=end)
+                row["weakEstimate"] = {"startMs": start, "endMs": end}
             else:
                 row.update(observedStartMs=start, observedEndMs=end)
         else:
@@ -139,7 +141,7 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
         rows.append(row)
     # Shared coarse word/segment spans may belong to adjacent lines: disclose,
     # never interpolate boundaries or silently trim one side.
-    for left, right in zip(rows, rows[1:]):
+    for left, right in itertools.pairwise(rows):
         left_end = left.get(
             "observedEndMs", left.get("weakEstimate", {}).get("endMs", -1)
         )

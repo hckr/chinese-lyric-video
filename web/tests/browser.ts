@@ -1,3 +1,4 @@
+import { rawProject } from "../src/domain.ts";
 import { automaticTiming, cachedTimingModels } from "../timing-api.ts";
 import { detectedAudioAcceptance } from "./detected-audio-browser.ts";
 import { waveformMedia } from "./waveform-media.ts";
@@ -45,8 +46,128 @@ const built = await build({
 const assets = new Map(
   built.outputFiles.map((file) => [path.basename(file.path), file.contents]),
 );
+const translationCalls: {
+  route: string;
+  body: {
+    jobs: Record<string, string[]>;
+    model: string;
+    vocabularyMode: string;
+    thinkingEffort?: string;
+    revision?: { wordIndex?: number };
+    timeline: { lyricKey: string }[];
+    phrases: {
+      id: string;
+      text: string;
+      translation: { en: string; pl: string };
+      words: { hanzi: string }[];
+    }[];
+  };
+}[] = [];
+const idiom = {
+  hanzi: "一丝一毫",
+  pinyin: "yī sī yī háo",
+  translation: { en: "the slightest bit" },
+};
+let releaseTranslation: (() => void) | undefined;
 const server = http.createServer((req, res) => {
   const requestPath = req.url ?? "/";
+  if (requestPath === "/api/translation/providers") {
+    res.end(
+      JSON.stringify({
+        Groq: ["qwen/qwen3.8-27b"],
+        Gemini: ["gemma-4-26b-a4b-it", "gemma-4-31b-it"],
+      }),
+    );
+    return;
+  }
+  if (requestPath.startsWith("/api/translation/")) {
+    let raw = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => {
+      raw += chunk;
+    });
+    req.on("end", async () => {
+      const body = JSON.parse(raw) as (typeof translationCalls)[number]["body"];
+      translationCalls.push({ route: requestPath, body });
+      res.writeHead(200, { "Content-Type": "application/x-ndjson" });
+      if (translationCalls.length === 1) {
+        for (let index = 0; index < 30; index++)
+          res.write(
+            JSON.stringify({
+              kind: "notice",
+              message: `Fixture message ${index}`,
+            }) + "\n",
+          );
+        res.write('{"kind":"retry","code":429,"delay":9}\n');
+        await new Promise<void>((resolve) => {
+          releaseTranslation = resolve;
+        });
+      }
+      for (const [stage, ids] of Object.entries<string[]>(body.jobs)) {
+        res.write(
+          JSON.stringify({
+            kind: "request",
+            stage,
+            count: ids.length,
+            prompt: "debug fixture prompt",
+          }) + "\n",
+        );
+        res.write(
+          JSON.stringify({ kind: "response", text: "debug fixture response" }) +
+            "\n",
+        );
+        if (translationCalls.length === 1 && stage === "pl") {
+          res.write(
+            JSON.stringify({
+              kind: "issue",
+              reason: "rate_limit",
+              stage,
+              ids,
+            }) + "\n",
+          );
+          continue;
+        }
+        for (const id of ids) {
+          const word =
+            body.phrases.find((phrase) => phrase.id === id)?.text ===
+            idiom.hanzi
+              ? idiom
+              : {
+                  hanzi: "有梦",
+                  pinyin: "yǒumèng",
+                  translation: { en: "have a dream" },
+                };
+          const value =
+            stage === "vocabulary"
+              ? [
+                  body.revision
+                    ? { ...word, translation: { en: "an iota" } }
+                    : word,
+                ]
+              : body.revision
+                ? stage === "en"
+                  ? "Even a little."
+                  : "Choć odrobinę."
+                : stage === "en"
+                  ? "The slightest bit."
+                  : "Ani odrobiny.";
+          res.write(
+            JSON.stringify({
+              kind: "draft",
+              id,
+              stage,
+              value,
+              support: stage === "vocabulary" ? null : [word],
+              dictionary: stage === "vocabulary" ? ["dictionary evidence"] : [],
+              promptVersion: "offline-test",
+            }) + "\n",
+          );
+        }
+      }
+      res.end('{"kind":"done"}\n');
+    });
+    return;
+  }
   if (req.url === "/api/timing-models") {
     void cachedTimingModels(req, res);
     return;
@@ -209,6 +330,400 @@ const server = http.createServer((req, res) => {
         errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
         [],
       );
+      return;
+    }
+    if (process.argv.includes("--translation")) {
+      const fixture = rawProject("一丝一毫\n一丝一毫\n有梦", "Offline", "Test");
+      fixture.phrases[0].words = [];
+      fixture.phrases[1].words = [
+        {
+          id: "existing-dictionary-row",
+          hanzi: "有梦",
+          pinyin: "yǒumèng",
+          translation: { en: "" },
+        },
+      ];
+      fixture.occurrences = fixture.occurrences.map((cue, i) => ({
+        ...cue,
+        startMs: 1000 * i,
+        endMs: 1000 * i + 500,
+      }));
+      await upload("translation.json", JSON.stringify(fixture));
+      assert.equal(translationCalls.length, 0);
+      assert.equal(
+        await page.evaluate(
+          () =>
+            document.querySelector<HTMLDetailsElement>(".translation-options")!
+              .open,
+        ),
+        false,
+      );
+      assert.equal(
+        await page.evaluate(
+          () => !!document.querySelector('textarea[maxlength="4000"]'),
+        ),
+        false,
+      );
+      await page.evaluate(() => {
+        const effort = [
+          ...document.querySelectorAll(".translation-toolbar label"),
+        ]
+          .find((label) => label.textContent?.includes("Thinking effort"))!
+          .querySelector("select")!;
+        effort.value = "medium";
+        effort.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await click("Translate whole song");
+      try {
+        let status = "";
+        const until = Date.now() + 5000;
+        while (Date.now() < until) {
+          status = await page.evaluate(
+            () =>
+              document.querySelector(".translation-toolbar [role=status]")
+                ?.textContent ?? "",
+          );
+          if (
+            status.includes("temporarily limiting requests") &&
+            status.includes("retry in")
+          )
+            break;
+          await settle();
+        }
+        assert.match(
+          status,
+          /Groq.*0\/6 drafts.*temporarily limiting requests.*retry in.*0%/,
+        );
+        await click("Timing");
+        assert.equal(
+          await page.evaluate(
+            () =>
+              !!document
+                .querySelector(".translation-toolbar")
+                ?.closest("[hidden]"),
+          ),
+          true,
+        );
+      } finally {
+        releaseTranslation?.();
+      }
+      const waitForDrafts = async (count: number) => {
+        const deadline = Date.now() + 10000;
+        while (
+          (await read()).translationWork?.drafts.length !== count &&
+          Date.now() < deadline
+        )
+          await settle();
+        assert.equal((await read()).translationWork?.drafts.length, count);
+      };
+      await waitForDrafts(4);
+      await click("Lyric editor");
+      assert.equal(translationCalls.length, 1);
+      assert.equal(translationCalls[0].body.thinkingEffort, "medium");
+      assert.equal(translationCalls[0].body.model, "qwen/qwen3.8-27b");
+      assert.deepEqual(
+        translationCalls[0].body.timeline.map((cue) => cue.lyricKey),
+        ["一丝一毫", "一丝一毫", "有梦"],
+      );
+      assert.deepEqual(
+        translationCalls[0].body.jobs.vocabulary,
+        fixture.phrases.map((phrase) => phrase.id),
+      );
+      assert.ok(
+        await page.evaluate(() => {
+          const details = document.querySelector<HTMLDetailsElement>(
+            ".translation-run-details",
+          );
+          return (
+            details &&
+            !details.open &&
+            details.textContent?.includes("reached a usage limit") &&
+            document
+              .querySelector(".translation-toolbar [role=status]")
+              ?.textContent?.includes("Vocabulary ready for 2 of 2")
+          );
+        }),
+      );
+      await page.evaluate(() => {
+        document
+          .querySelector<HTMLElement>(".translation-run-details > summary")!
+          .click();
+      });
+      await settle();
+      assert.ok(
+        await page.evaluate(() => {
+          const list = document.querySelector(".translation-run-details > ul")!;
+          return (
+            list.scrollHeight > list.clientHeight &&
+            list.scrollHeight - list.clientHeight - list.scrollTop <= 8
+          );
+        }),
+      );
+      await page.evaluate(() => {
+        const provider = document.querySelector<HTMLSelectElement>(
+          ".translation-toolbar select",
+        )!;
+        provider.value = "Gemini";
+        provider.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await page.evaluate(() => {
+        const select = document.querySelector<HTMLSelectElement>(
+          ".translation-toolbar label:nth-of-type(2) select",
+        )!;
+        select.value = "gemma-4-31b-it";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await click("Retry unfinished");
+      await waitForDrafts(6);
+      assert.equal(translationCalls[1].body.thinkingEffort, undefined);
+      assert.equal(translationCalls[1].body.model, "gemma-4-31b-it");
+      assert.deepEqual(translationCalls[1].body.jobs, {
+        pl: fixture.phrases.map((phrase) => phrase.id),
+      });
+      assert.deepEqual(
+        translationCalls[1].body.phrases.map((item) => item.words[0].hanzi),
+        ["一丝一毫", "有梦"],
+      );
+      assert.ok(
+        await page.evaluate(() => {
+          const fields = Array.from(
+            document.querySelectorAll<HTMLTextAreaElement>(
+              ".translation-exchange textarea",
+            ),
+          );
+          return (
+            fields.some((field) => field.value === "debug fixture prompt") &&
+            fields.some((field) => field.value === "debug fixture response") &&
+            !localStorage
+              .getItem("lyric-workbench-v1")
+              ?.includes("debug fixture")
+          );
+        }),
+      );
+      await click("Revise lyric…");
+      await page.evaluate(() =>
+        document
+          .querySelector<HTMLInputElement>(
+            ".translation-review-actions form input[type=checkbox]",
+          )!
+          .click(),
+      );
+      await fill('textarea[maxlength="4000"]', "Keep the original speaker");
+      await click("Generate revision");
+      assert.deepEqual(Object.keys(translationCalls[2].body.jobs).sort(), [
+        "en",
+        "pl",
+      ]);
+      assert.ok(
+        await page.evaluate(() => {
+          const buttons = Array.from(
+            document.querySelectorAll<HTMLButtonElement>(
+              ".translation-toolbar button",
+            ),
+          );
+          return (
+            !buttons.some((button) =>
+              /Resume translation|Translate remaining lyrics|Retry unfinished/.test(
+                button.textContent ?? "",
+              ),
+            ) &&
+            buttons.some(
+              (button) =>
+                button.textContent?.trim() === "Draft replacements" &&
+                !button.disabled,
+            )
+          );
+        }),
+      );
+      const source = translationCalls[2].body.phrases[0];
+      assert.equal(source.words[0].hanzi, idiom.hanzi);
+      assert.equal(source.translation.en, "The slightest bit.");
+      assert.equal(source.translation.pl, "Ani odrobiny.");
+      assert.deepEqual(
+        await page.evaluate(() =>
+          ["English", "Polish"].map(
+            (label) =>
+              document.querySelector<HTMLInputElement>(
+                `[aria-label="${label} sentence"]`,
+              )?.value,
+          ),
+        ),
+        ["Even a little.", "Choć odrobinę."],
+      );
+      assert.match(
+        await page.evaluate(
+          () =>
+            document.querySelector(".translation-review-actions [role=status]")
+              ?.textContent ?? "",
+        ),
+        /ready for review.*English, Polish/,
+      );
+      await click("Timing");
+      await click("Lyric editor");
+      assert.ok(
+        await page.evaluate(
+          () => !!document.querySelector(".translation-exchange"),
+        ),
+      );
+      await page.evaluate(() => {
+        const raw = localStorage.getItem("lyric-workbench-v1")!;
+        const saved = JSON.parse(raw);
+        saved.phrases[0].translation.en = "Human edit";
+        localStorage.setItem("lyric-workbench-v1", JSON.stringify(saved));
+      });
+      await page.goto({ url, timeout: 30000 });
+      assert.equal(
+        await page.evaluate(
+          () => !!document.querySelector(".translation-exchange"),
+        ),
+        false,
+      );
+      await click("Review drafts for 2 lyrics");
+      assert.ok(
+        await page.evaluate(
+          () =>
+            document.querySelectorAll(".editor .tokens .token:not(.headings)")
+              .length === 1 &&
+            document.querySelector(".editor .token [data-draft]") &&
+            document
+              .querySelector(".translation-review-actions")
+              ?.textContent?.includes("A draft is stale"),
+        ),
+      );
+      await click("Revise lyric…");
+      assert.ok(
+        await page.evaluate(() => {
+          const form = document.querySelector(
+            ".translation-review-actions form",
+          )!;
+          const parts = form.querySelectorAll<HTMLInputElement>(
+            'input[type="checkbox"]',
+          );
+          if (parts.length !== 3) return false;
+          parts[0].click();
+          return (
+            !parts[0].checked &&
+            parts[1].checked &&
+            parts[2].checked &&
+            form.textContent?.includes("gemma-4-31b-it")
+          );
+        }),
+      );
+      await click("Cancel revision");
+      await click("Revise this word");
+      assert.ok(
+        await page.evaluate(() =>
+          document
+            .querySelector(".translation-review-actions form label")
+            ?.textContent?.includes("一丝一毫"),
+        ),
+      );
+      await click("Cancel revision");
+      await fill('textarea[aria-label="Gloss 1"]', "a tiny bit");
+      assert.equal((await read()).phrases[0].words.length, 0);
+      await click("Apply all drafts for this lyric");
+      assert.equal(
+        (await read()).phrases[0].words[0].translation.en,
+        "a tiny bit",
+      );
+      assert.equal((await read()).phrases[0].translation.en, "Human edit");
+      assert.equal((await read()).phrases[0].words[0].pinyin, "yī sī yī háo");
+      assert.deepEqual((await read()).occurrences, fixture.occurrences);
+      await click("Undo");
+      assert.equal((await read()).phrases[0].words.length, 0);
+      await click("Redo");
+      await click("Revise this word");
+      await fill('textarea[maxlength="4000"]', "Use a more literal gloss");
+      await click("Generate revision");
+      await click("Apply all drafts for this lyric");
+      assert.equal(
+        (await read()).phrases[0].words[0].translation.en,
+        "an iota",
+      );
+      assert.equal(translationCalls[3].route, "/api/translation/revise");
+      assert.equal(translationCalls[3].body.revision?.wordIndex, 0);
+      await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+      await click("Next draft");
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      );
+      assert.ok(
+        await page.evaluate(() => {
+          const button = [
+            ...document.querySelectorAll<HTMLButtonElement>(
+              ".translation-toolbar button",
+            ),
+          ].find((item) =>
+            item.textContent?.includes("Fill missing fields with"),
+          );
+          return button?.getClientRects().length && !button.closest("details");
+        }),
+      );
+      await click("Fill missing fields with 3 drafts");
+      assert.equal((await read()).phrases[1].translation.pl, "Ani odrobiny.");
+      assert.equal(
+        (await read()).phrases[1].words[0].id,
+        "existing-dictionary-row",
+      );
+      assert.equal(translationCalls.length, 4);
+      assert.match(
+        await page.evaluate(
+          () =>
+            document.querySelector(".translation-toolbar")?.textContent ?? "",
+        ),
+        /replacement drafts? needs? individual review on 1 lyric/,
+      );
+      await click("Review drafts for 1 lyric");
+      await page.evaluate(() =>
+        document
+          .querySelector<HTMLElement>(".translation-options > summary")!
+          .click(),
+      );
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      );
+      await click("Draft replacement glosses");
+      await waitForDrafts(3);
+      assert.equal(translationCalls[4].body.vocabularyMode, "glosses");
+      assert.deepEqual(translationCalls[4].body.jobs, {
+        vocabulary: [fixture.phrases[0].id],
+      });
+      assert.equal(
+        (await read()).phrases[0].words[0].translation.en,
+        "an iota",
+      );
+      assert.ok(
+        await page.evaluate(
+          () =>
+            document.querySelector<HTMLInputElement>('[aria-label="Pinyin 1"]')
+              ?.readOnly,
+        ),
+      );
+      await click("Apply all drafts for this lyric");
+      assert.equal(
+        (await read()).phrases[0].words[0].translation.en,
+        "the slightest bit",
+      );
+
+      await page.evaluate(() => {
+        const field = document
+          .querySelector('[aria-label="English sentence"]')!
+          .closest("label")!.parentElement!;
+        const dismiss = field.querySelector<HTMLButtonElement>(
+          '[aria-label="Dismiss English draft"]',
+        );
+        if (!dismiss?.getClientRects().length)
+          throw new Error("Dismiss must be visible beside the English draft");
+        dismiss.click();
+      });
+      await settle();
+      assert.equal((await read()).phrases[0].translation.en, "Human edit");
+      assert.deepEqual(errors, []);
+      console.log("Translation browser acceptance passed.");
       return;
     }
     if (process.argv.includes("--lyrics-grouping")) {
@@ -512,7 +1027,11 @@ const server = http.createServer((req, res) => {
     );
     await click("Export data");
     await page.evaluate(() =>
-      document.querySelector<HTMLInputElement>("input[type=checkbox]")!.click(),
+      document
+        .querySelector<HTMLInputElement>(
+          ".warnings + label input[type=checkbox]",
+        )!
+        .click(),
     );
     await settle();
     await click("Download legacy TypeScript");

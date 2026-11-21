@@ -1,11 +1,12 @@
 import json
 import subprocess
 from pathlib import Path
+
 import pytest
-from workbench.models import Project, Word, save, load
-from workbench.songs import import_song, ingest, export_ts
-from workbench.pinyin import normalize
 from workbench.generation import generate
+from workbench.models import Project, Word, load, save
+from workbench.pinyin import normalize
+from workbench.songs import export_ts, import_song, ingest
 from workbench.transport import ConfigurationError
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -139,7 +140,9 @@ def test_partial_recovery():
         p, transport, "mock", lambda: checkpoints.append(1), stages=["vocabulary"]
     )
     assert len(calls) == 2 and len(checkpoints) == 2
-    assert '"requested": [{"id": "p001"' in calls[1]
+    assert [
+        row["id"] for row in json.loads(calls[1].splitlines()[-1])["requested"]
+    ] == ["p001"]
     assert not generate(p, transport, "mock", stages=["vocabulary"])
     assert len(calls) == 2
 
@@ -176,8 +179,9 @@ def test_configuration_not_retried():
 
 def test_transient_retry_and_credentials(monkeypatch):
     from types import SimpleNamespace
-    from workbench.transport import GeminiTransport, ConfigurationError
     from unittest.mock import Mock
+
+    from workbench.transport import ConfigurationError, GeminiTransport
 
     monkeypatch.setattr("workbench.transport.time.sleep", lambda _: None)
     transport = GeminiTransport.__new__(GeminiTransport)
@@ -249,7 +253,9 @@ def test_resume_from_checkpoint_after_interruption(tmp_path):
 
     assert not generate(recovered, finish, "mock", stages=["vocabulary"])
     assert len(calls) == 1
-    assert '"requested": [{"id": "p001"' in calls[0]
+    assert [
+        row["id"] for row in json.loads(calls[0].splitlines()[-1])["requested"]
+    ] == ["p001"]
 
 
 def test_import_never_implicitly_regenerated():
@@ -282,13 +288,14 @@ def test_numbered_committed_rows():
 
 
 def test_current_google_sdk_configuration(monkeypatch, tmp_path):
-    from unittest.mock import Mock
     from types import SimpleNamespace
+    from unittest.mock import Mock
+
     from google import genai
     from google.genai import types
     from httpx2 import ReadTimeout
-    from workbench.transport import GeminiTransport
     from workbench import config as local_config
+    from workbench.transport import GeminiTransport
 
     env_file = tmp_path / ".env"
     env_file.write_text("GEMINI_API_KEY=offline-test-key\n")
@@ -319,8 +326,9 @@ def test_current_google_sdk_configuration(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize("exported", [False, True])
 def test_dotenv_loading_and_precedence(tmp_path, monkeypatch, exported):
-    from workbench import config
     import os
+
+    from workbench import config
 
     python_env = tmp_path / "python-src" / ".env"
     python_env.parent.mkdir()
@@ -394,15 +402,23 @@ def test_generation_scope_and_progress():
     )
     assert p.phrases[0].vocabulary == "pending"
     assert p.phrases[1].vocabulary == "complete"
-    assert [e["kind"] for e in events] == ["request", "response", "updated", "saved"]
+    assert [e["kind"] for e in events] == [
+        "request",
+        "processing",
+        "validating",
+        "response",
+        "updated",
+        "saved",
+    ]
 
 
 @pytest.mark.parametrize("code", [500, "500"])
 def test_real_sdk_500_retries_are_counted_and_reported(monkeypatch, code):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
     from google.genai import errors
     from workbench.transport import GeminiTransport, GenerationServiceError
-    from unittest.mock import Mock
-    from types import SimpleNamespace
 
     monkeypatch.setattr("workbench.transport.time.sleep", lambda _: None)
     error = errors.ServerError(
@@ -587,8 +603,8 @@ def test_screenshot_vocabulary_never_replaces_existing_words():
 
 
 def test_bad_saved_vocabulary_can_be_opened_but_not_exported(tmp_path):
-    from workbench.models import Word, save, load
-    from workbench.songs import ingest, export_ts
+    from workbench.models import Word, load, save
+    from workbench.songs import export_ts, ingest
 
     p = ingest("你")
     p.phrases[0].words = [Word(hanzi="你", pinyin="pinyin", translation={"en": "you"})]
@@ -643,7 +659,9 @@ def test_invalid_vocabulary_is_corrected_before_committing():
     assert context["segmentation_hint"] == ("对", "你", "专属", "的", "偏爱")
 
 
-@pytest.mark.parametrize("text,pinyin", [("花儿", "huār"), ("一点儿", "yìdiǎnr")])
+@pytest.mark.parametrize(
+    "text,pinyin", [("花儿", "huār"), ("花兒", "huār"), ("一点儿", "yìdiǎnr")]
+)
 def test_vocabulary_allows_erhua(text, pinyin):
     from workbench.vocabulary import validate_vocabulary
 

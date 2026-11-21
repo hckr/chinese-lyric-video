@@ -1,8 +1,8 @@
 """Preview generation scope without changing the project or contacting a model."""
+
 from .vocabulary import usable_vocabulary
 
-
-STAGES = ('vocabulary', 'en', 'pl')
+STAGES = ("vocabulary", "en", "pl")
 
 
 def plan_generation(project, stages, phrase_ids=None, replace=False):
@@ -10,13 +10,21 @@ def plan_generation(project, stages, phrase_ids=None, replace=False):
     jobs = {stage: [] for stage in STAGES if stage in stages}
     blocked = {stage: [] for stage in jobs}
     for phrase in selected:
-        for stage in jobs:
-            missing = not phrase.words if stage == 'vocabulary' else not getattr(phrase.translation, stage).strip()
-            if not (replace or missing or getattr(phrase, stage) == 'pending'):
+        for stage, pending in jobs.items():
+            missing = (
+                not phrase.words
+                if stage == "vocabulary"
+                else not getattr(phrase.translation, stage).strip()
+            )
+            if not (replace or missing or getattr(phrase, stage) == "pending"):
                 continue
             vocabulary_ready = usable_vocabulary(phrase)
-            if stage != 'vocabulary' and not vocabulary_ready and phrase.id not in jobs.get('vocabulary', []):
+            if (
+                stage != "vocabulary"
+                and not vocabulary_ready
+                and phrase.id not in jobs.get("vocabulary", [])
+            ):
                 blocked[stage].append(phrase.id)
             else:
-                jobs[stage].append(phrase.id)
+                pending.append(phrase.id)
     return jobs, blocked

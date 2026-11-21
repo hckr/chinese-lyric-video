@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { translateLyrics } from "./translation-api.ts";
 import { automaticTiming, cachedTimingModels } from "./timing-api.ts";
 import http from "node:http";
 import { importLyrics } from "./import-api.ts";
@@ -46,6 +48,34 @@ import fs from "node:fs/promises";
       port: 0,
     });
     frontend.server = http.createServer((req, res) => {
+      if (req.url === "/api/translation/providers" && req.method === "GET") {
+        execFile(
+          process.env.WORKBENCH_PYTHON ||
+            process.cwd() + "/python-src/venv/bin/python",
+          ["-m", "workbench.react_translation", "capabilities"],
+          { cwd: "python-src", timeout: 15000 },
+          (error, stdout) => {
+            res.writeHead(error ? 503 : 200, {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            });
+            res.end(error ? "{}" : stdout);
+          },
+        );
+        return;
+      }
+      if (
+        req.url === "/api/translation/generate" ||
+        req.url === "/api/translation/revise"
+      ) {
+        void translateLyrics(
+          req,
+          res,
+          process.cwd(),
+          req.url.endsWith("/revise"),
+        );
+        return;
+      }
       if (req.url === "/api/timing-models") {
         void cachedTimingModels(req, res);
         return;

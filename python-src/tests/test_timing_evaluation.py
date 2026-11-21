@@ -104,7 +104,7 @@ def test_assignment_preserves_repeats_and_does_not_bridge_instrumental_gap():
 
     song = {
         "TIMELINE": [
-            dict(id=id_, lyricKey="你好", startMs=start, endMs=start + 2000)
+            {"id": id_, "lyricKey": "你好", "startMs": start, "endMs": start + 2000}
             for id_, start in [("first", 0), ("repeat", 10000)]
         ]
     }
@@ -121,7 +121,9 @@ def test_assignment_preserves_repeats_and_does_not_bridge_instrumental_gap():
     rows = evaluate(song, transcript, 13000)["modes"]["assigned_toneless"]["lines"]
     assert [r["id"] for r in rows] == ["first", "repeat"]
     assert [r["observedStartMs"] for r in rows] == [1000, 11000]
-    one_line = {"TIMELINE": [dict(id="a", lyricKey="你好", startMs=0, endMs=13000)]}
+    one_line = {
+        "TIMELINE": [{"id": "a", "lyricKey": "你好", "startMs": 0, "endMs": 13000}]
+    }
     split = {
         "segments": [
             {
@@ -140,7 +142,9 @@ def test_assignment_preserves_repeats_and_does_not_bridge_instrumental_gap():
 def test_assignment_exposes_substituted_end_and_missing_expected_unit():
     from workbench.timing_evaluation import evaluate
 
-    song = {"TIMELINE": [dict(id="a", lyricKey="你好星", startMs=0, endMs=4000)]}
+    song = {
+        "TIMELINE": [{"id": "a", "lyricKey": "你好星", "startMs": 0, "endMs": 4000}]
+    }
     observed = {
         "segments": [
             {
@@ -167,8 +171,8 @@ def test_shared_coarse_observation_spans_are_flagged_not_interpolated():
 
     song = {
         "TIMELINE": [
-            dict(id="a", lyricKey="你", startMs=0, endMs=1000),
-            dict(id="b", lyricKey="好", startMs=1000, endMs=2000),
+            {"id": "a", "lyricKey": "你", "startMs": 0, "endMs": 1000},
+            {"id": "b", "lyricKey": "好", "startMs": 1000, "endMs": 2000},
         ]
     }
     transcript = {"segments": [{"text": "你好", "start": 0, "end": 2}]}
@@ -183,7 +187,9 @@ def test_shared_coarse_observation_spans_are_flagged_not_interpolated():
 def test_untimed_song_proposes_bounds_without_fabricated_reference_deltas():
     from workbench.timing_evaluation import evaluate
 
-    song = {"TIMELINE": [dict(id="a", lyricKey="你好", startMs=None, endMs=None)]}
+    song = {
+        "TIMELINE": [{"id": "a", "lyricKey": "你好", "startMs": None, "endMs": None}]
+    }
     transcript = {"segments": [{"words": [{"word": "你好", "start": 1, "end": 2}]}]}
     result = evaluate(song, transcript, 3000)
     for mode in result["modes"].values():

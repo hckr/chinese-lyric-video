@@ -1,6 +1,6 @@
 # Word segmentation editor and Pinyin contract
 
-**Status (source-inspected 2026-11-14):** React editing, validation, explicit spacing correction and split/merge are implemented. Python AI normalization/validation and protected AI suggestion acceptance remain C requirements. Outstanding checks are in [TEST_PLAN.md](TEST_PLAN.md).
+**Status:** React editing, explicit spacing correction, split/merge, and reviewed Python translation drafts are implemented for owner review. Outstanding checks are in [TEST_PLAN.md](TEST_PLAN.md).
 
 ## Scope: words within a phrase, not lyric timing
 
@@ -16,11 +16,11 @@ A **phrase** is a unique complete lyric line with shared EN/PL translations; rep
 - Split/merge are **undoable**, invalidate the edited phrase's reviewed status, update the selected token, coverage/review validation and dictionary inspector immediately. Export/reimport must persist the chosen segmentation. Retain stable identities for unchanged tokens; choose and document predictable IDs for replaced/merged rows (e.g., left token retains ID, new right token gets a new ID).
 - If a new AI suggestion differs from a manually reviewed segmentation, present it as a proposal rather than silently reverting a user's split/merge. Suggestions and imported segmentation should be editable by the same controls.
 
-## Pinyin: one lexical word = one contiguous orthographic unit
+## Pinyin for lexical words and idioms
 
-**Per-token `words[].pinyin` must not contain spaces between syllables of one word.** Use lowercase, tone-marked Hanyu Pinyin in dictionary forms. Preserve dictionary tones regardless of context; do not apply tone sandhi or other contextual tone changes.
+Use contiguous Pinyin for ordinary lexical words and retain spaced readings for idiom tokens. Use lowercase, tone-marked Hanyu Pinyin in dictionary forms. Preserve dictionary tones regardless of context; do not apply tone sandhi or other contextual tone changes.
 
-| Hanzi token | Correct `pinyin` field | Incorrect    |
+| Hanzi token | Correct `pinyin` field | Spaced form  |
 | ----------- | ---------------------- | ------------ |
 | 漂亮        | `piàoliang`            | `piào liang` |
 | 喜欢        | `xǐhuan`               | `xǐ huan`    |
@@ -31,7 +31,7 @@ A **phrase** is a unique complete lyric line with shared EN/PL translations; rep
 - **Different lexical tokens** are separated when rendering a full sentence's word-by-word Pinyin, e.g. `我` (`wǒ`) + `喜欢` (`xǐhuan`) → `wǒ xǐhuan`. The rule is about individual word fields, **not** removing all spaces from displayed lyric lines.
 - Contextual annotations with empty Hanzi (such as `[if]`) may have empty Pinyin; do not force a fabricated reading for them. Do not infer lexical boundaries from Pinyin spaces alone.
 - AI generation and revision prompts, the Python postprocessing pipeline, API response validation, editor validation, and exported files must all use this invariant. Prefer returning structured word tokens over a single unsegmented Pinyin string.
-- **New AI drafts** with internal Pinyin whitespace must be normalized **only when the word boundary is already known and the change is safe**, otherwise flagged for correction. Do not silently rewrite preexisting **manually authored** Pinyin on import; display a warning and provide an explicit “Fix spacing” action. Never change the number of word tokens just to eliminate spaces.
+- **New AI drafts** use contiguous Pinyin for ordinary words such as `xǐhuan` and may use spaces for a single idiom token such as 一丝一毫 with `yī sī yī háo`. The validator checks syllables against the Hanzi and draft review flags ambiguous spaced alignment. Author-provided readings retain their spaces on import. “Fix spacing” is an explicit edit to the reading.
 - When **merging**, concatenating the two token Pinyin strings without a space is a useful _draft_, but verify required apostrophes and the dictionary reading, preserving dictionary tones. When **splitting**, ask for both new readings explicitly unless a reliable aligned segmentation already exists. The user can revise everything before confirming.
 
 ## Implemented operations and remaining requirements
@@ -40,12 +40,12 @@ A **phrase** is a unique complete lyric line with shared EN/PL translations; rep
 
 [split-suggestions.ts](../../web/src/split-suggestions.ts) aligns supplied Pinyin only when there is exactly one syllable alignment. It reuses a gloss only when matching project tokens have one unique nonempty meaning. Ambiguous readings/glosses stay blank; no compound meaning or pronunciation is invented. All suggestions remain editable before confirmation.
 
-Frontend validation checks internal whitespace, syllable validity/count, gloss completeness and Hanzi coverage. Explicit Fix spacing joins supplied readings and inserts apostrophes before vowel-initial syllables; it edits only the working project. Existing imported values remain untouched until that action. Legacy TS retains segmentation values; project JSON additionally retains token IDs and approval state.
+Frontend validation checks syllable validity/count, gloss completeness and Hanzi coverage. Explicit Fix spacing joins supplied readings and inserts apostrophes before vowel-initial syllables; it edits only the working project. Existing imported values remain untouched until that action. Legacy TS retains segmentation values; project JSON additionally retains token IDs and approval state.
 
-Python's existing word normalization still permits internal spaces (`piào liang` for one 漂亮 token). Frontend validation does not complete that backend requirement. C must enforce the new-output contract in prompts/postprocessing/response validation, keep AI proposals separate, and never silently replace manually approved segmentation. Review/export warnings must remain visible; draft downloads are not proof that all linguistic validation passes.
+The Python generation prompt requests contiguous readings for ordinary words and spaced readings for idioms. Python and React check Pinyin syllable counts and source coverage. The editor keeps proposed segmentation separate until the owner applies it.
 
 ## Executable verification and remaining coverage
 
 - [Domain tests](../../web/tests/domain.test.ts) cover merge/split identities and semantic TS round trips, Unicode boundaries, note preservation, unchanged translations/timing, review invalidation, undo/redo, Pinyin validation/spacing/apostrophes and conservative split suggestions.
 - [Browser acceptance](../../web/tests/browser.ts) exercises the editor dialogs, explicit corrections, review and project recovery through the UI.
-- Python new-output spacing validation and protected AI regeneration remain unimplemented C work; their regression tests must accompany implementation. Dictionary-tone preservation must also be covered when that generation/normalization path is implemented. See [the existing Python Pinyin carry-forward](../ROADMAP.md#unresolved-carry-forwards-not-cleared-by-accepting-checkpoint-b) and [C acceptance gates](TEST_PLAN.md#m3--python-ai).
+- The translation fixture exercises a single idiom token with a literal gloss and spaced reading through the Python draft pipeline, Workbench JSON, the preview reading alignment, and legacy TypeScript. The opt-in [evaluation sample](../../web/README.md#automatic-translation) supports a separate check of live dictionary-tone accuracy.
