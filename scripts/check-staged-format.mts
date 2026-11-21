@@ -2,12 +2,27 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import * as prettier from "prettier";
 import { selectedFiles } from "./format-changes.mts";
 
 export interface FormattingProblem {
   file: string;
   message: string;
+}
+
+function samePackagePrettierConfig(
+  staged: string | undefined,
+  local: string | undefined,
+): boolean {
+  if (staged === undefined || local === undefined) return false;
+  try {
+    const setting = (source: string) =>
+      (JSON.parse(source) as { prettier?: unknown }).prettier;
+    return isDeepStrictEqual(setting(staged), setting(local));
+  } catch {
+    return false;
+  }
 }
 
 // Check Git blobs, not working-tree copies: partial staging must remain reliable.
@@ -58,7 +73,10 @@ export async function checkStagedFormatting(
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
       const staged = entry ? git(["cat-file", "blob", entry.oid]) : undefined;
-      if (local !== staged)
+      if (
+        local !== staged &&
+        !(name === "package.json" && samePackagePrettierConfig(staged, local))
+      )
         return [
           {
             file,

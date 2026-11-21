@@ -71,6 +71,31 @@ test("staged check accepts good index content despite unstaged edits or a missin
   }
 });
 
+test("staged check only compares Prettier settings in package.json", async () => {
+  const { root, git, cleanup } = await fixture();
+  try {
+    const manifest = path.join(root, "package.json");
+    const staged =
+      JSON.stringify({ version: "0.2.0", prettier: { semi: true } }, null, 2) +
+      "\n";
+    await fs.writeFile(manifest, staged);
+    git("add", "--", "package.json");
+    await fs.writeFile(manifest, staged.replace("0.2.0", "0.3.0"));
+    assert.deepEqual(await checkStagedFormatting(root), []);
+    assert.equal(git("show", ":package.json"), staged);
+
+    for (const local of [staged.replace("true", "false"), "{"]) {
+      await fs.writeFile(manifest, local);
+      assert.match(
+        (await checkStagedFormatting(root))[0]?.message ?? "",
+        /Formatter configuration differs/,
+      );
+    }
+  } finally {
+    await cleanup();
+  }
+});
+
 test("installed hook blocks an unformatted commit and permits a formatted commit in a temporary repository", async () => {
   const { root, git, cleanup } = await fixture();
   try {
