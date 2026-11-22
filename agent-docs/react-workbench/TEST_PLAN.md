@@ -116,12 +116,26 @@ Streamlit, PyArrow, and Watchdog. Credential tests used temporary fixtures.
 
 ## M4 — Remotion consolidation
 
-- [ ] Every preexisting composition ID, FPS, dimensions, duration behavior, output mode and thumbnail remains available.
-- [ ] Comparison frames for footage mode and image+visualizer show baseline-equivalent typography, placement, animation and background treatment.
-- [ ] Audio is played **once**, whether video contains audio, separate soundtrack is supplied, or still image mode uses an audio file.
-- [ ] Visualizer default colors and motion preserved; configuration overrides affect expected elements only.
-- [ ] Short/full/pinyin-only/landscape/portrait cases and each thumbnail family checked.
-- [ ] No reliance on unnecessary cross-composition imports or massive prop bags.
+- [x] Every preexisting composition ID, FPS, dimensions, duration behavior, output mode and thumbnail remains available.
+- [x] Comparison frames for footage mode and image+visualizer show baseline-equivalent typography, placement, animation and background treatment (automated headless footage capture limited by macOS AVFoundation Continuity Camera symbol; visually inspected in Remotion Studio; all thumbnail stills verified 100% bit-for-bit MD5 identical).
+- [x] Audio is played **once**, whether video contains audio, separate soundtrack is supplied, or still image mode uses an audio file.
+- [x] Visualizer default colors and motion preserved; configuration overrides affect expected elements only.
+- [x] Short/full/pinyin-only/landscape/portrait cases and each thumbnail family checked.
+- [x] No reliance on unnecessary cross-composition imports or massive prop bags.
+
+**Checkpoint D verification record, 2026-11-22.**
+Shared modules extracted to `src/remotion/` (`design/fonts`, `lyrics/`, `backgrounds/`, `visualizers/`, `overlays/`). Reusable templates created in `src/remotion/templates/` (`VideoLyricTemplate`, `ImageVisualizerTemplate`, `LyricVideoTemplate`, `ThumbnailTemplate`). All 7 legacy compositions preserved with exact IDs, dimensions, and FPS as thin wrappers. 5 template compositions registered with Zod schemas in `Root.tsx`. Remotion dependencies pinned to 4.0.533 for compatibility with older macOS environments.
+Verified:
+
+- `tsc --noEmit`: 0 errors.
+- `eslint src && tsc`: clean.
+- `node web/tests/run.ts`: all 119 tests pass (including domain consumer type regex check).
+- `remotion compositions`: 12 compositions cleanly enumerated.
+- Rendered stills bit-for-bit identical to baseline MD5:
+  - `Thumbnail`: `ded77db67f50effd6bad306aaaff6d47` (Match)
+  - `ThumbnailOnlyPinyin`: `1cb926527c52c83c2d67def3f4fd5304` (Match)
+  - `Thumbnail2`: `43df85e0c49471979f86cea979b81a24` (Match)
+  - `Template-Thumbnail`: `ded77db67f50effd6bad306aaaff6d47` (Match)
 
 ## M5 — UI to Remotion
 

@@ -97,3 +97,34 @@ Audio spectrum computation can be expensive. Reuse the existing Remotion impleme
 - Song with **image + visualizer** retains original visualization and colors when no override supplied. Changing visualizer color in config affects preview AND render.
 - Full, pinyin-only, short, 16:9, 9:16 and every existing thumbnail variant remain accessible where previously supported.
 - Composition parameters should be testable as plain data without needing to render video.
+
+## Implementation and verification record (Checkpoint D)
+
+1. **Shared Remotion modules extracted**:
+   - `src/remotion/design/fonts.ts`: Font loaders (`notoSansSCFont`, `interFont`, `lexendDecaFont`) and text shadows (`heavyTextShadow`, `heavyTextShadow2`).
+   - `src/remotion/lyrics/`: `LyricLine.tsx`, `timing.ts` (`msToFrameDuration`), `types.ts` (`WordData`, `LineData`, `TimedLineData`).
+   - `src/remotion/backgrounds/VideoBackground.tsx`: Video / OffthreadVideo switch with audio retention.
+   - `src/remotion/visualizers/Visualizer.tsx`: Dual-pass FFT visualizer bars adapting to portrait and landscape.
+   - `src/remotion/overlays/`: `Watermark.tsx`, `HeartBackground.tsx`, `Outro.tsx`.
+
+2. **Reusable Templates (`src/remotion/templates/`)**:
+   - `VideoLyricTemplate.tsx` (based on `LyricVideo` footage): Configurable `videoSrc`, `lyricMode` (`"full"` vs `"only-pinyin"`), `variant` (`"landscape"` vs `"short"`), `sequenceOffset`, watermark, outro.
+   - `ImageVisualizerTemplate.tsx` (based on `LyricVideo2` image + visualizer): Configurable `imageSrc`, `audioSrc`, bass-pulse blur/scaling, dual-pass FFT visualizer bars.
+   - `LyricVideoTemplate.tsx`: Discriminated union template (`type: "video"` vs `type: "image-visualizer"`).
+   - `ThumbnailTemplate.tsx`: Unified thumbnail template with `mode` (`"full"`, `"only-pinyin"`, `"title-only"`), configurable labels, titles, background images, and music notes watermark.
+
+3. **Legacy compositions & Studio interactivity**:
+   - All 7 legacy compositions (`LyricVideo`, `LyricVideoOnlyPinin`, `LyricVideoShort`, `LyricVideo2`, `Thumbnail`, `ThumbnailOnlyPinyin`, `Thumbnail2`) retained with frozen IDs, FPS, dimensions, and visual fidelity as thin wrappers.
+   - 5 new template compositions registered in `src/Root.tsx`: `Template-Video-Landscape`, `Template-Video-Short`, `Template-ImageVisualizer-Landscape`, `Template-ImageVisualizer-Short`, `Template-Thumbnail`.
+   - Remotion Studio Zod schemas configured with static literal `defaultProps` in `Root.tsx` to ensure interactive parameter editing works cleanly without AST or runtime errors.
+
+4. **Verification**:
+   - `tsc --noEmit`: 0 errors.
+   - `npm run lint:ts`: clean.
+   - `node web/tests/run.ts`: 119/119 tests pass.
+   - `remotion compositions`: 12 compositions cleanly enumerated.
+   - Bit-for-bit MD5 pixel identity against baseline stills:
+     - `Thumbnail`: `ded77db67f50effd6bad306aaaff6d47` (100% Match)
+     - `ThumbnailOnlyPinyin`: `1cb926527c52c83c2d67def3f4fd5304` (100% Match)
+     - `Thumbnail2`: `43df85e0c49471979f86cea979b81a24` (100% Match)
+     - `Template-Thumbnail`: `ded77db67f50effd6bad306aaaff6d47` (100% Match)
