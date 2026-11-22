@@ -1,4 +1,4 @@
-import { AutomaticTiming } from "./AutomaticTiming";
+import { AutomaticTiming, type VerifiedSplitAudio } from "./AutomaticTiming";
 import { timelineLayout, type TimelineLayout } from "./timeline-layout.ts";
 import {
   orderGroupedProject,
@@ -56,6 +56,10 @@ function smoothScroll(
   });
 }
 type Props = {
+  onSplitAudioReady: (audio: VerifiedSplitAudio | undefined) => void;
+  report?: (s: string) => void;
+  localFile: File | null;
+  onFile: (file: File) => void;
   project: Project;
   active: boolean;
   selectedId?: string;
@@ -126,6 +130,9 @@ function TimingFields({
 }
 export function TimingEditor({
   project: sourceProject,
+  localFile,
+  onSplitAudioReady,
+  onFile,
   active,
   selectedId,
   onSelect,
@@ -133,6 +140,7 @@ export function TimingEditor({
   onReview,
   onRemove,
   onAudioMetadata,
+  report,
   onUndo,
   onRedo,
 }: Props) {
@@ -151,7 +159,7 @@ export function TimingEditor({
     if (!duplicating) return;
     const elements = [
       ...document.querySelectorAll<HTMLElement>(
-        ".navigation, main > header, .lyric-structure-actions, .lyric-structure-panel",
+        "main > header, .lyric-structure-actions, .lyric-structure-panel",
       ),
     ];
     const reveal = requestAnimationFrame(() => {
@@ -330,6 +338,7 @@ export function TimingEditor({
     return () => observer.disconnect();
   }, []);
   const audio = useLocalAudio(
+    localFile,
     active,
     (metadata) => {
       if (!duplicate) onAudioMetadata(metadata);
@@ -387,6 +396,13 @@ export function TimingEditor({
     return () => observer.disconnect();
   }, [active, ticks]);
   const available = duration !== undefined;
+  const audioStatus = localFile
+    ? audio.error
+      ? "Audio unavailable"
+      : "Loading audio…"
+    : project.audio
+      ? "Audio needs relinking"
+      : "No audio selected";
   const groupPreview =
     groupDraft && groupDraft.base === project
       ? shiftGroup(project, groupDraft.id, groupDraft.offset)
@@ -749,7 +765,7 @@ export function TimingEditor({
           </button>
           <output className="timing-clock" aria-label="Audio time">
             {formatTime(audio.positionMs)} /{" "}
-            {available ? formatTime(duration) : "No audio loaded"}
+            {available ? formatTime(duration) : audioStatus}
           </output>
           <label className="timing-speed">
             Speed
@@ -803,13 +819,17 @@ export function TimingEditor({
         </div>
         <div className="timing-source">
           <p className="muted timing-media-status">
-            {available ? project.audio?.name : "No audio selected"}
+            {localFile?.name ?? project.audio?.name ?? "No audio selected"}
           </p>
           <label
             className={`timing-file ${!available ? "timing-file-primary" : ""}`}
           >
             <span className="timing-file-button">
-              {available ? "Replace audio" : "Choose local audio"}
+              {localFile
+                ? "Replace audio"
+                : project.audio
+                  ? "Relink audio"
+                  : "Choose local audio"}
             </span>
             <input
               aria-label="Local audio file"
@@ -817,7 +837,7 @@ export function TimingEditor({
               accept="audio/*,video/mp4,video/webm,.wav,.mp3,.m4a,.mp4,.ogg,.flac"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) audio.load(file);
+                if (file) onFile(file);
                 e.target.value = "";
               }}
             />
@@ -879,6 +899,7 @@ export function TimingEditor({
         </div>
       )}
       <AutomaticTiming
+        report={report}
         expanded={automaticTimingOpen}
         onCollapse={() => setAutomaticTimingOpen(false)}
         revealTiming={automaticTimingTrigger}
@@ -897,6 +918,7 @@ export function TimingEditor({
         }}
         onChange={onChange}
         onListen={listen}
+        onSplitAudioReady={onSplitAudioReady}
         onIdentityReady={setIdentityReady}
       />
       <div className="timing-grid">

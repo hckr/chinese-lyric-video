@@ -1,3 +1,9 @@
+import type { VerifiedSplitAudio } from "./AutomaticTiming";
+import { wordSpans } from "./word-spans";
+import { ImportAudioSplits } from "./ImportAudioSplits";
+import { needsImportSplit } from "./automatic-timing";
+import type { EditorHistory } from "./useEditorHistory";
+import { DocumentImport } from "./DocumentImport";
 import {
   TranslateLyrics,
   type TranslationExchange,
@@ -9,11 +15,15 @@ import { orderGroupedProject } from "./lyric-groups.ts";
 import { DictionaryLookup } from "./DictionaryLookup";
 import { RemoveAppearanceDialog } from "./RemoveAppearanceDialog";
 import { draftDetectedWords, draftRawLyrics } from "./raw-import";
+import { ProjectStructure } from "./ProjectStructure";
+import { lyricCount, lyricLimit } from "./lyric-length";
+import { TimingConfirmDialog } from "./TimingConfirmDialog";
 import { TimingEditor } from "./TimingEditor";
 import {
   attachAudioMetadata,
   withTimingBaseline,
   formatTime,
+  timingStatus,
 } from "./timing.ts";
 import { WiktionaryDialog } from "./WiktionaryDialog";
 import { useEffect, useRef, useState } from "react";
@@ -59,9 +69,7 @@ function loadSession(): History | null {
   }
 }
 function initial(project: Project): History {
-  project = withTimingBaseline(
-    project.timingRun ? project : orderGroupedProject(project),
-  );
+  project = withTimingBaseline(project);
   return {
     present: {
       project,
@@ -110,6 +118,30 @@ export function App() {
     [saved, setSaved] = useState(""),
     [query, setQuery] = useState("");
   const [importing, setImporting] = useState(false);
+  const [editorHistory, setEditorHistory] = useState<EditorHistory | null>(
+    null,
+  );
+  const [documentSource, setDocumentSource] = useState({ text: "" });
+  const [splitAudio, setSplitAudio] = useState<VerifiedSplitAudio>();
+  const [projectAudio, setProjectAudio] = useState<File | null>(null);
+  const [suggestionProgress, setSuggestionProgress] = useState("");
+  const [importProgress, setImportProgress] = useState("");
+  const [translationProgress, setTranslationProgress] = useState("");
+  const [timingProgress, setTimingProgress] = useState("");
+  const [replaceTrigger, setReplaceTrigger] =
+    useState<HTMLButtonElement | null>(null);
+  const importVisit = useRef(0);
+  const lyricsInput = useRef<HTMLTextAreaElement>(null);
+  const importLocked = !!history;
+  function navigate(next: string) {
+    if (screen !== next) {
+      importVisit.current++;
+
+      setImporting(false);
+      setReplaceTrigger(null);
+    }
+    setScreen(next);
+  }
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const header = headerRef.current;
@@ -129,10 +161,8 @@ export function App() {
   const [newLyric, setNewLyric] = useState("");
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [editingStructure, setEditingStructure] = useState(false);
-  const [raw, setRaw] = useState(""),
-    [title, setTitle] = useState(""),
-    [artist, setArtist] = useState(""),
-    [allowDraft, setAllowDraft] = useState(false);
+  const importDisabled = importLocked || importing || editingStructure;
+  const [allowDraft, setAllowDraft] = useState(false);
   const [dialog, setDialog] = useState<"split" | "merge" | null>(null),
     [boundary, setBoundary] = useState(1),
     [leftPy, setLeftPy] = useState(""),
@@ -183,9 +213,9 @@ export function App() {
     if (!project) return;
     try {
       localStorage.setItem(STORE, serializeProject(project));
-      setSaved("Saved in this browser · download JSON for a portable copy");
+      setSaved("Saved in this browser");
     } catch {
-      setSaved("Browser storage unavailable — download project JSON to save");
+      setSaved("Browser storage unavailable · save JSON");
     }
   }, [project]);
   useEffect(() => {
@@ -249,12 +279,6 @@ export function App() {
         : initial(p),
     );
   const editPhrase = (updated: Phrase, tokenId = snapshot?.tokenId) => {
-    if (phrase && updated.words !== phrase.words)
-      updated = {
-        ...updated,
-        lyricKey:
-          updated.words.map((word) => word.hanzi).join("") || phrase.lyricKey,
-      };
     if (project)
       change(
         {
@@ -267,11 +291,29 @@ export function App() {
       );
   };
   const updateWord = (id: string, patch: Partial<Word>) => {
-    if (phrase)
-      editPhrase({
-        ...pending(phrase),
-        words: phrase.words.map((w) => (w.id === id ? { ...w, ...patch } : w)),
-      });
+    if (!phrase) return;
+    const index = phrase.words.findIndex((word) => word.id === id);
+    if (index < 0) return;
+    let lyricKey = phrase.lyricKey;
+    if (
+      patch.hanzi !== undefined &&
+      patch.hanzi !== phrase.words[index].hanzi
+    ) {
+      const spans = wordSpans(lyricKey, phrase.words);
+      const span = spans.find(({ word }) => word.id === id);
+      const following = spans.find(
+        ({ word }) => phrase.words.indexOf(word) > index,
+      );
+      const at = span?.start ?? following?.start ?? lyricKey.length;
+      lyricKey =
+        lyricKey.slice(0, at) + patch.hanzi + lyricKey.slice(span?.end ?? at) ||
+        lyricKey;
+    }
+    editPhrase({
+      ...pending(phrase),
+      lyricKey,
+      words: phrase.words.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+    });
   };
   const selectPhrase = (p: Phrase) => {
     setDialog(null);
@@ -297,57 +339,53 @@ export function App() {
     setRepeatOpen(false);
     setProjectSession((version) => version + 1);
     setTranslationExchanges([]);
+
+    setDocumentSource({ text: "" });
     setHistory(initial(p));
     setDialog(null);
-    setScreen("Lyric editor");
+    navigate("Lyric editor");
   };
-  async function read(file: File) {
-    act(() => {
-      if (file.size > 5_000_000) throw Error("Import limit is 5 MB");
-    });
-    if (file.size > 5_000_000) return;
-    const before = projectRef.current;
-    setImporting(true);
-    try {
-      const text = await file.text();
-      const p = file.name.endsWith(".json")
-        ? parseProject(text)
-        : file.name.endsWith(".ts")
-          ? importLegacy(text, file.name)
-          : await draftRawLyrics(text, title, artist);
-      if (projectRef.current !== before)
-        throw Error(
-          "The open project changed during import. Import again when you are ready.",
-        );
-      setError("");
-      openProject(p);
-    } catch (e) {
-      setError(
-        `${e instanceof Error ? e.message : String(e)}. Your current project has been retained.`,
-      );
-    } finally {
-      setImporting(false);
-    }
-  }
-  async function importRaw() {
-    if (importing) return;
+  async function runImport(
+    load: () => Promise<Project | string>,
+    audio: File | null = null,
+  ) {
+    if (screen !== "Import lyrics" || importDisabled) return;
+    const visit = ++importVisit.current;
     const before = projectRef.current;
     setImporting(true);
     setError("");
     try {
-      const draft = await draftRawLyrics(raw, title, artist);
+      const draft = await load();
+      if (visit !== importVisit.current) return;
       if (projectRef.current !== before)
         throw Error(
           "The open project changed during import. Import again when ready.",
         );
-      openProject(draft);
+      if (typeof draft === "string") {
+        setDocumentSource({ text: draft });
+      } else {
+        setProjectAudio(audio);
+        openProject(draft);
+      }
     } catch (e) {
-      setError(
-        `${e instanceof Error ? e.message : String(e)}. Your current project has been retained.`,
-      );
+      if (visit === importVisit.current)
+        setError(
+          `${e instanceof Error ? e.message : String(e)}. Your import draft is still available.`,
+        );
     } finally {
-      setImporting(false);
+      if (visit === importVisit.current) setImporting(false);
     }
+  }
+  function read(file: File) {
+    return runImport(async () => {
+      if (file.size > 5_000_000) throw Error("Import limit is 5 MB");
+      const text = await file.text();
+      if (file.name.toLowerCase().endsWith(".json")) return parseProject(text);
+      if (file.name.toLowerCase().endsWith(".ts"))
+        return importLegacy(text, file.name);
+      if (file.name.toLowerCase().endsWith(".txt")) return text;
+      throw Error("Choose a .txt, .ts or .json file");
+    });
   }
   async function restoreDetectedReadings() {
     if (!project || !phrase || phrase.words.length || editingStructure) return;
@@ -475,63 +513,136 @@ export function App() {
     if (kind === "split") populateSplit(1);
     setDialog(kind);
   }
+  const workspaces = [
+    ["Import lyrics", "Import"],
+    ["Lyric editor", "Translations"],
+    ["Timing", "Timing"],
+    ["Video settings", "Video"],
+    ["Export data", "Export"],
+  ];
+  const activeWorkspace =
+    screen === "Song structure" ? "Import lyrics" : screen;
+  function openWorkspace(name: string) {
+    navigate(name);
+    setRepeatOpen(false);
+    setError("");
+    setDialog(null);
+  }
+  const counts: Record<string, string> = project
+    ? {
+        "Lyric editor":
+          project.phrases.filter((p) => p.review === "reviewed").length +
+          "/" +
+          project.phrases.length,
+        Timing:
+          project.occurrences.filter(
+            (o) => timingStatus(o, project.audio?.durationMs) === "Reviewed",
+          ).length +
+          "/" +
+          project.occurrences.length,
+      }
+    : {};
+  const projectName = project
+    ? [project.metadata.title || "Untitled song", project.metadata.artist]
+        .filter(Boolean)
+        .join(" · ")
+    : "Lyric Workbench";
+  const pendingImportSplits =
+    project?.timingRun?.candidates.some(needsImportSplit);
+  const jobs: Record<string, string> = {
+    "Import lyrics":
+      importProgress || suggestionProgress || (pendingImportSplits ? "!" : ""),
+    "Lyric editor":
+      translationProgress ||
+      (project?.translationWork?.drafts.length ? "!" : ""),
+    Timing:
+      timingProgress ||
+      (project?.timingRun &&
+      (project.timingRun.candidates.some((c) => !needsImportSplit(c)) ||
+        project.occurrences.some(
+          (o) =>
+            (o.automaticTiming || o.timingIssue) &&
+            o.timingReview !== "reviewed",
+        ))
+        ? "!"
+        : ""),
+  };
   const warnings = project ? exportIssues(project) : [];
   return (
     <div className="app">
-      <aside className="navigation">
-        <div className="brand">
-          字{" "}
-          <span>
-            Lyric Workbench<small>v{version}</small>
-          </span>
-        </div>
-        <nav aria-label="Workspaces">
-          {[
-            "Import lyrics",
-            "Lyric editor",
-            "Timing",
-            "Video settings",
-            "Export data",
-          ].map((name) => (
-            <button
-              key={name}
-              aria-current={screen === name ? "page" : undefined}
-              onClick={() => {
-                setScreen(name);
-                setRepeatOpen(false);
-                setError("");
-                setDialog(null);
-              }}
-            >
-              {name}
-            </button>
-          ))}
-        </nav>
-        <div className="navfoot">
-          {project ? (
-            <>
-              <strong>{project.metadata.title || "Untitled song"}</strong>
-              <p>
-                {project.phrases.length} unique phrases
-                <br />
-                {project.occurrences.length} occurrences
-              </p>
-            </>
-          ) : (
-            <p>Import a song to begin.</p>
-          )}
-          <small>
-            AI requests start only when you choose a generation action.
-          </small>
-        </div>
-      </aside>
       <main>
         <header ref={headerRef}>
-          <span>{screen}</span>
+          <div className="project-identity">
+            <span className="music-mark" aria-hidden="true">
+              ♫
+            </span>
+            <strong>Lyric Workbench</strong>
+            <small title={[projectName, saved].join(" · ")}>
+              v{version}
+              {project && " · " + projectName} {saved && " · " + saved}
+            </small>
+          </div>
+          <nav className="workflow-tabs" aria-label="Workspaces">
+            {workspaces.map(([name, label], index) => (
+              <button
+                key={name}
+                data-workspace={name}
+                aria-current={activeWorkspace === name ? "page" : undefined}
+                onClick={() => openWorkspace(name)}
+              >
+                <span
+                  className="step-marker"
+                  data-complete={name === "Import lyrics" && !!project}
+                  aria-hidden="true"
+                >
+                  {name === "Import lyrics" && project ? "✓" : index + 1}
+                </span>
+                {label}{" "}
+                {jobs[name] && (
+                  <b
+                    aria-label={
+                      jobs[name] === "!" ? "Needs attention" : jobs[name]
+                    }
+                  >
+                    {jobs[name]}
+                  </b>
+                )}
+                {counts[name] && <small> {counts[name]}</small>}
+              </button>
+            ))}
+          </nav>
+          <label className="workspace-picker">
+            Workspace
+            <select
+              value={activeWorkspace}
+              onChange={(e) => openWorkspace(e.target.value)}
+            >
+              {workspaces.map(([name, label]) => (
+                <option value={name} key={name}>
+                  {jobs[name]}
+                  {label} {counts[name]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="mobile-job" role="status">
+            {workspaces
+              .filter(([name]) => jobs[name])
+              .map(([name, label]) => label + " " + jobs[name])
+              .join(" · ")}
+          </span>
           <div className="actions">
             <button
-              disabled={editingStructure || !history?.past.length}
+              disabled={
+                importing ||
+                editingStructure ||
+                (editorHistory ? !editorHistory.undo : !history?.past.length)
+              }
               onClick={() => {
+                if (editorHistory) {
+                  editorHistory.undo?.();
+                  return;
+                }
                 setHistory((h) => (h ? undo(h) : h));
                 setDialog(null);
               }}
@@ -539,8 +650,16 @@ export function App() {
               Undo
             </button>
             <button
-              disabled={editingStructure || !history?.future.length}
+              disabled={
+                importing ||
+                editingStructure ||
+                (editorHistory ? !editorHistory.redo : !history?.future.length)
+              }
               onClick={() => {
+                if (editorHistory) {
+                  editorHistory.redo?.();
+                  return;
+                }
                 setHistory((h) => (h ? redo(h) : h));
                 setDialog(null);
               }}
@@ -558,93 +677,148 @@ export function App() {
             </button>
           </div>
         </header>
-        <div className="content">
-          <h1>{screen === "Lyric editor" ? "Translate & review" : screen}</h1>
-          <p className="muted" role="status">
-            {saved ||
-              "Import raw lyrics, a legacy song module, or a saved workbench project."}
-          </p>
+        <div
+          className="content"
+          onDragOver={(e) => {
+            if (
+              screen === "Import lyrics" &&
+              e.dataTransfer.types.includes("Files")
+            )
+              e.preventDefault();
+          }}
+          onDrop={(e) => {
+            if (screen !== "Import lyrics") return;
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+            e.preventDefault();
+            if (!project) void read(file);
+          }}
+        >
+          <h1>
+            {screen === "Lyric editor"
+              ? "Translate & review"
+              : project && screen === "Import lyrics"
+                ? "Song structure"
+                : screen}
+          </h1>
           {error && (
             <div role="alert" className="error">
               {error}
             </div>
           )}
-          {screen === "Import lyrics" && (
-            <div className="two">
-              <section>
-                <h2>Open an existing song</h2>
-                <p>
-                  Import .ts data safely without running code. JSON restores
-                  reviews and token identities. A successful import replaces the
-                  open project; save it first if needed.
-                </p>
-                <label className="file">
-                  Choose .ts, .txt or project .json
-                  <input
-                    type="file"
-                    accept=".ts,.txt,.json"
-                    disabled={importing || editingStructure}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void read(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                <h2>Song metadata for raw lyrics</h2>
-                <label>
-                  Title
-                  <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Artist
-                  <input
-                    value={artist}
-                    onChange={(e) => setArtist(e.target.value)}
-                  />
-                </label>
-                <p>
-                  Legacy imports retain all metadata, translations, repetitions
-                  and exact timestamps. Manual Pinyin is preserved, including
-                  spaces inside readings.
-                </p>
-                <p>
-                  Raw import uses local Python, OpenCC, Jieba and CC-CEDICT to
-                  create editable word rows. Glosses start empty and dictionary
-                  senses appear in the inspector; ambiguous or unknown readings
-                  stay blank. Sentence translations are not generated.
-                </p>
-              </section>
-              <section>
-                <h2>Paste raw Chinese lyrics</h2>
-                <label>
-                  Lyrics
-                  <textarea
-                    className="raw"
-                    value={raw}
-                    onChange={(e) => setRaw(e.target.value)}
-                    placeholder={"[Verse]\n我喜欢你\n漂亮的梦\n我喜欢你"}
-                  />
-                </label>
-                <p>
-                  Section headings are removed. Punctuation splits phrases;
-                  repeated lines share one translation. Timing is unassigned.
-                </p>
-                <button
-                  className="primary"
-                  disabled={importing || editingStructure}
-                  onClick={() => void importRaw()}
+          {(!project || screen === "Import lyrics") && (
+            <div hidden={screen !== "Import lyrics"}>
+              {project && pendingImportSplits && (
+                <ImportAudioSplits
+                  project={project}
+                  file={projectAudio}
+                  verifiedAudio={splitAudio}
+                  active
+                  apply={(p) => change(p, {}, true)}
+                />
+              )}
+              {replaceTrigger && (
+                <TimingConfirmDialog
+                  cancelLabel="Keep project"
+                  extraAction={
+                    project && (
+                      <button
+                        onClick={() =>
+                          download(
+                            "song.workbench.json",
+                            serializeProject(project, 2),
+                          )
+                        }
+                      >
+                        Download project JSON
+                      </button>
+                    )
+                  }
+                  title="Replace current project?"
+                  action="Discard project and start import"
+                  trigger={replaceTrigger}
+                  onCancel={() => setReplaceTrigger(null)}
+                  onConfirm={() => {
+                    setReplaceTrigger(null);
+                    try {
+                      localStorage.removeItem(STORE);
+                    } catch {
+                      setError("Could not remove the saved project.");
+                      return;
+                    }
+                    setHistory(null);
+                    setProjectAudio(null);
+                    setSaved("");
+                    setTranslationExchanges([]);
+                    requestAnimationFrame(() => lyricsInput.current?.focus());
+                  }}
                 >
-                  {importing ? "Preparing word drafts…" : "Import raw lyrics"}
-                </button>
-              </section>
+                  Starting a new import will discard this project and its undo
+                  history.{" "}
+                </TimingConfirmDialog>
+              )}
+              {!project && (
+                <fieldset disabled={importDisabled} className="import-fields">
+                  <DocumentImport
+                    publishHistory={setEditorHistory}
+                    key={projectSession}
+                    source={documentSource}
+                    editor={lyricsInput}
+                    active={screen === "Import lyrics"}
+                    locked={importLocked}
+                    reportAI={setSuggestionProgress}
+                    reportAudio={setImportProgress}
+                    runImport={runImport}
+                  />
+                  <section>
+                    <h2>Open a saved project or legacy song</h2>
+                    <p>
+                      Open project JSON or a legacy TypeScript song. Choose a
+                      .txt file to fill the lyrics field.
+                    </p>
+                    <label className="file">
+                      Choose .ts, .txt or project .json
+                      <input
+                        type="file"
+                        accept=".ts,.txt,.json"
+                        aria-label="Song file"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void read(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </section>
+                </fieldset>
+              )}
+            </div>
+          )}
+          {project &&
+            (screen === "Song structure" || screen === "Import lyrics") && (
+              <ProjectStructure
+                publishHistory={setEditorHistory}
+                project={project}
+                selectedId={snapshot?.occurrenceId}
+                cancel={() => navigate("Timing")}
+                apply={(p) => {
+                  change(p, {}, true);
+                  navigate("Timing");
+                }}
+              />
+            )}
+          {project && screen === "Import lyrics" && (
+            <div className="import-replacement">
+              <button onClick={(e) => setReplaceTrigger(e.currentTarget)}>
+                Import another song…
+              </button>
             </div>
           )}
           {project && screen === "Timing" && (
             <div className="lyric-structure-actions">
+              <button onClick={() => navigate("Song structure")}>
+                Edit song structure
+              </button>
               <button
                 disabled={editingStructure || !project.phrases.length}
                 aria-haspopup="dialog"
@@ -691,6 +865,7 @@ export function App() {
           )}
           {project && (
             <TranslateLyrics
+              report={setTranslationProgress}
               key={projectSession}
               hidden={screen !== "Lyric editor"}
               project={project}
@@ -827,10 +1002,10 @@ export function App() {
                               <span lang="pl">
                                 {p.translation.pl || "Brak tłumaczenia"}
                               </span>
-                              {[...hanzi(p.lyricKey)].length > 11 && (
+                              {lyricCount(p.lyricKey) > lyricLimit && (
                                 <small className="warning">
-                                  Long phrase · consider a manual phrase split
-                                  later
+                                  {lyricCount(p.lyricKey)} / {lyricLimit} lyric
+                                  characters
                                 </small>
                               )}
                             </button>
@@ -964,9 +1139,21 @@ export function App() {
                               <button
                                 disabled={!selected}
                                 onClick={() => {
+                                  const span = wordSpans(
+                                    phrase.lyricKey,
+                                    phrase.words,
+                                  ).find(
+                                    ({ word }) => word.id === selected?.id,
+                                  );
+                                  const lyricKey = span
+                                    ? phrase.lyricKey.slice(0, span.start) +
+                                        phrase.lyricKey.slice(span.end) ||
+                                      phrase.lyricKey
+                                    : phrase.lyricKey;
                                   editPhrase(
                                     {
                                       ...pending(phrase),
+                                      lyricKey,
                                       words: phrase.words.filter(
                                         (w) => w.id !== selected?.id,
                                       ),
@@ -1118,8 +1305,33 @@ export function App() {
                                             words[i + d],
                                             words[i],
                                           ];
+                                          const ids = new Set([
+                                            w.id,
+                                            phrase.words[i + d].id,
+                                          ]);
+                                          const [left, right] = wordSpans(
+                                            phrase.lyricKey,
+                                            phrase.words,
+                                          ).filter(({ word }) =>
+                                            ids.has(word.id),
+                                          );
+                                          const lyricKey =
+                                            left && right
+                                              ? phrase.lyricKey.slice(
+                                                  0,
+                                                  left.start,
+                                                ) +
+                                                right.word.hanzi +
+                                                phrase.lyricKey.slice(
+                                                  left.end,
+                                                  right.start,
+                                                ) +
+                                                left.word.hanzi +
+                                                phrase.lyricKey.slice(right.end)
+                                              : phrase.lyricKey;
                                           editPhrase({
                                             ...pending(phrase),
+                                            lyricKey,
                                             words,
                                           });
                                         }}
@@ -1171,6 +1383,29 @@ export function App() {
                         <section className="inspector">
                           <DictionaryLookup
                             word={inspectorWord}
+                            onPick={
+                              proposedWords
+                                ? undefined
+                                : (entry) =>
+                                    updateWord(inspectorWord.id, {
+                                      pinyin: fixSpacing(entry.pinyin),
+                                    })
+                            }
+                            advice={{
+                              provider: preview.wordProvider,
+                              text: phrase.lyricKey,
+                              position: phrase.lyricKey.indexOf(
+                                inspectorWord?.hanzi ?? "",
+                                words
+                                  .slice(0, words.indexOf(inspectorWord))
+                                  .reduce(
+                                    (offset, w) =>
+                                      phrase.lyricKey.indexOf(w.hanzi, offset) +
+                                      w.hanzi.length,
+                                    0,
+                                  ),
+                              ),
+                            }}
                             onOpenWiktionary={setDictionaryTerm}
                           />
                           <hr />
@@ -1326,7 +1561,11 @@ export function App() {
           {project && (
             <div hidden={screen !== "Timing"}>
               <TimingEditor
+                report={setTimingProgress}
                 key={projectSession}
+                localFile={projectAudio}
+                onSplitAudioReady={setSplitAudio}
+                onFile={setProjectAudio}
                 project={project}
                 active={screen === "Timing"}
                 selectedId={snapshot?.occurrenceId}
@@ -1346,11 +1585,13 @@ export function App() {
                       ) ?? p.phrases[0];
                     change(
                       p,
-                      {
-                        occurrenceId: occurrence?.id,
-                        phraseId: selectedPhrase?.id ?? "",
-                        tokenId: selectedPhrase?.words[0]?.id ?? "",
-                      },
+                      screen !== "Timing"
+                        ? {}
+                        : {
+                            occurrenceId: occurrence?.id,
+                            phraseId: selectedPhrase?.id ?? "",
+                            tokenId: selectedPhrase?.words[0]?.id ?? "",
+                          },
                       preserveOrder,
                     );
                   }

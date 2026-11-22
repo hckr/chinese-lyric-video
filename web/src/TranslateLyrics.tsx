@@ -118,6 +118,7 @@ type DraftField = {
   edit: (value: string) => void;
 };
 type DraftPreview = {
+  wordProvider?: import("./WordReview").WordProvider;
   actions: Partial<Record<Stage, ReactNode>>;
   wordAction?: (index: number) => ReactNode;
   vocabulary?: {
@@ -131,6 +132,7 @@ type DraftPreview = {
 
 export function TranslateLyrics({
   hidden,
+  report,
   project,
   phrase,
   exchanges,
@@ -141,6 +143,7 @@ export function TranslateLyrics({
   secondaryAction,
   children,
 }: {
+  report?: (s: string) => void;
   hidden: boolean;
   project: Project;
   phrase: Phrase | undefined;
@@ -214,7 +217,20 @@ export function TranslateLyrics({
   const [running, setRunning] = useState(false);
   const [pendingLyrics, setPendingLyrics] = useState<Set<string>>(new Set());
   const draftLocked = running && !!phrase && pendingLyrics.has(phrase.id);
+  const [needsAttention, setNeedsAttention] = useState(false);
   const [progress, setProgress] = useState("");
+  useEffect(() => {
+    report?.(
+      running
+        ? counts.total
+          ? counts.ready + "/" + counts.total
+          : "Working…"
+        : needsAttention
+          ? "!"
+          : "",
+    );
+    return () => report?.("");
+  }, [running, counts, needsAttention, report]);
   const [details, setDetails] = useState<RunDetail[]>([]);
   const detailsList = useRef<HTMLUListElement>(null);
   const followDetails = useRef(true);
@@ -333,6 +349,7 @@ export function TranslateLyrics({
     request.current = controller;
     setCounts({ ready: 0, total: jobs.length });
     setRunning(true);
+    setNeedsAttention(false);
     followDetails.current = true;
     setDetails([]);
     if (wholeSong) setSongIncomplete(false);
@@ -673,6 +690,7 @@ export function TranslateLyrics({
           `${label} ready for ${requested.length - unfinished} of ${requested.length} ${requested.length === 1 ? "lyric" : "lyrics"}`,
         ];
       });
+      if (pending.size && !controller.signal.aborted) setNeedsAttention(true);
       if (revision) {
         const ready = jobs.filter(
           ({ target, stage }) =>
@@ -707,6 +725,7 @@ export function TranslateLyrics({
       if (controller.signal.aborted)
         setProgress("Translation canceled. Received drafts are saved.");
       else {
+        setNeedsAttention(true);
         setProgress("Translation stopped. Received drafts are saved.");
         report({
           message:
@@ -799,7 +818,18 @@ export function TranslateLyrics({
       drafts: state.drafts.filter((draft) => draft.id !== id),
     }));
 
-  const preview: DraftPreview = { sentences: {}, actions: {} };
+  const preview: DraftPreview = {
+    wordProvider: catalog[provider]?.length
+      ? {
+          provider,
+          model: settings.model,
+          structured: settings.structured,
+          thinkingEffort: settings.thinkingEffort,
+        }
+      : undefined,
+    sentences: {},
+    actions: {},
+  };
   const wordDraft = selectedDrafts.find(
     (draft) => draft.stage === "vocabulary",
   );
@@ -1358,6 +1388,11 @@ export function TranslateLyrics({
                 </small>
               )}
             </div>
+            {needsAttention && (
+              <button onClick={() => setNeedsAttention(false)}>
+                Dismiss notification
+              </button>
+            )}
             {running && (
               <button onClick={() => request.current?.abort()}>
                 Cancel translation

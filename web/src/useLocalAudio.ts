@@ -4,6 +4,7 @@ import { mediaMs } from "./timing.ts";
 import { decodeWaveform } from "./waveform-stream.ts";
 
 export function useLocalAudio(
+  selectedFile: File | null,
   active: boolean,
   onMetadata: (audio: NonNullable<Project["audio"]>) => void,
   loop: { startMs: number; endMs: number } | null,
@@ -122,19 +123,20 @@ export function useLocalAudio(
       audio.pause();
     };
   }, []);
-  const load = (next: File) => {
+  useEffect(() => {
+    if (!selectedFile) return;
     cancelBounded();
     version.current++;
     analysis.current?.abort();
     ref.current?.pause();
-    file.current = next;
+    file.current = selectedFile;
     setError("");
     setDuration(undefined);
     setPosition(0);
     setPeaks([]);
     setWaveStatus("Waiting for audio metadata…");
-    setUrl(URL.createObjectURL(next));
-  };
+    setUrl(URL.createObjectURL(selectedFile));
+  }, [selectedFile]);
   const metadata = async () => {
     const audio = ref.current,
       selected = file.current,
@@ -236,7 +238,6 @@ export function useLocalAudio(
     peaks,
     waveStatus,
     error,
-    load,
     metadata,
     seek,
     toggle,

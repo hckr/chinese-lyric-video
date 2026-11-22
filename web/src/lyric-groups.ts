@@ -1,3 +1,4 @@
+import { lyricCount, lyricLimit } from "./lyric-length.ts";
 import { newId, parseProject, type Project } from "./domain.ts";
 import { editTiming, snappedTime, timingNotices, type Snap } from "./timing.ts";
 
@@ -192,6 +193,14 @@ export function duplicateGroup(
   const members = group.occurrenceIds.map(
     (id) => project.occurrences.find((cue) => cue.id === id)!,
   );
+  if (
+    members.some(
+      (o) =>
+        lyricCount(project.phrases.find((p) => p.id === o.phraseId)!.lyricKey) >
+        lyricLimit,
+    )
+  )
+    throw Error("This section contains a lyric longer than 11 elements.");
   const copies = members.map((original) => {
     const {
       reviewedTiming: _reviewed,

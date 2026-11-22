@@ -41,7 +41,12 @@ def test_unassigned_intro_is_an_optional_flagged_addition(capsys):
             "durationMs": 5000,
             "transcript": {
                 "segments": [
-                    {"words": [{"word": "小哥哥", "start": 0.1, "end": 0.8}]},
+                    {
+                        "words": [
+                            {"word": "小哥哥小哥哥", "start": 0.1, "end": 0.3},
+                            {"word": "小哥哥小哥哥", "start": 0.55, "end": 0.8},
+                        ]
+                    },
                     {"words": [{"word": "你好", "start": 1, "end": 2}]},
                 ]
             },
@@ -52,6 +57,11 @@ def test_unassigned_intro_is_an_optional_flagged_addition(capsys):
     result = json.loads(capsys.readouterr().out.splitlines()[-1])["result"]
     assert result["additions"][0]["occurrence"]["detectedFromAudio"] is True
     assert result["additions"][0]["phrase"]["review"] == "pending"
+    assert result["additions"][0]["phrase"]["lyricKey"] == "小哥哥" * 4
+    assert result["additions"][0]["timedWords"] == [
+        {"text": "小哥哥小哥哥", "startMs": 100, "endMs": 300},
+        {"text": "小哥哥小哥哥", "startMs": 550, "endMs": 800},
+    ]
     assert project["occurrences"] == [{"id": "a", "phraseId": "p"}]
 
 

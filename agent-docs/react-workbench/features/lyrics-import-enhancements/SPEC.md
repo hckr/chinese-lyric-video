@@ -1,107 +1,33 @@
-# Import view: live lyric grouping and project replacement protection
+# Import workspace
 
-**Area:** React workbench → Import lyrics
-**Status:** Proposal. Replacement protection and live structure preview are not implemented. Fixed-membership groups already exist; reuse [their contract](../lyrics-grouping/SPEC.md) and the [project schema](../../../../web/src/domain.ts).
-**Scheduling:** [ROADMAP.md](../../../ROADMAP.md).
+The [structured editor UX](EDITOR_UX.md) defines the Import interaction and acceptance criteria for 0.4.0. This page records the 0.4.0 behavior and verification.
 
-## Objective
+## Document and project handoff
 
-Make the raw-lyrics import view the natural place to review a song's structure **before** timing. As Chinese lyrics are pasted or edited, show a continuously updated, human-correctable grouping preview. Also prevent accidental replacement of the song currently being edited.
+The editor is the source of lyric text and section membership. Each nonblank lyric line creates one occurrence. A standalone `[Section]` starts a section, and a blank line or `[/]` closes it before ungrouped lyrics. Punctuation, whitespace, traditional characters and credit lines survive import. Occurrences retain separate identities when lyrics repeat. The read-only preview shows accepted text. The import worker uses the parsed occurrences and memberships for local dictionary drafting and portable project creation.
 
-Use the current import view in the local application as the UI reference. Preserve its existing colors, typography, spacing and components; no screenshot or redesign is needed.
+Each sung English-only line keeps its own occurrence. The full original line goes in the English sentence field. Mixed lines retain source order, with Latin words in English gloss tokens with empty Hanzi and Pinyin. On lines containing Hanzi, each Han character, Latin word and digit counts as one element toward the 11-element limit. Apostrophes within Latin words are retained. English-only lines are exempt.
 
-## A. Protect an open project from replacement
+AI analysis and transcription are optional and run on request. Individual accepted patches update the document. Over-limit audio detections from Import or Timing are queued in Import with a topbar attention marker. A compact read-only insertion preview marks the pending line at its proposed position and shows dictionary Pinyin for it and its surrounding lyrics. Review splits recalculates intervals at transcript word boundaries and supports manual timing. Applying a timed split requires a checked or explicitly reused recording and validates the intervals against its duration. When a suggested two-line split leaves one element on its own, it prefers a more balanced split if both intervals are supported by the transcript. Accepting a split for an open project or dismissing a pending detection is undoable. Newly accepted audio lines between two timed members of the same section join that section, preserving the same lyric order in Song structure and Timing. The import draft retains the placement confirmation for reviewed splits. Split timings use word evidence or manual correction. Moving between workspaces preserves the current-session draft and running analysis.
 
-When an editable project is already open, entering **Import lyrics** shows the existing import UI in a visibly locked state. All operations that could replace the project are disabled (including file upload/drop and raw-text import), until the user explicitly chooses to start another import.
+## Replacement and saved projects
 
-Present a short, prominent explanation and these actions:
+With a project open, Import opens Song structure directly and offers **Import another song…** as the alternative. **Keep project** cancels replacement. **Download project JSON** saves a portable copy. **Discard project and start import** immediately clears the project, history, linked audio and browser recovery copy. A failed subsequent import retains the replacement draft. JSON and legacy TypeScript use their existing loaders.
 
-- **Back to project** — return without changing anything.
-- **Export project JSON** — use the existing portable export; keep the current project and the lock intact.
-- **Replace current project…** — explicit acknowledgement/confirmation that a successful import will replace the current project. Then unlock the import controls for this import attempt.
+**Edit song structure** accepts heading and membership changes against the existing lyric sequence. Applying creates one project history entry. Timing’s **+ Group** still requires two members. See the [grouping contract](../lyrics-grouping/SPEC.md).
 
-The warning must not imply that opening the import view already discards anything: the current project remains untouched until a **successful, validated import** completes. Cancelling the confirmation or abandoning the new import leaves the current project intact. A failed file/raw import must not wipe it. If the user leaves and re-enters Import lyrics while a project is still open, require acknowledgement again.
+## Verification and deferred work
 
-Reuse any existing unsaved-work/replace protection rather than stacking competing confirmation dialogs. Browser-local autosave is **not** equivalent to a portable backup: offer the JSON export clearly. No new global modal or persistent app-wide mode is required; this is an import-view gate. Use actual disabled/inert form behavior, not just dimming, and make the unlock actions keyboard-accessible.
+Run the workbench unit, import workflow, and timing review browser suites and the Python ingest and group worker tests. The import browser suite writes desktop and mobile captures under `output/playwright/import-workflow/`. Fixture providers exercise the review protocol. Evaluation of live suggestion quality and future YouTube acquisition are tracked in the [roadmap](../../../ROADMAP.md).
 
-When there is **no** current project, the import controls are immediately available, unchanged.
+The 0.4.0 checks passed the TypeScript frontend and tooling, the production build, 130 workbench tests, 37 targeted Python tests, and the general, Import, and Timing-review browser workflows. The browser coverage includes mixed-script source preservation during gloss edits, restoration of a dismissed passage with Undo, and audio handoff using synthetic WAV media.
 
-## B. Live grouping preview for pasted lyrics
+The browser acceptance fixture exercises a 73-occurrence document with repeated choruses at 1600px and 390px. It checks keyboard navigation to the second chorus, the editor’s accessible name in Chromium’s accessibility tree, a blocking three-piece split, stale proposals, cancellation, and a provider quota response. A delayed audio comparison continues across workspaces and returns a two-piece intro. The test checks the insertion diff, cancellation, undo, section membership, and the original gap between 270ms and 330ms. Existing-project regrouping checks the paused playhead and the saved occurrence and phrase records.
 
-### User interaction
+Review captures include [desktop paste](../../../../output/playwright/import-workflow/paste.png), [390px paste](../../../../output/playwright/import-workflow/document-mobile.png), [length diagnostic](../../../../output/playwright/import-workflow/document-length.png), [split review](../../../../output/playwright/import-workflow/document-split.png), [proposed heading](../../../../output/playwright/import-workflow/document-proposed-heading.png), [accepted heading](../../../../output/playwright/import-workflow/document-accepted-heading.png), and [audio insertion](../../../../output/playwright/import-workflow/audio-insertion.png). These are generated local artifacts. Manual screen-reader testing and live provider quality evaluation remain open.
 
-1. A user pastes lyrics into the current raw Chinese lyrics field.
-2. A **Detected structure** preview updates as the text changes, without pressing Import.
-3. The preview shows consecutive sections with their proposed names and contained lyric lines, plus any ungrouped lines. Group boundaries should be visually obvious without altering the pasted source text.
-4. The user can correct the suggestions **before** importing: rename a group, adjust its start/end boundaries, remove a group, or group a contiguous ungrouped range. The UI may use a compact range editor rather than complex drag-and-drop.
-5. **Import raw lyrics** creates the normal lyric occurrences and saves the accepted group structure with them. The timing editor sees the same groups; their timestamps remain unassigned as they do today.
+The [visual references](assets/MOCKUPS.md) guide the compact source view, shared Structure and Suggestions rail, and the audio comparison detail view. On desktop, the rail sits beside the source card and sticks beneath the workflow header while the source card scrolls. On narrow screens it follows the source card in normal page flow. Length diagnostics remain available with either rail tab selected. Matched audio results start collapsed. The insertion inspector uses waveform peaks decoded from the attached file when available.
 
-Keep the textarea as a normal, editable source field. Place an always-visible compact structure preview immediately below or beside it within the existing right-hand card; allow expansion to inspect individual lines and boundaries. Avoid replacing the textarea with a new editor dependency merely to draw decorations. The preview is a **draft**, not a second editable lyric source.
+Clicking an inline suggestion applies it and advances to the next actionable proposal. AI section suggestions use blank lines to end sections before ungrouped lyrics. Alignment uses lyric occurrences without section markup. AI review focuses the first actionable proposal when the editor is visible. Adjacent proposals keep their lyric anchors when an earlier accepted section adds a generated terminator. Section membership and target text still determine whether a proposal conflicts. After inserting an audio passage, the comparison shows an added notice with **View in editor** and **Undo insertion**. The insertion selector supports positions before and after existing lyrics. Undo restores the previous document, timing evidence, and pending passage together.
 
-Show a neutral **Suggested** state until confirmed/adjusted. If parsing has no plausible groups, show ordinary ungrouped lines and a concise “No groups detected” message; never fabricate confident structure merely to fill the UI. While editing, keep the import action and metadata inputs accessible when the page is unlocked.
-
-### Inference rules and implementation phases
-
-**Phase B1: immediate, deterministic inference (no AI dependency).**
-
-- Recognize explicit headings such as `[Intro]`, `[Verse]`, `[Verse 2]`, `[Pre-chorus]`, `[Chorus]`, `[Bridge]`, `[Outro]` (case-insensitive); preserve the heading's intended label where possible.
-- A heading starts a new section ending immediately before the next heading. Headings are **not** lyric occurrences. Process them **before** the existing import code discards section headings.
-- Optionally use blank-line-separated stanzas as lower-confidence suggestions when there are no explicit headings; do not create a group from fewer than two resulting occurrences.
-- Multiple choruses remain **separate group instances**, even if they have the same name and text. Repeated lyric lines retain their existing shared translation identity behavior, while each occurrence gets independent group membership.
-- Punctuation splitting currently performed by raw import must be respected: group boundaries attach to the **resulting occurrences**, not assumed one-to-one source lines. Preserve source-to-occurrence mapping so preview, edits and final import agree.
-- Suggestions must be contiguous, non-overlapping and optional; ungrouped occurrences are valid. Do not require every line to be in a group.
-
-**Phase B2: AI-supported inference, after AI translation infrastructure exists.**
-
-- Improve structural suggestions for unmarked lyrics (e.g. repeated multi-line chorus, verse vs pre-chorus). Reuse the app's AI infrastructure and review conventions rather than creating a separate service just for this feature.
-- Show fast deterministic results immediately; AI refinement, if available, arrives asynchronously and is labeled as a suggestion. Do not send an AI request on every keystroke: debounce, cache per normalized source, and avoid re-running for unchanged text.
-- AI must not silently overwrite manual group edits. Provide an explicit way to accept or dismiss AI refinements (or an **Improve suggestions** action) once the user has edited the proposed structure.
-- AI failure/offline mode leaves the deterministic preview functional; importing raw lyrics must not depend on successful AI calls.
-
-**Important:** “Immediately after text changes” means responsive local feedback. The app must not freeze while awaiting an AI response.
-
-### Editing behavior
-
-- Name changes, boundary adjustments and removed groups apply only to the draft preview until import is committed.
-- Update automatic suggestions on source edits. Preserve unaffected user overrides if the corresponding source segments can be matched reliably. When an edit invalidates a manual range, show a clear indication that the affected suggestion needs review; never silently attach a group to the wrong words.
-- Use the **same group/occurrence representation** as the grouping feature; do not create a second import-only group model that needs manual conversion later.
-- Do not silently rewrite, normalize or delete lines in the user's textarea. Keep present raw-import behavior for actual lyric text and metadata.
-
-## C. Consistency with the timing view
-
-- Groups created on import remain intact when the song opens in the timing editor.
-- Group membership is per occurrence; a group is an ordered, contiguous set in lyric order, regardless of its eventual timestamps.
-- Untimed occurrences are valid. Assigned timestamps and overlap warnings are handled by the existing grouping/timing feature; this work must not redesign or override those interactions.
-- Use a stable group ID and occurrence IDs rather than inferring membership later from repeated text.
-
-## D. Future extension — YouTube URL import (not in this implementation)
-
-Eventually the import view may accept a YouTube URL to propose **title**, **artist** and **lyrics**, then run the same grouping/review pipeline. This should be a separate later task, once the rest of the workflow is stable. Do **not** add a placeholder URL field, scraping implementation, dependencies or an AI/provider integration as part of this spec. The future design must account for source reliability, licensing and user review before importing lyrics.
-
-## Acceptance criteria
-
-### Project protection
-
-- [ ] With an existing project open, import controls are visibly and functionally locked on entering the page.
-- [ ] User can return to editing or export current project JSON without replacing it.
-- [ ] Explicit replacement acknowledgement unlocks import; the existing project is preserved until another import succeeds.
-- [ ] Cancelling, navigating away, invalid input and failed import do not discard the current project.
-- [ ] With no project open, the original import workflow is immediately available.
-- [ ] File picker, drag/drop, raw import, keyboard access and focus behavior respect the lock.
-
-### Grouping preview
-
-- [ ] Pasting or editing text updates the local structure preview immediately (without an import click).
-- [ ] Explicit section headings produce labeled consecutive groups; headings do not become lyric occurrences.
-- [ ] Preview supports a mixed sequence of grouped and ungrouped occurrences.
-- [ ] A group can be renamed, removed or have its contiguous boundary edited before import.
-- [ ] Repeated lines and repeated section headings create distinct occurrences/groups while preserving existing translation identity semantics.
-- [ ] Preview and resulting imported groups agree even when punctuation splits a source line into multiple occurrences.
-- [ ] Successful import creates groups compatible with the timing editor, leaving times unassigned.
-- [ ] No AI service is required for the deterministic preview; if AI support is added, results are reviewable, throttled and non-destructive to manual edits.
-
-## Scope and dependencies
-
-Implement **A** independently. **B1** can reuse the implemented group schema, but source-to-occurrence mapping and preview/import integration remain unfinished. **B2** is a later enhancement contingent on the AI translation integration. **D** is explicitly deferred.
-
-Inspect the current local workbench code first: existing import parsers, project state, autosave/export and grouping models take precedence over assumptions from public repository versions. Avoid unrelated refactors and do not alter the timing UI to implement this import-view feature.
+The source view shows comparison progress and results in the audio attachment area. **Review alignment** opens the findings; selecting an insertion opens its inspector with Pinyin for the passage and nearby lyrics. Matched and discrepant alignments are collapsed independently of the inline result. The Suggestions rail renders changed lines with nearby context and keeps navigation and actions visible. Structure uses collapsible lyric links. The collapsed **Dictionary** panel above the review tabs follows the editor cursor or selection when opened. It shows readings and definitions, labels alternative word boundaries, and attributes definitions before the separate AI explanation and retains the current lookup and explanation on collapse. The editor marks the current line and gutter number even after focus moves to the sidebar. Alternating backgrounds show word boundaries. Text size scales lyrics, Pinyin and line numbers together from 100% to 200%. The default-on Show Pinyin toggle annotates Hanzi and expands character and line spacing so adjacent readings stay distinct. Labels use spare space beside shorter neighbors. Pasting starts local dictionary lookup across the document in batches, including offscreen lyrics. A separate highlight identifies the inspected word or selection within its occurrence. Inline Apply controls suggest recognized title and performer locally. Acceptance copies values into project metadata and preserves the source text.

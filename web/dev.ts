@@ -84,12 +84,20 @@ import fs from "node:fs/promises";
         void automaticTiming(req, res, process.cwd());
         return;
       }
-      if (req.url === "/api/import-lyrics" || req.url === "/api/dictionary") {
+      if (
+        req.url === "/api/import-lyrics" ||
+        req.url === "/api/dictionary" ||
+        req.url === "/api/suggest-groups"
+      ) {
         void importLyrics(
           req,
           res,
           process.cwd(),
-          req.url === "/api/dictionary" ? "dictionary" : "import",
+          req.url === "/api/dictionary"
+            ? "dictionary"
+            : req.url === "/api/suggest-groups"
+              ? "groups"
+              : "import",
         ).catch(() => {
           if (!res.writableEnded)
             res.writeHead(500).end(

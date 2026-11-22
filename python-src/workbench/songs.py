@@ -44,15 +44,26 @@ def import_song(path=None):
     )
 
 
+HEADING = re.compile(
+    r"^(?:\[[^\]\n]+\]|【[^】\n]+】|(?:Verse|Pre-chorus|Chorus|Bridge|Intro|Outro)\s*\d*:?|主歌:?|副歌:?)$",
+    re.IGNORECASE,
+)
+PUNCTUATION = re.compile(r"[，。！？；,!?;]+")
+
+
 def ingest(raw, title="", artist=""):
     raw = OpenCC("t2s").convert(raw)
-    raw = re.sub(
-        r"(?m)^\s*(?:\[[^\]\n]+\]|【[^】\n]+】|(?:Verse|Chorus|Bridge|Intro|Outro)\s*\d*:?|主歌|副歌)\s*$",
-        "",
-        raw,
-        flags=re.IGNORECASE,
-    )
-    parts = [s.strip() for s in re.split(r"[\n，。！？；,!?;]+", raw) if s.strip()]
+    parts = [
+        segment.strip()
+        for line in raw.splitlines()
+        if not HEADING.fullmatch(line.strip())
+        for segment in PUNCTUATION.split(line)
+        if segment.strip()
+    ]
+    return project_from_parts(parts, title, artist)
+
+
+def project_from_parts(parts, title, artist):
     unique = list(dict.fromkeys(parts))
     return Project(
         metadata={"title": title, "artist": artist},

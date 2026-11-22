@@ -169,6 +169,22 @@ export async function timingReviewAcceptance(
                     "intro-g",
                   ]
                     .map((id, i) => ({
+                      ...(i === 2
+                        ? {
+                            timedWords: [
+                              {
+                                text: "今天大家一起",
+                                startMs: 300,
+                                endMs: 370,
+                              },
+                              {
+                                text: "来听我们的歌",
+                                startMs: 400,
+                                endMs: 500,
+                              },
+                            ],
+                          }
+                        : {}),
                       phrase: {
                         ...request.project.phrases[0],
                         id: id + "-phrase",
@@ -195,9 +211,11 @@ export async function timingReviewAcceptance(
                             ? "小哥哥小哥哥"
                             : i === 1
                               ? "你好"
-                              : "This unusually long detected passage must wrap without hiding its timestamps or actions. ".repeat(
-                                  3,
-                                ),
+                              : i === 2
+                                ? "今天大家一起来听我们的歌"
+                                : "This unusually long detected passage must wrap without hiding its timestamps or actions. ".repeat(
+                                    3,
+                                  ),
                       },
                       occurrence: {
                         id,
@@ -515,7 +533,7 @@ export async function timingReviewAcceptance(
     list.focus({ preventScroll: true });
     list.scrollTop = 0;
   });
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 17; i++) {
     await client.send("Input.dispatchKeyEvent", {
       type: "keyDown",
       key: "Tab",
@@ -536,9 +554,183 @@ export async function timingReviewAcceptance(
           "intro-g" &&
         document.querySelector(".timing-candidate-list")!.scrollTop > 0,
     ),
-    "Tab reaches and scrolls to the seventh candidate",
+    "Tab reaches and scrolls to the last Timing candidate",
   );
 
+  const beforeSplits = await read();
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector('[data-workspace="Import lyrics"] b')
+          ?.textContent,
+    ),
+    "!",
+  );
+  assert.ok(
+    await page.evaluate(
+      () => !document.querySelector('[data-add-candidate="intro-c"]'),
+    ),
+  );
+  await click("Import lyrics");
+  await wait(
+    () =>
+      page.evaluate(() => {
+        const preview = document.querySelector(".import-audio-splits");
+        const input = preview?.querySelector(".document-input");
+        const gutter = preview?.querySelector(".editor-gutter");
+        return (
+          !!preview?.querySelector(".editor-line-issue [data-reading]") &&
+          input?.getBoundingClientRect().height === 200 &&
+          gutter?.getBoundingClientRect().height === 200
+        );
+      }),
+    "loaded project insertion preview aligned with Pinyin",
+  );
+  await capture("pending-audio-split", ".import-audio-splits");
+  const openSplits = () => click("Review splits");
+  await openSplits();
+  await wait(
+    () =>
+      page.evaluate(() => !!document.querySelector('[aria-label="endMs 1"]')),
+    "split editor",
+  );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLInputElement>('[aria-label="endMs 1"]')!
+          .value,
+    ),
+    "370",
+  );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLInputElement>('[aria-label="startMs 2"]')!
+          .value,
+    ),
+    "400",
+  );
+  await fill(
+    ".import-audio-splits fieldset textarea",
+    "今天大家一\n起来听我们的歌",
+  );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLInputElement>('[aria-label="endMs 1"]')!
+          .value,
+    ),
+    "",
+  );
+  await fill('[aria-label="endMs 1"]', "350");
+  await fill('[aria-label="startMs 2"]', "350");
+  await click("Cancel");
+  assert.deepEqual(await read(), beforeSplits);
+  await openSplits();
+  await click("Add reviewed lines");
+  await wait(
+    async () =>
+      (await read()).occurrences.length === beforeSplits.occurrences.length + 2,
+    "atomic split add",
+  );
+  const progress = () =>
+    page.evaluate(() =>
+      document
+        .querySelector('[data-workspace="Timing"] small')!
+        .textContent!.trim(),
+    );
+  const withIntro = await read();
+  assert.equal(
+    (await progress()).split("/")[1],
+    String(withIntro.occurrences.length),
+  );
+  const intro = withIntro.occurrences.filter(
+    (o) => !beforeSplits.occurrences.some((b) => b.id === o.id),
+  );
+  assert.deepEqual(
+    intro.map((o) => [o.startMs, o.endMs, o.detectedFromAudio, o.timingReview]),
+    [
+      [300, 370, true, "needs-review"],
+      [400, 500, true, "needs-review"],
+    ],
+  );
+  await wait(
+    () =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector<HTMLTextAreaElement>("#lyrics-document")
+            ?.value.includes("今天大家一起") ?? false,
+      ),
+    "open structure refreshes after audio insertion",
+  );
+  await click("Timing");
+  await select(intro[0].id);
+  const pausedAt = await page.evaluate(
+    () => document.querySelector("audio")!.currentTime,
+  );
+  await click("Edit song structure");
+  const sourceDoc = () =>
+    page.evaluate(
+      () =>
+        document.querySelector<HTMLTextAreaElement>("#lyrics-document")!.value,
+    );
+  const opening = intro
+    .map((o) => withIntro.phrases.find((p) => p.id === o.phraseId)!.lyricKey)
+    .join("\n");
+  const originalText = await sourceDoc();
+  await fill(
+    "#lyrics-document",
+    originalText.replace(
+      opening,
+      "[Spoken intro]\n" +
+        opening +
+        (originalText.split(opening)[1]?.trimStart().startsWith("[")
+          ? ""
+          : "\n[/]"),
+    ),
+  );
+  await click("Apply and return to Timing");
+  const grouped = await read();
+  assert.deepEqual(
+    grouped.lyricGroups?.find((g) => g.name === "Spoken intro")?.occurrenceIds,
+    intro.map((o) => o.id),
+  );
+  assert.deepEqual(grouped.occurrences, withIntro.occurrences);
+  assert.deepEqual(grouped.phrases, withIntro.phrases);
+  assert.equal(
+    await page.evaluate(() => document.querySelector("audio")!.currentTime),
+    pausedAt,
+  );
+  await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
+  await page.evaluate(() => {
+    document.querySelector<HTMLDetailsElement>(".timing-candidates")!.open =
+      false;
+    document
+      .querySelector(".group-sidebar-wrapper")!
+      .scrollIntoView({ block: "center", behavior: "instant" });
+  });
+  const returnShot = await page
+    ._client()
+    .send("Page.captureScreenshot", { format: "png" });
+  mkdirSync("output/playwright/import-workflow", { recursive: true });
+  writeFileSync(
+    "output/playwright/import-workflow/return-to-timing.png",
+    Buffer.from(returnShot.value.data, "base64"),
+  );
+  await page.evaluate(() => {
+    document.querySelector<HTMLDetailsElement>(".timing-candidates")!.open =
+      true;
+  });
+  await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 });
+  await click("Undo");
+  assert.deepEqual(await read(), withIntro);
+  await click("Undo");
+  assert.deepEqual(await read(), beforeSplits);
+  assert.equal(
+    (await progress()).split("/")[1],
+    String(beforeSplits.occurrences.length),
+  );
   const beforeAdd = await page.evaluate(() => {
     const button = document.querySelector<HTMLButtonElement>(
       '[data-add-candidate="intro-a"]',
@@ -899,7 +1091,14 @@ export async function timingReviewAcceptance(
     window.fetch = window.__timingFetch;
   });
   await click("Clear detected passages");
-  assert.equal((await read()).timingRun!.candidates.length, 0);
+  const remaining = (await read()).timingRun!.candidates;
+  assert.ok(remaining.length > 0);
+  await click("Import lyrics");
+  await click("Dismiss passage");
+  assert.equal(
+    (await read()).timingRun!.candidates.length,
+    remaining.length - 1,
+  );
   await click("Undo");
   assert.ok((await read()).timingRun!.candidates.length > 0);
   const final = rawProject("时序\n未定", "Completion", "Test");
@@ -1016,4 +1215,34 @@ export async function timingReviewAcceptance(
     window.fetch = window.__timingFetch;
   });
   await page.setViewport({ width: 1640, height: 1050, deviceScaleFactor: 1 });
+  await upload("spoken-intro.workbench.json", JSON.stringify(grouped));
+  assert.deepEqual(await read(), grouped);
+  await click("Timing");
+  await click("Edit song structure");
+  const splitSection = (await sourceDoc()).replace(
+    "[Spoken intro]\n" + opening,
+    "[Opening line]\n" + opening.replace("\n", "\n[Spoken intro]\n"),
+  );
+  await fill("#lyrics-document", splitSection);
+  await click("Cancel");
+  assert.deepEqual(await read(), grouped);
+  await click("Edit song structure");
+  await fill("#lyrics-document", splitSection);
+  await click("Apply and return to Timing");
+  const transferred = await read();
+  assert.deepEqual(
+    transferred.lyricGroups
+      ?.filter((g) => g.name === "Spoken intro" || g.name === "Opening line")
+      .map((g) => g.occurrenceIds),
+    intro.map((o) => [o.id]),
+  );
+  assert.deepEqual(
+    transferred.lyricGroups?.filter(
+      (g) => !["Spoken intro", "Opening line"].includes(g.name),
+    ),
+    grouped.lyricGroups?.filter((g) => g.name !== "Spoken intro"),
+  );
+  assert.deepEqual(transferred.occurrences, grouped.occurrences);
+  await click("Undo");
+  assert.deepEqual(await read(), grouped);
 }

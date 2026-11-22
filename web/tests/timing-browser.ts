@@ -757,11 +757,11 @@ export async function timingAcceptance(
     "saved project reload",
   );
   await click("Timing");
-  assert.match(
+  assert.equal(
     await page.evaluate(
-      () => document.querySelector(".timing-media-status")!.textContent ?? "",
+      () => document.querySelector(".timing-media-status")!.textContent,
     ),
-    /No audio selected/,
+    saved.audio?.name,
   );
   assert.equal(
     await page.evaluate(() =>

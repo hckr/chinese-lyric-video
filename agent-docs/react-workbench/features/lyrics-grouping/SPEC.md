@@ -78,4 +78,8 @@ Committed layouts compact automatically: nonoverlapping groups and standalone oc
 
 ## Executable verification
 
-[Group domain tests](../../../../web/tests/lyric-groups.test.ts), [layout tests](../../../../web/tests/timeline-layout.test.ts) and [grouping browser acceptance](../../../../web/tests/lyrics-grouping.ts) cover creation/ranges, menus, collapse, selection, exact shared movement, overlap/interleaving, isolated ghost confirmation/cancellation, untimed copies, history, persistence and crowded-layout reveal. [The current import workflow](../../../../web/tests/cat-song-workflow.ts) covers integration; replacing its song-text fixture with synthetic data is part of pending feature work. Outstanding checks are in [TEST_PLAN.md](../../TEST_PLAN.md).
+[Group domain tests](../../../../web/tests/lyric-groups.test.ts), [layout tests](../../../../web/tests/timeline-layout.test.ts) and [grouping browser acceptance](../../../../web/tests/lyrics-grouping.ts) cover creation/ranges, menus, collapse, selection, exact shared movement, overlap/interleaving, isolated ghost confirmation/cancellation, untimed copies, history, persistence and crowded-layout reveal. [The import workflow](../../../../web/tests/import-workflow.ts) covers grouping with synthetic lyrics. Outstanding checks are in [TEST_PLAN.md](../../TEST_PLAN.md).
+
+## Structure review in 0.4.0
+
+From Timing or Import, **Edit song structure** opens the document at the selected occurrence. Edit headings and use `[/]` to end a section before ungrouped lyrics. An explicit section may contain one line. Applying commits memberships once and returns to Timing with identities and intervals preserved. Cancel discards the draft. See the [editor contract](../lyrics-import-enhancements/EDITOR_UX.md).

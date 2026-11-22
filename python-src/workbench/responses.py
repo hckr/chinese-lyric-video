@@ -6,7 +6,7 @@ import re
 from pydantic import ValidationError
 
 
-def decode_entries(raw):
+def decode_json(raw):
     if not isinstance(raw, str):
         raise ValueError("The API returned no answer text")  # noqa: TRY004
     text = raw.lstrip("\ufeff").strip()
@@ -18,11 +18,15 @@ def decode_entries(raw):
     if fence:
         text = fence.group(1).strip()
     try:
-        data = json.loads(text)
+        return json.loads(text)
     except json.JSONDecodeError as exc:
         raise ValueError(
             f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}"
         ) from exc
+
+
+def decode_entries(raw):
+    data = decode_json(raw)
     if not isinstance(data, dict):
         raise ValueError("Expected a JSON object with an entries array")  # noqa: TRY004
     if "entries" not in data:

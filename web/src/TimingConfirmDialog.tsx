@@ -4,6 +4,8 @@ export function TimingConfirmDialog({
   title,
   children,
   action,
+  extraAction,
+  cancelLabel = "Cancel",
   trigger,
   onCancel,
   onConfirm,
@@ -11,6 +13,8 @@ export function TimingConfirmDialog({
   title: string;
   children: ReactNode;
   action: string;
+  extraAction?: ReactNode;
+  cancelLabel?: string;
   trigger: HTMLButtonElement;
   onCancel: () => void;
   onConfirm: () => void;
@@ -42,8 +46,9 @@ export function TimingConfirmDialog({
       <p id={descriptionId}>{children}</p>
       <div className="remove-dialog-actions">
         <button autoFocus onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </button>
+        {extraAction}
         <button className="primary" onClick={onConfirm}>
           {action}
         </button>

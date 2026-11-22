@@ -650,3 +650,7 @@ The results card collapses after generation. **Regenerate timing…** beside **T
 The desktop follow-up passed the workbench build, TypeScript checks, browser regressions, and the grouping and synthetic import workflows. Focused Chromium checks and screenshots at 1024×768 and 1440×1000 cover a seven-candidate list with long text, keyboard scroll and focus, both detected-text previews, in-app cancellation, and completion with an untimed lyric. The existing matching song transcript also passed the new parser. The UI checks use synthetic generation and native WAV playback. Live inference and listening quality were outside this UX pass.
 
 Code review identified two data safeguards that are now implemented. The checkpoint now confirms successful replacement of pending detected passages during regeneration and rejects resets outside the loaded recording. The reset reference is retained for use with suitable audio.
+
+### Long detected passages in 0.4.0
+
+An unmatched Whisper segment remains one pending candidate until reviewed. Optional word timestamps retain the recognized text and both ends of each token in milliseconds. Passages over the shared 11-element limit appear under Import with a topbar attention marker. Timing lists passages within the limit. The browser checks a break with a real pause, manual timing inside a token, cancel, atomic insertion, undo and subsequent section editing. Older candidates can use manual timing. [Combined verification](../lyrics-import-enhancements/SPEC.md#verification-and-deferred-work).

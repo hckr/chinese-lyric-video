@@ -49,3 +49,7 @@ The Python generation prompt requests contiguous readings for ordinary words and
 - [Domain tests](../../web/tests/domain.test.ts) cover merge/split identities and semantic TS round trips, Unicode boundaries, note preservation, unchanged translations/timing, review invalidation, undo/redo, Pinyin validation/spacing/apostrophes and conservative split suggestions.
 - [Browser acceptance](../../web/tests/browser.ts) exercises the editor dialogs, explicit corrections, review and project recovery through the UI.
 - The translation fixture exercises a single idiom token with a literal gloss and spaced reading through the Python draft pipeline, Workbench JSON, the preview reading alignment, and legacy TypeScript. The opt-in [evaluation sample](../../web/README.md#automatic-translation) supports a separate check of live dictionary-tone accuracy.
+
+## Word choices during import
+
+Jieba drafts the final phrases. Open **Dictionary** in the Import sidebar to inspect CC-CEDICT words starting at a character, their readings and meanings. Choosing a word replaces its overlapping token range in the shared lyric. The browser workflow selects 明了 · míngliǎo in 我比谁都明了 and retains 说明 · shuōmíng followed by 了 · le in 他说明了原因. Both choices survive JSON reopen. **Explain with AI** uses the selected provider and the displayed alternatives. Provider advice is optional and requires a separate user action.

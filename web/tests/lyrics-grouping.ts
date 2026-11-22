@@ -546,7 +546,6 @@ export async function lyricsGrouping(
   assert.ok(
     await page.evaluate(() =>
       [
-        ".navigation",
         "main > header",
         ".timing-transport",
         ".timing-board-toolbar",
@@ -574,7 +573,7 @@ export async function lyricsGrouping(
   assert.deepEqual(await read(), stable);
   assert.equal(
     await page.evaluate(
-      () => document.querySelector<HTMLElement>(".navigation")!.inert,
+      () => document.querySelector<HTMLElement>("main > header")!.inert,
     ),
     false,
   );

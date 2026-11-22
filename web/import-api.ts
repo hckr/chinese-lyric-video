@@ -6,7 +6,7 @@ export async function importLyrics(
   req: IncomingMessage,
   res: ServerResponse,
   root: string,
-  mode: "import" | "dictionary" = "import",
+  mode: "import" | "dictionary" | "groups" = "import",
 ) {
   res.setHeader("Content-Type", "application/json");
   const fail = (status: number, error: string) => {
@@ -17,10 +17,11 @@ export async function importLyrics(
     fail(405, "Use POST for local lyric import.");
     return;
   }
-  // Reject cross-origin browser requests; this endpoint never needs remote access.
+  // Only the local workbench may initiate imports or provider calls.
   if (
-    req.headers.origin &&
-    req.headers.origin !== `http://${req.headers.host}`
+    (mode === "groups" &&
+      req.headers["content-type"]?.split(";")[0] !== "application/json") ||
+    (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`)
   ) {
     fail(403, "Local requests only.");
     return;
@@ -54,17 +55,27 @@ export async function importLyrics(
       "-m",
       mode === "dictionary"
         ? "workbench.react_dictionary"
-        : "workbench.react_ingest",
+        : mode === "groups"
+          ? "workbench.react_groups"
+          : "workbench.react_ingest",
     ],
     {
       cwd: path.join(root, "python-src"),
       stdio: ["pipe", "pipe", "pipe"],
     },
   );
-  const timer = setTimeout(() => {
-    child.kill();
-    fail(504, "Dictionary import timed out. Existing project retained.");
-  }, 30000);
+  const timer = setTimeout(
+    () => {
+      child.kill();
+      fail(
+        504,
+        mode === "groups"
+          ? "Group suggestions timed out."
+          : "Dictionary import timed out. Existing project retained.",
+      );
+    },
+    mode === "groups" ? 120000 : 30000,
+  );
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   res.once("close", () => {

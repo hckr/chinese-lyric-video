@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type RefObject,
+  type ReactNode,
 } from "react";
 import {
   audioIdentitySchema,
@@ -12,6 +13,7 @@ import {
 } from "./domain.ts";
 import {
   addDetectedCandidate,
+  needsImportSplit,
   applyGeneration,
   formatTimingEta,
   parseWhisperTranscript,
@@ -20,6 +22,12 @@ import {
 import { draftDetectedWords } from "./raw-import";
 import { TimingConfirmDialog } from "./TimingConfirmDialog";
 import { formatTime, timingStatus } from "./timing.ts";
+
+export type VerifiedSplitAudio = {
+  file: File;
+  runId: string;
+  duration: number;
+};
 
 export function AutomaticTiming({
   project,
@@ -33,7 +41,18 @@ export function AutomaticTiming({
   onChange,
   onListen,
   onIdentityReady,
+  onSplitAudioReady,
+  report,
+  comparison = false,
+  comparisonResults,
+  selectedCandidate,
+  onComparisonStart,
 }: {
+  comparison?: boolean;
+  comparisonResults?: ReactNode;
+  selectedCandidate?: string;
+  onComparisonStart?: () => void;
+  report?: (s: string) => void;
   project: Project;
   file: File | null;
   duration?: number;
@@ -44,6 +63,7 @@ export function AutomaticTiming({
   onViewLyric: (id: string) => void;
   onChange: (p: Project, id: string, preserveOrder?: boolean) => void;
   onListen: (bounds: { startMs: number; endMs: number }) => void;
+  onSplitAudioReady?: (audio: VerifiedSplitAudio | undefined) => void;
   onIdentityReady: (ready: boolean) => void;
 }) {
   const settings = project.timingSettings ?? defaultTimingSettings;
@@ -68,7 +88,20 @@ export function AutomaticTiming({
   const [transcriptError, setTranscriptError] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [percent, setPercent] = useState<number>();
+  useEffect(() => {
+    report?.(
+      busy
+        ? percent === undefined
+          ? "Working…"
+          : percent + "%"
+        : failed
+          ? "!"
+          : "",
+    );
+    return () => report?.("");
+  }, [busy, percent, report, failed]);
   const [deadline, setDeadline] = useState<number>();
   const [now, setNow] = useState(0);
   const [identity, setIdentity] = useState<{
@@ -77,8 +110,14 @@ export function AutomaticTiming({
   }>();
   const [reuse, setReuse] = useState(false);
   const controller = useRef<AbortController | null>(null);
-  const live = useRef({ project, file, selectedId });
-  live.current = { project, file, selectedId };
+  const inputs = JSON.stringify([
+    project.occurrences,
+    project.phrases.map((p) => [p.id, p.lyricKey]),
+    project.timingRun,
+    project.timingSettings,
+  ]);
+  const live = useRef({ project, file, selectedId, inputs, onChange });
+  live.current = { project, file, selectedId, inputs, onChange };
   const pendingCandidates = useRef(new Set<string>());
   const [preparingCandidate, setPreparingCandidate] = useState<string>();
   const preparing = useRef(false);
@@ -132,10 +171,18 @@ export function AutomaticTiming({
   const runIdentity = project.timingRun?.audioIdentity;
   const match =
     !!identity && !!runIdentity && identity.sha256 === runIdentity.sha256;
-  const ready = !!file && (match || reuse);
+  const ready = !!file && previous.current === file && (match || reuse);
   useEffect(() => {
     onIdentityReady(ready);
   }, [ready, onIdentityReady]);
+  const splitRunId = project.timingRun?.id;
+  useEffect(() => {
+    onSplitAudioReady?.(
+      ready && file && duration && splitRunId
+        ? { file, runId: splitRunId, duration }
+        : undefined,
+    );
+  }, [ready, file, duration, splitRunId, onSplitAudioReady]);
   useEffect(() => {
     void fetch("/api/timing-models")
       .then((r) => r.json())
@@ -146,7 +193,7 @@ export function AutomaticTiming({
   useEffect(() => {
     controller.current?.abort();
     setBusy(false);
-  }, [project, file, transcript, policy]);
+  }, [inputs, file, transcript, policy]);
   useEffect(() => {
     setIdentity(undefined);
     setReuse(false);
@@ -170,10 +217,12 @@ export function AutomaticTiming({
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true);
+    if (!identityOnly) onComparisonStart?.();
+    setFailed(false);
     setStatus(identityOnly ? "Checking normalized audio…" : "Uploading audio…");
     setPercent(undefined);
     setDeadline(undefined);
-    const source = project,
+    const source = inputs,
       audio = file;
     try {
       const response = await fetch("/api/automatic-timing", {
@@ -231,7 +280,7 @@ export function AutomaticTiming({
       if (
         abort.signal.aborted ||
         controller.current !== abort ||
-        live.current.project !== source ||
+        live.current.inputs !== source ||
         live.current.file !== audio
       )
         return;
@@ -242,15 +291,21 @@ export function AutomaticTiming({
       } else {
         if (!result)
           throw Error("Timing ended without results; project retained.");
-        const next = applyGeneration(project, result, duration, policy, {
-          id: crypto.randomUUID(),
-          model: transcript ? "imported transcript" : model,
-          provider: transcript ? undefined : (settings.provider ?? "local"),
-          transcriptProvenance: transcript
-            ? "external-unverified"
-            : "generated",
-          audioIdentity: hash,
-        });
+        const next = applyGeneration(
+          live.current.project,
+          result,
+          duration,
+          policy,
+          {
+            id: crypto.randomUUID(),
+            model: transcript ? "imported transcript" : model,
+            provider: transcript ? undefined : (settings.provider ?? "local"),
+            transcriptProvenance: transcript
+              ? "external-unverified"
+              : "generated",
+            audioIdentity: hash,
+          },
+        );
         focusRerun.current = true;
         setPolicy("preserve-reviewed");
         onCollapse();
@@ -260,7 +315,7 @@ export function AutomaticTiming({
             o.automaticTiming?.runId === next.timingRun?.id &&
             o.timingReview !== "reviewed",
         );
-        onChange(
+        live.current.onChange(
           next,
           generated?.id ?? selectedId ?? next.occurrences[0]?.id ?? "",
           true,
@@ -268,8 +323,10 @@ export function AutomaticTiming({
         setStatus("Timings generated.");
       }
     } catch (e) {
-      if (!abort.signal.aborted)
+      if (!abort.signal.aborted) {
+        setFailed(true);
         setStatus(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       if (controller.current === abort) setBusy(false);
     }
@@ -284,7 +341,8 @@ export function AutomaticTiming({
   };
   const counts = { Reviewed: 0, "Needs review": 0, Untimed: 0 };
   project.occurrences.forEach((o) => counts[timingStatus(o, duration)]++);
-  const candidates = project.timingRun?.candidates ?? [];
+  const candidates =
+    project.timingRun?.candidates.filter((c) => !needsImportSplit(c)) ?? [];
   const lastAdded =
     added && project.occurrences.some((o) => o.id === added.id)
       ? added
@@ -310,8 +368,8 @@ export function AutomaticTiming({
         timingRun: {
           ...run,
           candidates: id
-            ? candidates.filter((candidate) => candidate.id !== id)
-            : [],
+            ? run.candidates.filter((candidate) => candidate.id !== id)
+            : run.candidates.filter(needsImportSplit),
         },
       },
       selectedId ?? project.occurrences[0]?.id ?? "",
@@ -323,7 +381,11 @@ export function AutomaticTiming({
       className="automatic-timing"
       aria-label="Automatic timing"
       hidden={
-        !!project.timingRun && !expanded && !candidates.length && !lastAdded
+        !comparison &&
+        !!project.timingRun &&
+        !expanded &&
+        !candidates.length &&
+        !lastAdded
       }
     >
       <div
@@ -332,7 +394,9 @@ export function AutomaticTiming({
       >
         <div className="automatic-timing-header">
           <div>
-            <h2>Automatic timing</h2>
+            <h2>
+              {comparison ? "Transcription settings" : "Automatic timing"}
+            </h2>
             <p className="muted">
               {counts.Reviewed} reviewed · {counts["Needs review"]} need review
               · {counts.Untimed} untimed
@@ -450,12 +514,12 @@ export function AutomaticTiming({
               onClick={(e) => {
                 if (policy === "replace-all")
                   setConfirm({ kind: "replace", trigger: e.currentTarget });
-                else if (candidates.length)
+                else if (project.timingRun?.candidates.length)
                   setConfirm({ kind: "regenerate", trigger: e.currentTarget });
                 else void run();
               }}
             >
-              Generate timings
+              {comparison ? "Transcribe and compare" : "Generate timings"}
             </button>
           </div>
           {groq && (
@@ -561,7 +625,12 @@ export function AutomaticTiming({
           role="status"
           className={!groq && transcriptError ? "timing-notice" : "muted"}
         >
-          {(!groq && transcriptError) || status}
+          {(!groq && transcriptError) || status}{" "}
+          {failed && (
+            <button onClick={() => setFailed(false)}>
+              Dismiss notification
+            </button>
+          )}
         </p>
       </div>
       {file &&
@@ -619,7 +688,7 @@ export function AutomaticTiming({
         </div>
       )}
       {candidates.length > 0 && (
-        <details className="timing-candidates">
+        <details className="timing-candidates" open={comparison || undefined}>
           <summary>
             Detected from audio · {candidates.length}{" "}
             {candidates.length === 1 ? "passage" : "passages"} available
@@ -637,8 +706,31 @@ export function AutomaticTiming({
             aria-label="Detected passages, scroll for more"
           >
             {candidates.map((c, index) => (
-              <li key={c.id} data-candidate={c.id}>
-                <strong>{c.text}</strong>
+              <li
+                key={c.id}
+                data-candidate={c.id}
+                data-selected={selectedCandidate === c.id}
+              >
+                <strong>
+                  {c.text}
+                  {comparison && (
+                    <small>
+                      {" "}
+                      ·{" "}
+                      {(() => {
+                        const after = project.occurrences.find(
+                          (o) => o.startMs !== null && o.startMs > c.startMs,
+                        );
+                        return after
+                          ? "Before " +
+                              project.phrases.find(
+                                (p) => p.id === after.phraseId,
+                              )?.lyricKey
+                          : "At end of song";
+                      })()}
+                    </small>
+                  )}
+                </strong>
                 <span className="timing-candidate-range">
                   {formatTime(c.startMs)}–{formatTime(c.endMs)}
                 </span>
@@ -685,10 +777,10 @@ export function AutomaticTiming({
                           words,
                         );
                         if (next === current) return;
-                        pendingCandidates.current.add(c.id);
+                        if (!comparison) pendingCandidates.current.add(c.id);
                         nextCandidateFocus.current =
                           candidates[index + 1]?.id ?? null;
-                        setAdded({ id: c.id, text: c.text });
+                        if (!comparison) setAdded({ id: c.id, text: c.text });
                         onChange(
                           next,
                           live.current.selectedId ??
@@ -710,7 +802,9 @@ export function AutomaticTiming({
                   >
                     {preparingCandidate === c.id
                       ? "Preparing…"
-                      : "Add to lyrics"}
+                      : comparison
+                        ? "Review insertion"
+                        : "Add lyric"}
                   </button>
                   <button
                     aria-label={`Dismiss passage: ${c.text}`}
@@ -725,6 +819,7 @@ export function AutomaticTiming({
           </ul>
         </details>
       )}
+      {comparisonResults}
       {confirm && (
         <TimingConfirmDialog
           title={
@@ -760,8 +855,8 @@ export function AutomaticTiming({
               ? "Stored passages and estimates may refer to a different recording. Listen to each one before using it."
               : "Add the passages you want to keep or download a project backup before regenerating."}
           {confirm.kind !== "reuse" &&
-            candidates.length > 0 &&
-            ` A successful run replaces the ${candidates.length} pending detected passages. Any passages already added to lyrics stay in the song.`}
+            !!project.timingRun?.candidates.length &&
+            ` A successful run replaces the ${project.timingRun.candidates.length} pending detected passages. Any passages already added to lyrics stay in the song.`}
         </TimingConfirmDialog>
       )}
     </section>

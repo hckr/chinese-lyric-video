@@ -112,3 +112,97 @@ def test_dictionary_readings_preserve_reference_notation(
     assert result == [
         {"hanzi": term, "pinyin": expected, "meanings": ["reference meaning"]}
     ]
+
+
+def test_reviewed_structure_checks_source_before_attaching_groups(dictionary):
+    raw = "標題\n詞：作者\n[Chorus]\n女兒，貓\n[Chorus]\n女兒，貓"
+    structure = {
+        "rows": [
+            {"line": line, "segment": segment, "text": text}
+            for line in (3, 5)
+            for segment, text in enumerate(("女兒", "貓"))
+        ],
+        "groups": [
+            {"id": "a", "name": "Chorus", "occurrenceIds": ["line-0", "line-1"]},
+            {"id": "b", "name": "Chorus", "occurrenceIds": ["line-2", "line-3"]},
+        ],
+    }
+    result = draft_project(raw, dictionary_path=dictionary, structure=structure)
+    assert result["lyricGroups"] == structure["groups"]
+    assert result["phrases"][0]["lyricKey"] == "女儿"
+    assert result["occurrences"][0]["phraseId"] == result["occurrences"][2]["phraseId"]
+    structure["rows"][2]["line"] = 3
+    with pytest.raises(ValueError, match="Preview"):
+        draft_project(raw, dictionary_path=dictionary, structure=structure)
+
+
+def test_new_lyric_limit_preserves_raw_source_across_reviewed_boundaries(dictionary):
+    short = "字" * 9 + "，中３"
+    project = draft_project(short, dictionary_path=dictionary)
+    assert len(project["occurrences"]) == 2
+    long = "字" * 10 + " 中３！"
+    with pytest.raises(ValueError, match="11 elements"):
+        draft_project(long, dictionary_path=dictionary)
+    source = long[:-1]
+    structure = {
+        "rows": [{"line": 0, "segment": 0, "text": source}],
+        "pieces": [source[:-2], source[-2:]],
+        "groups": [],
+    }
+    assert (
+        len(
+            draft_project(long, dictionary_path=dictionary, structure=structure)[
+                "occurrences"
+            ]
+        )
+        == 2
+    )
+    structure["pieces"][0] = "changed"
+    with pytest.raises(ValueError, match="preserve"):
+        draft_project(long, dictionary_path=dictionary, structure=structure)
+
+
+def test_editor_document_preserves_spelling_spacing_and_occurrence_identity(dictionary):
+    occurrences = [
+        {"id": "first", "text": "  女兒，貓  "},
+        {"id": "second", "text": "  女兒，貓  "},
+        {"id": "credit", "text": "唱：歌手"},
+    ]
+    groups = [{"id": "section", "name": "Intro", "occurrenceIds": ["first"]}]
+    doc = {"occurrences": occurrences, "groups": groups}
+    project = draft_project("", document=doc, dictionary_path=dictionary)
+    assert project["lyricGroups"] == groups
+    assert [o["id"] for o in project["occurrences"]] == ["first", "second", "credit"]
+    assert [p["lyricKey"] for p in project["phrases"]] == ["  女兒，貓  ", "唱：歌手"]
+    assert "".join(w["hanzi"] for w in project["phrases"][0]["words"]) == "女兒貓"
+    occurrences[0]["text"] = "字" * 12
+    with pytest.raises(ValueError, match="11 elements"):
+        draft_project("", document=doc, dictionary_path=dictionary)
+
+
+def test_sung_english_and_mixed_lyrics(dictionary):
+    english = "Don't forget this entire English lyric even when it opens the song."
+    mixed = "我 don’t love 你"
+    lines = [english, mixed, english, "字" * 9 + " love you"]
+    doc = {
+        "occurrences": [{"id": str(i), "text": t} for i, t in enumerate(lines)],
+        "groups": [],
+    }
+    project = draft_project("", document=doc, dictionary_path=dictionary)
+    first, second, _ = project["phrases"]
+    assert first["translation"]["en"] == english
+    assert first["words"] == []
+    assert [o["id"] for o in project["occurrences"]] == ["0", "1", "2", "3"]
+    assert (
+        project["occurrences"][0]["phraseId"] == project["occurrences"][2]["phraseId"]
+    )
+    assert [(w["hanzi"], w["translation"]["en"]) for w in second["words"]] == [
+        ("我", ""),
+        ("", "don’t"),
+        ("", "love"),
+        ("你", ""),
+    ]
+    assert all(not w["pinyin"] for w in second["words"] if not w["hanzi"])
+    doc["occurrences"][-1]["text"] += " too"
+    with pytest.raises(ValueError, match="11"):
+        draft_project("", document=doc, dictionary_path=dictionary)

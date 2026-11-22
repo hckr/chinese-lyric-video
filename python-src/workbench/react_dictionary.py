@@ -18,10 +18,15 @@ def lookup(term, dictionary_path=None):
     path = Path(dictionary_path or ROOT / "public/cedict_1_0_ts_utf-8_mdbg.txt")
     if not path.is_file():
         raise ValueError("Local CC-CEDICT dictionary is missing from public/")
+    return format_entries(
+        term,
+        dictionary_entries(str(path.resolve()), path.stat().st_mtime_ns).get(term, []),
+    )
+
+
+def format_entries(term, entries):
     result = []
-    for entry in dictionary_entries(str(path.resolve()), path.stat().st_mtime_ns).get(
-        term, []
-    ):
+    for entry in entries:
         match = re.match(r"\S+ \[(.*?)\] /(.*)/$", entry)
         if match:
             result.append(

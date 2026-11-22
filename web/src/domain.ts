@@ -1,3 +1,4 @@
+import { lyricCount, lyricLimit } from "./lyric-length.ts";
 import { translationSchema } from "./translation-schema.ts";
 import { syllableCounts } from "./pinyin-validation.ts";
 import { z } from "zod";
@@ -94,6 +95,13 @@ export const occurrenceSchema = z
   })
   .strict();
 export type Occurrence = z.infer<typeof occurrenceSchema>;
+export const timedWordsSchema = z.array(
+  z.object({
+    text: z.string(),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+  }),
+);
 export const projectSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -130,6 +138,7 @@ export const projectSchema = z
               id: z.string(),
               text: z.string().min(1),
               words: z.array(wordSchema).optional(),
+              timedWords: timedWordsSchema.optional(),
               startMs: z.number().int().nonnegative(),
               endMs: z.number().int().nonnegative(),
             })
@@ -533,8 +542,10 @@ export function addAppearance(
   afterId?: string,
   appearanceId = newId(),
 ): Project {
-  if (!project.phrases.some((p) => p.id === phraseId))
-    throw Error("Lyric not found.");
+  const phrase = project.phrases.find((p) => p.id === phraseId);
+  if (!phrase) throw Error("Lyric not found.");
+  if (lyricCount(phrase.lyricKey) > lyricLimit)
+    throw Error("New occurrences must fit the 11-element limit.");
   if (project.occurrences.some((o) => o.id === appearanceId))
     throw Error("Duplicate lyric appearance ID.");
   const cue: Occurrence = {

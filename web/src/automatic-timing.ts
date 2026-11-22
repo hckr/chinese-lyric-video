@@ -1,6 +1,13 @@
+import {
+  englishLyric,
+  lyricCount,
+  lyricLimit,
+  validPieces,
+} from "./lyric-length.ts";
 import { z } from "zod";
 import {
   projectSchema,
+  timedWordsSchema,
   phraseSchema,
   occurrenceSchema,
   type Project,
@@ -30,6 +37,7 @@ export const timingResultSchema = z.object({
     .array(
       z.object({
         phrase: phraseSchema,
+        timedWords: timedWordsSchema.optional(),
         occurrence: occurrenceSchema,
       }),
     )
@@ -138,6 +146,8 @@ export function acceptTiming(
       occurrences.some((o) => o.id === a.occurrence.id)
     )
       continue;
+    if (lyricCount(a.phrase.lyricKey) > lyricLimit)
+      throw Error("Review splits before adding this passage.");
     const shared = phrases.find((p) => p.lyricKey === a.phrase.lyricKey);
     if (!shared)
       phrases.push({
@@ -242,6 +252,7 @@ export function applyGeneration(
         id: a.occurrence.id,
         text: a.phrase.lyricKey,
         words: a.phrase.words,
+        timedWords: a.timedWords,
         startMs: a.occurrence.startMs!,
         endMs: a.occurrence.endMs!,
       })),
@@ -304,13 +315,18 @@ export function addDetectedCandidate(
   const candidate = project.timingRun?.candidates.find((c) => c.id === id);
   if (!candidate || project.occurrences.some((o) => o.id === id))
     return project;
+  if (lyricCount(candidate.text) > lyricLimit)
+    throw Error("Review splits before adding this passage.");
   if (timingError({ ...candidate, phraseId: "candidate" }, duration))
     throw Error("Invalid candidate timing.");
   const existing = project.phrases.find((p) => p.lyricKey === candidate.text);
   const phrase = existing ?? {
     id: crypto.randomUUID(),
     lyricKey: candidate.text,
-    translation: { en: "", pl: "" },
+    translation: {
+      en: englishLyric(candidate.text) ? candidate.text : "",
+      pl: "",
+    },
     words: (candidate.words ?? recoveredWords ?? []).map((word) => ({
       ...word,
       id: newId(),
@@ -336,14 +352,118 @@ export function addDetectedCandidate(
   const index = occurrences.findIndex(
     (o) => o.startMs !== null && o.startMs > candidate.startMs,
   );
+  const previous = occurrences[index - 1];
+  const following = occurrences[index];
+  const section =
+    previous &&
+    previous.startMs !== null &&
+    previous.startMs <= cue.startMs &&
+    following
+      ? project.lyricGroups?.find(
+          (group) =>
+            group.occurrenceIds.includes(previous.id) &&
+            group.occurrenceIds.includes(following.id),
+        )
+      : undefined;
   occurrences.splice(index < 0 ? occurrences.length : index, 0, cue);
   return {
     ...project,
     phrases: existing ? project.phrases : [...project.phrases, phrase],
     occurrences,
+    ...(section && {
+      lyricGroups: project.lyricGroups!.map((group) =>
+        group === section
+          ? {
+              ...group,
+              occurrenceIds: occurrences
+                .filter(
+                  (o) => o.id === id || group.occurrenceIds.includes(o.id),
+                )
+                .map((o) => o.id),
+            }
+          : group,
+      ),
+    }),
     timingRun: {
       ...project.timingRun!,
       candidates: project.timingRun!.candidates.filter((c) => c.id !== id),
     },
   };
+}
+
+export const needsImportSplit = (candidate: { text: string }) =>
+  lyricCount(candidate.text) > lyricLimit;
+
+export type Candidate = NonNullable<Project["timingRun"]>["candidates"][number];
+export function proposedIntervals(c: Candidate, pieces: string[]) {
+  const evidence = c.timedWords;
+  const bounds = new Map<number, { endMs: number; startMs: number }>();
+  if (evidence?.map((w) => w.text).join("") === c.text) {
+    let at = 0;
+    evidence.forEach((w, i) => {
+      at += w.text.length;
+      const next = evidence[i + 1];
+      if (next && w.endMs <= next.startMs)
+        bounds.set(at, { endMs: w.endMs, startMs: next.startMs });
+    });
+  }
+  let offset = 0;
+  return pieces.map((text, i) => {
+    const startMs = i === 0 ? c.startMs : bounds.get(offset)?.startMs;
+    offset += text.length;
+    const endMs = i === pieces.length - 1 ? c.endMs : bounds.get(offset)?.endMs;
+    return { text, startMs, endMs };
+  });
+}
+export type ReviewedPiece = {
+  text: string;
+  startMs: number;
+  endMs: number;
+  words?: Word[];
+};
+export function addReviewedPieces(
+  project: Project,
+  id: string,
+  pieces: ReviewedPiece[],
+  duration?: number,
+): Project {
+  const run = project.timingRun,
+    c = run?.candidates.find((item) => item.id === id);
+  if (
+    !run ||
+    !c ||
+    project.occurrences.some((o) => o.id === id) ||
+    !validPieces(
+      c.text,
+      pieces.map((p) => p.text),
+    ) ||
+    pieces.some(
+      (p, i) =>
+        !Number.isSafeInteger(p.startMs) ||
+        !Number.isSafeInteger(p.endMs) ||
+        p.startMs < (pieces[i - 1]?.endMs ?? c.startMs) ||
+        p.endMs <= p.startMs ||
+        p.endMs > c.endMs,
+    )
+  )
+    throw Error(
+      "Keep all lyric text and choose ordered intervals inside the passage.",
+    );
+  const replacements = pieces.map((p, i) => ({
+    ...p,
+    id: i === 0 ? id : newId(),
+  }));
+  let next: Project = {
+    ...project,
+    timingRun: {
+      ...run,
+      candidates: [
+        ...run.candidates.filter((item) => item.id !== id),
+        ...replacements,
+      ],
+    },
+  };
+  for (const item of replacements)
+    next = addDetectedCandidate(next, item.id, duration);
+  return next;
 }

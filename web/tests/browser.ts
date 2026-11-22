@@ -242,9 +242,15 @@ const server = http.createServer((req, res) => {
       let clicked = false;
       while (!clicked && Date.now() < deadline) {
         clicked = await page.evaluate((text) => {
-          const button = [
-            ...document.querySelectorAll<HTMLButtonElement>("button"),
-          ].find((b) => b.textContent?.trim() === text);
+          const button =
+            [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+              (b) => b.dataset.workspace === text,
+            ) ??
+            [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+              (b) =>
+                b.textContent?.trim() === text &&
+                b.getBoundingClientRect().height > 0,
+            );
           if (!button || button.disabled) return false;
           button.click();
           return true;
@@ -256,10 +262,19 @@ const server = http.createServer((req, res) => {
     };
     const upload = async (name: string, source: string) => {
       await click("Import lyrics");
+      if (
+        await page.evaluate(
+          () => !!document.querySelector(".import-replacement"),
+        )
+      ) {
+        await click("Import another song…");
+        await click("Discard project and start import");
+      }
       await page.evaluate(
         (name, source) => {
-          const input =
-            document.querySelector<HTMLInputElement>("input[type=file]")!;
+          const input = document.querySelector<HTMLInputElement>(
+            '[aria-label="Song file"]',
+          )!;
           const data = new DataTransfer();
           data.items.add(new File([source], name, { type: "text/plain" }));
           input.files = data.files;
@@ -268,6 +283,9 @@ const server = http.createServer((req, res) => {
         name,
         source,
       );
+      if (name.endsWith(".txt")) {
+        await click("Import document");
+      }
       const deadline = Date.now() + 15000;
       while (Date.now() < deadline) {
         const finished = await page.evaluate(
@@ -901,17 +919,8 @@ const server = http.createServer((req, res) => {
     assert.equal(p.phrases[0].words[1].pinyin, "nǐ");
     assert.deepEqual(p.occurrences, times);
     await upload("unsupported.ts", 'import "evil";');
-    assert.equal(
-      (await read()).phrases[0].translation.en,
-      "Browser-edited English",
-    );
-    assert.ok(
-      await page.evaluate(() =>
-        document
-          .querySelector<HTMLElement>("[role=alert]")!
-          .textContent?.includes("retained"),
-      ),
-    );
+    assert.equal(await read(), null);
+    await upload("resume.json", JSON.stringify(p));
     await page.goto({ url, timeout: 30000 });
     await settle();
     await click("Lyric editor");

@@ -215,8 +215,11 @@ def run(request):
     additions = []
     from uuid import uuid4
 
+    from opencc import OpenCC
+
     from .react_ingest import draft_project
 
+    converter = OpenCC("t2s")
     for segment in segments:
         words = segment["words"]
         # Offer only wholly unassigned passages outside supplied lyric spans.
@@ -236,7 +239,17 @@ def run(request):
             )
         ):
             continue
-        draft = draft_project(text)
+        draft = draft_project(text, passages=[text])
+        timed_words = [
+            {
+                "text": converter.convert(w["word"]),
+                "startMs": round(w["start"] * 1000),
+                "endMs": round(w["end"] * 1000),
+            }
+            for w in words
+        ]
+        timed_words[0]["text"] = timed_words[0]["text"].lstrip()
+        timed_words[-1]["text"] = timed_words[-1]["text"].rstrip()
         for phrase in draft["phrases"]:
             phrase["id"] = "audio-phrase-" + uuid4().hex
             for word in phrase["words"]:
@@ -244,6 +257,7 @@ def run(request):
             additions.append(
                 {
                     "phrase": phrase,
+                    "timedWords": timed_words,
                     "occurrence": {
                         "id": "audio-" + uuid4().hex,
                         "phraseId": phrase["id"],
