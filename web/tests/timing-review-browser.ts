@@ -656,11 +656,13 @@ export async function timingReviewAcceptance(
   );
   await wait(
     () =>
-      page.evaluate(
-        () =>
-          document
-            .querySelector<HTMLTextAreaElement>("#lyrics-document")
-            ?.value.includes("今天大家一起") ?? false,
+      page.evaluate(() =>
+        (document.querySelector("#lyrics-document") instanceof
+        HTMLTextAreaElement
+          ? document.querySelector<HTMLTextAreaElement>("#lyrics-document")!
+              .value
+          : (document.querySelector("#lyrics-document")?.textContent ?? "")
+        ).includes("今天大家一起"),
       ),
     "open structure refreshes after audio insertion",
   );
@@ -671,9 +673,13 @@ export async function timingReviewAcceptance(
   );
   await click("Edit song structure");
   const sourceDoc = () =>
-    page.evaluate(
-      () =>
-        document.querySelector<HTMLTextAreaElement>("#lyrics-document")!.value,
+    page.evaluate(() =>
+      (() => {
+        const field = document.querySelector("#lyrics-document");
+        return field instanceof HTMLTextAreaElement
+          ? field.value
+          : (field?.textContent ?? "");
+      })(),
     );
   const opening = intro
     .map((o) => withIntro.phrases.find((p) => p.id === o.phraseId)!.lyricKey)

@@ -33,7 +33,11 @@ export function lookupDictionary(term: string): Promise<DictionaryEntry[]> {
           ? String(data.error)
           : "Dictionary lookup failed.",
       );
-    return z.array(entrySchema).parse(data);
+    // The exact-term endpoint resolves traditional forms through OpenCC.
+    return z
+      .array(entrySchema)
+      .parse(data)
+      .map((entry) => ({ ...entry, hanzi: term }));
   })();
   cache.set(term, request);
   void request.catch(() => cache.delete(term));

@@ -153,7 +153,7 @@ def draft_project(
             for chinese in jieba.cut(run.group()):
                 for token in lexical(chinese):
                     candidates = entries.get(converter.convert(token), [])
-                    readings = set()
+                    readings = {}
                     for entry in candidates:
                         match = re.match(r"\S+ \[(.*?)\] /(.*)/$", entry)
                         if not match:
@@ -165,12 +165,15 @@ def draft_project(
                             if spelling and syllable[0] in "aāáǎàeēéěèoōóǒò":
                                 spelling += "'"
                             spelling += syllable
-                        readings.add(spelling)
+                        if re.search(r"\(idiom\)", match[2], re.IGNORECASE):
+                            readings[spelling] = " ".join(supplied)
+                        else:
+                            readings.setdefault(spelling, spelling)
                     words.append(
                         {
                             "id": f"word-{number}-{len(words)}",
                             "hanzi": token,
-                            "pinyin": next(iter(readings))
+                            "pinyin": next(iter(readings.values()))
                             if len(readings) == 1
                             else "",
                             "translation": {"en": ""},

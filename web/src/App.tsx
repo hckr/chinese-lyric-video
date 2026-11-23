@@ -1,3 +1,6 @@
+import { dictionaryReadings, readingKey } from "./dictionary-readings.ts";
+import { lookupDictionary } from "./dictionary-service.ts";
+import type { LyricField } from "./lyric-field.ts";
 import { AssetContext, useVideoFiles } from "./video-assets.tsx";
 import { FootageSettings } from "./FootageSettings.tsx";
 import { StudioHandoff } from "./StudioHandoff.tsx";
@@ -52,7 +55,6 @@ import {
   phraseIssues,
   phrasesInAppearanceOrder,
   hanzi,
-  fixSpacing,
   joinReadings,
   mergeAdjacentTokens,
   splitToken,
@@ -137,7 +139,7 @@ export function App() {
   const [replaceTrigger, setReplaceTrigger] =
     useState<HTMLButtonElement | null>(null);
   const importVisit = useRef(0);
-  const lyricsInput = useRef<HTMLTextAreaElement>(null);
+  const lyricsInput = useRef<LyricField>(null);
   const importLocked = !!history;
   function navigate(next: string) {
     if (screen !== next) {
@@ -212,6 +214,38 @@ export function App() {
         behavior,
       });
   }, [snapshot?.phraseId, screen, query]);
+  useEffect(() => {
+    if (dialog !== "merge" || !selected?.hanzi || !next?.hanzi) return;
+    const term = selected.hanzi + next.hanzi;
+    const initial = joinReadings([selected.pinyin, next.pinyin]);
+    let active = true;
+    void lookupDictionary(term).then(
+      (entries) => {
+        if (!active) return;
+        const options = dictionaryReadings(
+          entries.filter((entry) => entry.hanzi === term),
+        );
+        const matching = options.filter(
+          (option) =>
+            readingKey(term, option.pinyin) === readingKey(term, initial),
+        );
+        const suggested =
+          matching.length === 1
+            ? matching[0]
+            : initial
+              ? undefined
+              : options.length === 1
+                ? options[0]
+                : undefined;
+        if (suggested)
+          setLeftPy((value) => (value === initial ? suggested.pinyin : value));
+      },
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [dialog, selected, next]);
   const insertionAfterId =
     screen === "Timing"
       ? snapshot?.occurrenceId
@@ -1267,20 +1301,6 @@ export function App() {
                                           Previous · {reading.previous}
                                         </small>
                                       )}
-                                    {!proposedWords &&
-                                      w.hanzi &&
-                                      /\s/u.test(w.pinyin) && (
-                                        <button
-                                          className="compact"
-                                          onClick={() =>
-                                            updateWord(w.id, {
-                                              pinyin: fixSpacing(w.pinyin),
-                                            })
-                                          }
-                                        >
-                                          Fix spacing
-                                        </button>
-                                      )}
                                   </div>
                                   <div>
                                     <GlossInput
@@ -1422,7 +1442,7 @@ export function App() {
                                 ? undefined
                                 : (entry) =>
                                     updateWord(inspectorWord.id, {
-                                      pinyin: fixSpacing(entry.pinyin),
+                                      pinyin: entry.pinyin,
                                     })
                             }
                             advice={{

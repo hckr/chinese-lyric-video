@@ -1,14 +1,9 @@
+import { dictionarySpelling } from "./dictionary-readings.ts";
 import { hasHanzi } from "./lyric-length";
 import { inspectedWord } from "./word-spans";
 import { DictionaryLookup } from "./DictionaryLookup";
 import { useEffect, useState } from "react";
-import {
-  newId,
-  parseProject,
-  type Project,
-  type Word,
-  fixSpacing,
-} from "./domain";
+import { newId, parseProject, type Project, type Word } from "./domain";
 import type { DictionaryEntry } from "./dictionary-service";
 
 type Review = {
@@ -131,13 +126,13 @@ export function WordReview({
       const remainder = (part: string) => {
         if (!part) return;
         const readings = new Set(
-          (terms[part] ?? []).map((r) => fixSpacing(r.pinyin)),
+          (terms[part] ?? []).map((r) => dictionarySpelling(r)),
         );
         result.push(make(part, readings.size === 1 ? [...readings][0] : ""));
       };
       if (from < position) remainder(text.slice(from, position));
       if (!added) {
-        result.push(make(entry.hanzi, fixSpacing(entry.pinyin)));
+        result.push(make(entry.hanzi, dictionarySpelling(entry)));
         added = true;
       }
       if (cursor > end) remainder(text.slice(end, cursor));
@@ -208,13 +203,13 @@ export function WordReview({
                 {[
                   ...new Map(
                     terms[candidate].map((entry) => [
-                      fixSpacing(entry.pinyin),
+                      dictionarySpelling(entry),
                       entry,
                     ]),
                   ).values(),
                 ].map((entry, i) => (
                   <button key={candidate + i} onClick={() => pick(entry)}>
-                    {fixSpacing(entry.pinyin)}
+                    {dictionarySpelling(entry)}
                   </button>
                 ))}
               </div>
@@ -254,7 +249,7 @@ export function PassagePinyin({ id, text }: { id: string; text: string }) {
                   const readings = [
                     ...new Set(
                       (review?.terms[word.hanzi] ?? []).map((entry) =>
-                        fixSpacing(entry.pinyin),
+                        dictionarySpelling(entry),
                       ),
                     ),
                   ];

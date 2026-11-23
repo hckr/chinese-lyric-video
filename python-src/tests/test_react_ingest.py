@@ -206,3 +206,21 @@ def test_sung_english_and_mixed_lyrics(dictionary):
     doc["occurrences"][-1]["text"] += " too"
     with pytest.raises(ValueError, match="11"):
         draft_project("", document=doc, dictionary_path=dictionary)
+
+
+def test_import_preserves_dictionary_spacing_for_tagged_idioms(dictionary, monkeypatch):
+    import jieba
+
+    monkeypatch.setattr(jieba, "cut", lambda text: [text])
+    with dictionary.open("a", encoding="utf8") as stream:
+        stream.write(
+            "一了百了 一了百了 [yi1 liao3 bai3 liao3] /once and for all (idiom)/\n"
+        )
+        stream.write("一了百了 一了百了 [yi1 liao3 bai3 liao3] /an additional gloss/\n")
+        stream.write("喜歡 喜欢 [xi3 huan5] /to like/\n")
+
+    project = draft_project("一了百了\n喜欢", dictionary_path=dictionary)
+    assert [phrase["words"][0]["pinyin"] for phrase in project["phrases"]] == [
+        "yī liǎo bǎi liǎo",
+        "xǐhuan",
+    ]

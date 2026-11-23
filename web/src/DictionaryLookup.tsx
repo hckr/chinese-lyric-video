@@ -5,7 +5,12 @@ import {
 } from "./dictionary-service.ts";
 import { dictionaryParts } from "./dictionary-text.ts";
 import { readingParts } from "./reading-parts.ts";
-import { fixSpacing, type Word } from "./domain.ts";
+import type { Word } from "./domain.ts";
+import {
+  dictionaryReadings,
+  isDictionaryIdiom,
+  readingKey,
+} from "./dictionary-readings.ts";
 
 export function DictionaryLookup({
   word,
@@ -56,14 +61,24 @@ export function DictionaryLookup({
   }, [term, retry, entries]);
   const references =
     entries ?? (lookup.term === term && !lookup.error ? lookup.entries : []);
-  const readings = new Map<string, string[]>();
-  for (const entry of references) {
-    if (entry.hanzi !== word?.hanzi) continue;
-    readings.set(entry.pinyin, [
-      ...new Set([...(readings.get(entry.pinyin) ?? []), ...entry.meanings]),
-    ]);
-  }
+  const key = (value: string) => readingKey(term, value);
+  const readings = new Map(
+    dictionaryReadings(references.filter((entry) => entry.hanzi === term)).map(
+      ({ pinyin, meanings }) => [pinyin, meanings] as const,
+    ),
+  );
   const reading = word?.pinyin || readings.keys().next().value;
+  const match =
+    reading &&
+    [...readings.keys()].find((option) => key(option) === key(reading));
+  const canFixSpacing =
+    match &&
+    match !== word?.pinyin &&
+    !(
+      isDictionaryIdiom(readings.get(match) ?? []) &&
+      !/\s/u.test(match) &&
+      /\s/u.test(word?.pinyin.trim() ?? "")
+    );
   return (
     <section className="dictionary-lookup" aria-label="Dictionary lookup">
       {!word ? (
@@ -80,9 +95,8 @@ export function DictionaryLookup({
                 readingParts({
                   ...word,
                   pinyin:
-                    [...readings.keys()].find(
-                      (p) => fixSpacing(p) === fixSpacing(reading),
-                    ) ?? reading,
+                    [...readings.keys()].find((p) => key(p) === key(reading)) ??
+                    reading,
                 }).map((part, index) => (
                   <span className="dictionary-reading-part" key={index}>
                     <span>{part.pinyin}</span>
@@ -94,17 +108,13 @@ export function DictionaryLookup({
                   <strong lang="zh-Hans">{word.hanzi}</strong>
                   {reading &&
                     ![...readings.keys()].some(
-                      (p) => fixSpacing(p) === fixSpacing(reading),
+                      (p) => key(p) === key(reading),
                     ) && <span>{reading}</span>}
                 </>
               )}
-              {readings.size === 1 &&
-                reading &&
-                fixSpacing([...readings.keys()][0]) === fixSpacing(reading) && (
-                  <small className="reading-status">
-                    {word.pinyin ? "Selected" : "Default"}
-                  </small>
-                )}
+              {readings.size === 1 && !word.pinyin && match && (
+                <small className="reading-status">Default</small>
+              )}
             </div>
             {onOpenWiktionary && (
               <button
@@ -135,31 +145,49 @@ export function DictionaryLookup({
               </button>
             </div>
           )}
+          {onPick && word.pinyin.trim() && readings.size > 0 && !match && (
+            <p role="status" className="warning">
+              This Pinyin is absent from the local dictionary alternatives. The
+              dictionary may have incomplete coverage.
+            </p>
+          )}
+          {onPick && word.pinyin && match && canFixSpacing && (
+            <button
+              onClick={() =>
+                onPick({
+                  hanzi: term,
+                  pinyin: match,
+                  meanings: readings.get(match) ?? [],
+                })
+              }
+            >
+              Fix spacing
+            </button>
+          )}
           <div className="dictionary-entries">
             {readings.size ? (
               [...readings].map(([pinyin, meanings]) => (
                 <div className="dictionary-entry" key={pinyin}>
                   {(readings.size > 1 ||
-                    (onPick &&
-                      fixSpacing(pinyin) !== fixSpacing(reading ?? ""))) && (
+                    (onPick && key(pinyin) !== key(reading ?? ""))) && (
                     <div className="reading-heading">
                       <h3>{pinyin}</h3>{" "}
-                      {reading &&
-                        fixSpacing(pinyin) === fixSpacing(reading) && (
+                      {readings.size > 1 &&
+                        reading &&
+                        key(pinyin) === key(reading) && (
                           <small className="reading-status">
                             {word.pinyin ? "Selected" : "Default"}
                           </small>
                         )}
-                      {onPick &&
-                        fixSpacing(pinyin) !== fixSpacing(reading ?? "") && (
-                          <button
-                            onClick={() =>
-                              onPick({ hanzi: term, pinyin, meanings })
-                            }
-                          >
-                            Use {pinyin}
-                          </button>
-                        )}
+                      {onPick && key(pinyin) !== key(reading ?? "") && (
+                        <button
+                          onClick={() =>
+                            onPick({ hanzi: term, pinyin, meanings })
+                          }
+                        >
+                          Use {pinyin}
+                        </button>
+                      )}
                     </div>
                   )}
                   <ul>

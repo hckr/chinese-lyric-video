@@ -1,3 +1,10 @@
+declare global {
+  interface Window {
+    lyricTestText: (field: HTMLElement | null) => string;
+    lyricTestOffset: (field: HTMLElement) => number;
+    lyricTestSelect: (field: HTMLElement, start: number, end: number) => void;
+  }
+}
 import { syntheticWav } from "./synthetic-wav.ts";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -32,6 +39,40 @@ export async function importWorkflow(
     }
     throw Error(`Timed out: ${description}`);
   };
+  const installFieldHelpers = () =>
+    page.evaluate(() => {
+      window.lyricTestText = (field) =>
+        field instanceof HTMLTextAreaElement
+          ? field.value
+          : (field?.textContent ?? "");
+      window.lyricTestOffset = (field) => {
+        if (field instanceof HTMLTextAreaElement) return field.selectionStart;
+        const selection = document.getSelection();
+        if (!selection?.anchorNode || !field.contains(selection.anchorNode))
+          return 0;
+        const range = document.createRange();
+        range.selectNodeContents(field);
+        range.setEnd(selection.anchorNode, selection.anchorOffset);
+        return range.toString().length;
+      };
+      window.lyricTestSelect = (field, start, end) => {
+        if (field instanceof HTMLTextAreaElement)
+          return field.setSelectionRange(start, end);
+        const point = (offset: number): [Node, number] => {
+          const walker = document.createTreeWalker(field, NodeFilter.SHOW_TEXT);
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const length = node.textContent?.length ?? 0;
+            if (offset <= length) return [node, offset];
+            offset -= length;
+          }
+          return [field, field.childNodes.length];
+        };
+        document
+          .getSelection()
+          ?.setBaseAndExtent(...point(start), ...point(end));
+      };
+    });
+  await installFieldHelpers();
   const raw = fs.readFileSync(
     "python-src/tests/fixtures/import-workflow.txt",
     "utf8",
@@ -66,7 +107,42 @@ export async function importWorkflow(
     "《做你的猫》\n演唱：小可乐\n[Verse]\n我 love you 啊\nThis English line can be as long as the singer wants it to be\n印下梅花记号\n向全世界宣告";
   await fill(".document-metadata label:first-child input", "");
   await fill(".document-metadata label:last-child input", "");
-  await fill("textarea.raw", bilingualSample);
+  await fill(".raw", bilingualSample);
+  assert.ok(
+    await page.evaluate(() => {
+      const field = document.querySelector(".editor-body div.document-input")!;
+      const han = field.querySelector(".editor-han")!;
+      return (
+        ["normal", "0px"].includes(getComputedStyle(field).letterSpacing) &&
+        parseFloat(getComputedStyle(han).letterSpacing) > 0
+      );
+    }),
+  );
+  await page.evaluate(() => {
+    const field = document.querySelector<HTMLElement>(".raw")!;
+    field.focus();
+    window.lyricTestSelect(field, 4, 1);
+    document
+      .querySelector<HTMLInputElement>(".editor-pinyin-toggle input")!
+      .click();
+  });
+  assert.ok(
+    await page.evaluate(() => {
+      const field = document.querySelector<HTMLTextAreaElement>("textarea.raw");
+      const correct =
+        field?.selectionStart === 1 &&
+        field.selectionEnd === 4 &&
+        field.selectionDirection === "backward";
+      document
+        .querySelector<HTMLInputElement>(".editor-pinyin-toggle input")!
+        .click();
+      return correct;
+    }),
+  );
+  assert.equal(
+    await page.evaluate(() => document.getSelection()?.toString()),
+    "做你的",
+  );
   await waitFor("Pinyin on Chinese, plain English", () =>
     page.evaluate(() => {
       const rows = document.querySelectorAll(".editor-decoration > div");
@@ -102,7 +178,7 @@ export async function importWorkflow(
           getComputedStyle(document.querySelector(selector)!).fontSize,
         );
       return (
-        font("textarea.raw") === 32 &&
+        font(".raw") === 32 &&
         font(".editor-reading i") === 20 &&
         document
           .querySelector(".editor-decoration > div")!
@@ -129,7 +205,7 @@ export async function importWorkflow(
     "adjacent syllables in 向全世界宣告 have visible gaps",
   );
   await fill(
-    "textarea.raw",
+    ".raw",
     [
       "词：陈大创",
       "曲：陈大创",
@@ -164,7 +240,7 @@ export async function importWorkflow(
     "chuàng uses space next to dà and beyond the last character",
   );
   await capture("editor-pinyin-credits", true);
-  await fill("textarea.raw", bilingualSample);
+  await fill(".raw", bilingualSample);
   await waitFor("sample readings restored", () =>
     page.evaluate(
       () =>
@@ -186,11 +262,11 @@ export async function importWorkflow(
   await fill(".document-metadata label:first-child input", "词句导入练习");
   await fill(".document-metadata label:last-child input", "测试歌手");
   const longEnglish = "This English phrase continues ".repeat(12);
-  await fill("textarea.raw", "行\n" + longEnglish);
+  await fill(".raw", "行\n" + longEnglish);
   await page.evaluate(() => {
     const field = document.querySelector<HTMLTextAreaElement>(".raw")!;
     field.focus();
-    field.setSelectionRange(0, 0);
+    window.lyricTestSelect(field, 0, 0);
     document.querySelector<HTMLElement>(".word-inspector summary")!.click();
   });
   await waitFor("default polyphonic reading", () =>
@@ -240,11 +316,11 @@ export async function importWorkflow(
       .querySelector<HTMLInputElement>(".editor-pinyin-toggle input")!
       .click(),
   );
-  await fill("textarea.raw", "你好世界\n你好世界");
+  await fill(".raw", "你好世界\n你好世界");
   await page.evaluate(() => {
     const field = document.querySelector<HTMLTextAreaElement>(".raw")!;
     field.focus();
-    field.setSelectionRange(2, 4);
+    window.lyricTestSelect(field, 2, 4);
   });
   await page.evaluate(() =>
     document.querySelector<HTMLElement>(".word-inspector summary")!.click(),
@@ -360,7 +436,7 @@ export async function importWorkflow(
   await page.evaluate(() => {
     const field = document.querySelector<HTMLTextAreaElement>(".raw")!;
     field.focus();
-    field.setSelectionRange(0, 2);
+    window.lyricTestSelect(field, 0, 2);
     field.dispatchEvent(new Event("select", { bubbles: true }));
   });
   await waitFor("dictionary follows updated selection", () =>
@@ -378,7 +454,7 @@ export async function importWorkflow(
   await page.evaluate(() => {
     const field = document.querySelector<HTMLTextAreaElement>(".raw")!;
     field.focus();
-    field.setSelectionRange(1, 1);
+    window.lyricTestSelect(field, 1, 1);
     field.dispatchEvent(new Event("select", { bubbles: true }));
   });
   await click("Split at cursor");
@@ -400,7 +476,7 @@ export async function importWorkflow(
   await page.evaluate(() =>
     document.querySelector<HTMLElement>(".word-inspector summary")!.click(),
   );
-  await fill("textarea.raw", marked);
+  await fill(".raw", marked);
   await page.setViewport({ width: 1600, height: 560, deviceScaleFactor: 1 });
   assert.ok(
     await page.evaluate(() => {
@@ -496,7 +572,10 @@ export async function importWorkflow(
   assert.equal(
     await page.evaluate(() => {
       const el = document.querySelector<HTMLTextAreaElement>(".raw")!;
-      return el.value.slice(0, el.selectionStart).split("\n").length;
+      return window
+        .lyricTestText(el)
+        .slice(0, window.lyricTestOffset(el))
+        .split("\n").length;
     }),
     59,
   );
@@ -506,7 +585,7 @@ export async function importWorkflow(
       (n) => n.role?.value === "textbox" && n.name?.value === "Lyrics editor",
     ),
   );
-  await fill("textarea.raw", marked + "\n" + "天".repeat(12));
+  await fill(".raw", marked + "\n" + "天".repeat(12));
   await activate('[aria-label="Next issue"]');
   await click("Show suggested split");
   await click("Dismiss");
@@ -562,8 +641,9 @@ export async function importWorkflow(
     page.evaluate(() => {
       const field = document.querySelector<HTMLTextAreaElement>(".raw")!;
       const card = document.querySelector(".structure-preview .document-patch");
-      const caretLine = field.value
-        .slice(0, field.selectionStart)
+      const caretLine = window
+        .lyricTestText(field)
+        .slice(0, window.lyricTestOffset(field))
         .split("\n").length;
       return (
         document.activeElement === field &&
@@ -575,10 +655,10 @@ export async function importWorkflow(
     }),
   );
   await click("Dismiss suggestion");
-  await fill("textarea.raw", marked);
+  await fill(".raw", marked);
   await page.evaluate(() => {
     const el = document.querySelector<HTMLTextAreaElement>(".raw")!;
-    el.setSelectionRange(0, 0);
+    window.lyricTestSelect(el, 0, 0);
     el.scrollTop = 0;
     window.scrollTo(0, 0);
   });
@@ -595,7 +675,7 @@ export async function importWorkflow(
       .forEach((d) => (d.open = false)),
   );
   // Restore the ungrouped fixture for the Timing group-creation regressions.
-  await fill("textarea.raw", lyricLines.join("\n"));
+  await fill(".raw", lyricLines.join("\n"));
   const attachAudio = () =>
     page.evaluate(
       (base64) => {
@@ -664,9 +744,7 @@ export async function importWorkflow(
   });
   await waitFor("text file fills draft", async () =>
     page.evaluate(
-      () =>
-        document.querySelector<HTMLTextAreaElement>("textarea.raw")?.value ===
-        "测试歌词",
+      () => window.lyricTestText(document.querySelector(".raw")) === "测试歌词",
     ),
   );
 
@@ -674,8 +752,8 @@ export async function importWorkflow(
   await click("Timing");
   await click("Import lyrics");
   assert.equal(
-    await page.evaluate(
-      () => document.querySelector<HTMLTextAreaElement>("textarea.raw")!.value,
+    await page.evaluate(() =>
+      window.lyricTestText(document.querySelector(".raw")),
     ),
     "测试歌词",
   );
@@ -884,15 +962,15 @@ export async function importWorkflow(
   await click("Confirm insertion");
   assert.ok(
     await page.evaluate(() =>
-      document
-        .querySelector<HTMLTextAreaElement>(".raw")!
-        .value.startsWith("测试歌词\n"),
+      window
+        .lyricTestText(document.querySelector(".raw"))
+        .startsWith("测试歌词\n"),
     ),
   );
   await click("Undo insertion");
   assert.equal(
-    await page.evaluate(
-      () => document.querySelector<HTMLTextAreaElement>(".raw")!.value,
+    await page.evaluate(() =>
+      window.lyricTestText(document.querySelector(".raw")),
     ),
     "测试歌词",
   );
@@ -910,7 +988,7 @@ export async function importWorkflow(
   await page.evaluate(() => {
     const el = document.querySelector<HTMLTextAreaElement>(".raw")!;
     el.focus();
-    el.setSelectionRange(1, 1 + "Spoken intro".length);
+    window.lyricTestSelect(el, 1, 1 + "Spoken intro".length);
     document.execCommand("insertText", false, "Opening");
   });
   await click("Review alignment");
@@ -1124,6 +1202,7 @@ export async function importWorkflow(
     url: await page.evaluate(() => location.href),
     timeout: 30000,
   });
+  await installFieldHelpers();
   await waitFor(
     "saved editor",
     async () =>
@@ -1405,7 +1484,7 @@ export async function importWorkflow(
     page.evaluate(
       () =>
         document.querySelector("h1")?.textContent === "Song structure" &&
-        !!document.querySelector("textarea#lyrics-document:not(:disabled)") &&
+        !!document.querySelector("#lyrics-document:not(:disabled)") &&
         !document.querySelector('[aria-label="Song file"]') &&
         !document.querySelector(".import-fields"),
     );
@@ -1637,10 +1716,10 @@ export async function importWorkflow(
           (b) => b.textContent === "Import document",
         )!.disabled,
     );
-  await fill("textarea.raw", "[Verse]");
+  await fill(".raw", "[Verse]");
   assert.ok(await disabled());
   const long = "天".repeat(25);
-  await fill("textarea.raw", long + "\n風，雨\n風，雨");
+  await fill(".raw", long + "\n風，雨\n風，雨");
   await capture("document-length");
   await page.evaluate(() =>
     document
@@ -1673,10 +1752,10 @@ export async function importWorkflow(
       });
     };
   });
-  const splitDocument = await page.evaluate(
-    () => document.querySelector<HTMLTextAreaElement>("textarea.raw")!.value,
+  const splitDocument = await page.evaluate(() =>
+    window.lyricTestText(document.querySelector(".raw")),
   );
-  await fill("textarea.raw", "限流");
+  await fill(".raw", "限流");
   await click("Review with AI");
   await waitFor("provider diagnostic", () =>
     page.evaluate(() =>
@@ -1685,14 +1764,14 @@ export async function importWorkflow(
         .textContent!.includes("429"),
     ),
   );
-  await fill("textarea.raw", "等待\n甲\n乙\n重\n重");
+  await fill(".raw", "等待\n甲\n乙\n重\n重");
   await click("Review with AI");
   await click("Cancel review");
   await page.evaluate(() =>
     window.dispatchEvent(new Event("release-structural-ai")),
   );
   await click("Review with AI");
-  await fill("textarea.raw", "等待\n甲\n乙\n改\n重");
+  await fill(".raw", "等待\n甲\n乙\n改\n重");
   await page.evaluate(() =>
     window.dispatchEvent(new Event("release-structural-ai")),
   );
@@ -1714,7 +1793,7 @@ export async function importWorkflow(
     ),
   );
   await click("Dismiss suggestion");
-  await fill("textarea.raw", splitDocument);
+  await fill(".raw", splitDocument);
   await click("Review with AI");
   await waitFor("proposal", () =>
     page.evaluate(
@@ -1734,8 +1813,8 @@ export async function importWorkflow(
   await page.setViewport({ width: 1600, height: 1050, deviceScaleFactor: 1 });
   await capture("document-proposed-heading", true);
   await captureMobile("document-suggestions-mobile");
-  const sourcePosition = await page.evaluate(
-    () => document.querySelector<HTMLTextAreaElement>(".raw")!.selectionStart,
+  const sourcePosition = await page.evaluate(() =>
+    window.lyricTestOffset(document.querySelector<HTMLElement>(".raw")!),
   );
   await page.evaluate(() =>
     document
@@ -1753,17 +1832,15 @@ export async function importWorkflow(
       .click(),
   );
   assert.equal(
-    await page.evaluate(
-      () => document.querySelector<HTMLTextAreaElement>(".raw")!.selectionStart,
+    await page.evaluate(() =>
+      window.lyricTestOffset(document.querySelector<HTMLElement>(".raw")!),
     ),
     sourcePosition,
   );
   await click("Accept suggestion");
   await capture("document-accepted-heading");
   const value = () =>
-    page.evaluate(
-      () => document.querySelector<HTMLTextAreaElement>("textarea.raw")!.value,
-    );
+    page.evaluate(() => window.lyricTestText(document.querySelector(".raw")));
   const accepted = await value();
   assert.ok(accepted.includes("[Chorus]\n風，雨\n風，雨"));
   await click("Undo");
@@ -1777,7 +1854,7 @@ export async function importWorkflow(
     accepted +
     "\n[/]\n" +
     [english, mixed, english, "  唱：小貓  "].join("\n");
-  await fill("textarea.raw", withHeaders);
+  await fill(".raw", withHeaders);
   await click("Review with AI");
   await waitFor("metadata remains available after AI", () =>
     page.evaluate(

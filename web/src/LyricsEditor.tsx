@@ -1,3 +1,10 @@
+import {
+  fieldSelection,
+  fieldText,
+  paintLyricField,
+  selectField,
+  type LyricField,
+} from "./lyric-field.ts";
 import { wordSpans, inspectedWord } from "./word-spans";
 import { useVisibleWords } from "./useVisibleWords";
 import type { Word } from "./domain";
@@ -19,6 +26,7 @@ import {
   type Line,
   type Patch,
 } from "./lyrics-document";
+import { readingParts } from "./reading-parts.ts";
 import { alignedReadings } from "./split-suggestions";
 import {
   hasHanzi,
@@ -42,19 +50,19 @@ function fitReadings(text: string, annotations: Map<number, Annotation>) {
   let previous: Annotation | undefined;
   let previousEnd = 0;
   for (const [start, current] of annotations) {
-    const gapCharacters = [...text.slice(previousEnd, start)].length;
+    const gapWidth = [...text.slice(previousEnd, start)].reduce(
+      (width, character) => width + (hasHanzi(character) ? 1.6 : 0.6),
+      0,
+    );
     function fit(em: number, key: "scale" | "mobileScale") {
       const width = current.reading.length * 6.1;
       if (!previous) {
-        const leftRoom =
-          (gapCharacters * 0.6 + current.characters * 0.8 + 0.1) * em;
+        const leftRoom = (gapWidth + current.characters * 0.8 + 0.1) * em;
         current[key] = Math.min(1, (2 * leftRoom) / width);
         return;
       }
       const distance =
-        ((previous.characters + current.characters) * 0.8 +
-          gapCharacters * 0.6) *
-        em;
+        ((previous.characters + current.characters) * 0.8 + gapWidth) * em;
       const scale = Math.min(
         1,
         (2 * (distance - 2)) / (width + previous.reading.length * 6.1),
@@ -73,14 +81,13 @@ function annotateSlice(
   offset: number,
   annotations: Map<number, Annotation>,
 ) {
-  if (!annotations.size) return text;
   const parts: ReactNode[] = [];
   for (const char of text) {
     const annotation = annotations.get(offset);
     if (annotation) {
       const width = annotation.characters;
       parts.push(
-        <span key={offset} className="annotated-character">
+        <span key={offset} className="annotated-character editor-han">
           {char}
           <span
             aria-hidden="true"
@@ -99,6 +106,12 @@ function annotateSlice(
           </span>
         </span>,
       );
+    } else if (hasHanzi(char)) {
+      parts.push(
+        <span key={offset} className="editor-han">
+          {char}
+        </span>,
+      );
     } else parts.push(char);
     offset += char.length;
   }
@@ -112,7 +125,7 @@ function decoratedText(
   showPinyin: boolean,
   defaultReadings?: Record<string, string>,
 ) {
-  if (!words && !hasIssue && !target) return text;
+  if (!words && !hasIssue && !target && !showPinyin) return text;
   const spans = words ? wordSpans(text, words) : [];
   const breaks = new Set([0, text.length]);
   for (const span of spans) {
@@ -134,7 +147,17 @@ function decoratedText(
       const reading = word.pinyin || defaultReadings?.[word.hanzi];
       if (!reading || !hasHanzi(word.hanzi)) continue;
       const syllables = alignedReadings({ ...word, pinyin: reading });
-      if (!syllables)
+      if (/\s/u.test(reading.trim())) {
+        let offset = start;
+        for (const part of readingParts({ ...word, pinyin: reading })) {
+          annotations.set(offset, {
+            end: offset + part.hanzi.length,
+            characters: [...part.hanzi].length,
+            reading: part.pinyin,
+          });
+          offset += part.hanzi.length;
+        }
+      } else if (!syllables)
         annotations.set(start, {
           end,
           characters: [...word.hanzi].length,
@@ -277,7 +300,7 @@ export function LyricsEditor({
   change: (lines: Line[]) => void;
   proposals?: Patch[];
   dismiss?: (patch: Patch) => void;
-  editor: RefObject<HTMLTextAreaElement | null>;
+  editor: RefObject<LyricField | null>;
   history?: (redo: boolean) => void;
   initialLine?: number;
   readOnly?: boolean;
@@ -334,22 +357,45 @@ export function LyricsEditor({
       : (proposals.find((proposal) => patchIndex(lines, proposal) >= 0) ??
         proposals[0]);
   const value = lines.map((l) => l.text).join("\n");
+  const composing = useRef(false);
+  const pendingSelection = useRef<
+    | (ReturnType<typeof fieldSelection> & { top: number; left: number })
+    | undefined
+  >(undefined);
   const selections = useRef(
-    new WeakMap<Line[], { start: number; end: number; top: number }>(),
+    new WeakMap<Line[], ReturnType<typeof fieldSelection> & { top: number }>(),
   );
   const currentHistory = useRef(history);
   currentHistory.current = history;
   useLayoutEffect(() => {
-    const field = editor.current,
-      saved = selections.current.get(lines);
-    if (field && saved) {
-      field.setSelectionRange(saved.start, saved.end);
+    const field = editor.current;
+    if (!field || composing.current) return;
+    const pending = pendingSelection.current;
+    const saved = pending ?? selections.current.get(lines);
+    pendingSelection.current = undefined;
+    if (field instanceof HTMLDivElement) paintLyricField(field, value);
+    if (saved) {
+      if (pending) field.focus({ preventScroll: true });
+      if (
+        field instanceof HTMLTextAreaElement ||
+        document.activeElement === field
+      )
+        selectField(field, saved.start, saved.end, saved.backward);
       field.scrollTop = saved.top;
+      if (pending) field.scrollLeft = pending.left;
     }
-  }, [lines, editor]);
+  }, [lines, editor, pinyinLayout, value]);
   useEffect(() => {
     const field = editor.current;
-    function beforeInput(e: InputEvent) {
+    function beforeInput(e: Event) {
+      if (!(e instanceof InputEvent)) return;
+      if (
+        field instanceof HTMLDivElement &&
+        (e.inputType === "insertParagraph" || e.inputType === "insertLineBreak")
+      ) {
+        e.preventDefault();
+        insertFieldText(field, "\n");
+      }
       if (e.inputType === "historyUndo" || e.inputType === "historyRedo") {
         e.preventDefault();
         currentHistory.current?.(e.inputType === "historyRedo");
@@ -357,9 +403,10 @@ export function LyricsEditor({
     }
     field?.addEventListener("beforeinput", beforeInput);
     return () => field?.removeEventListener("beforeinput", beforeInput);
-  }, [editor]);
-  function inspect(field: HTMLTextAreaElement, documentLines = lines) {
-    const prefix = field.value.slice(0, field.selectionStart);
+  }, [editor, pinyinLayout, lines]);
+  function inspect(field: LyricField, documentLines = lines) {
+    const selection = fieldSelection(field);
+    const prefix = fieldText(field).slice(0, selection.start);
     const row = documentLines[prefix.split("\n").length - 1];
     if (!row) return;
     const offset = prefix.length - prefix.lastIndexOf("\n") - 1;
@@ -367,7 +414,7 @@ export function LyricsEditor({
       id: row.id,
       offset,
       length: Math.min(
-        field.selectionEnd - field.selectionStart,
+        selection.end - selection.start,
         row.text.length - offset,
       ),
     });
@@ -376,7 +423,14 @@ export function LyricsEditor({
     if (!inspectCursor) return;
     const field = editor.current;
     const selectionChanged = () => {
-      if (field && document.activeElement === field) inspect(field);
+      if (field && document.activeElement === field && !composing.current) {
+        const selection = fieldSelection(field);
+        selections.current.set(lines, { ...selection, top: field.scrollTop });
+        setSelected(
+          fieldText(field).slice(0, selection.start).split("\n").length - 1,
+        );
+        inspect(field);
+      }
     };
     document.addEventListener("selectionchange", selectionChanged);
     field?.addEventListener("select", selectionChanged);
@@ -384,7 +438,60 @@ export function LyricsEditor({
       document.removeEventListener("selectionchange", selectionChanged);
       field?.removeEventListener("select", selectionChanged);
     };
-  }, [inspectCursor, editor, lines, onWordReview]);
+  }, [inspectCursor, editor, lines, onWordReview, pinyinLayout]);
+  function attachField(field: LyricField | null) {
+    editor.current = field;
+    if (field && !field.dataset.ready) {
+      field.dataset.ready = "true";
+      if (active && (initialLine || readOnly))
+        requestAnimationFrame(() => reveal(initialLine));
+    }
+  }
+  function syncScroll(field: LyricField) {
+    if (layer.current) {
+      layer.current.scrollTop = field.scrollTop;
+      layer.current.scrollLeft = field.scrollLeft;
+    }
+    if (gutter.current) gutter.current.scrollTop = field.scrollTop;
+  }
+  function updateField(
+    field: LyricField,
+    text = fieldText(field),
+    offset = fieldSelection(field).start,
+  ) {
+    setHighlighted(undefined);
+    const next = editLines(lines, text, offset);
+    if (field instanceof HTMLDivElement) {
+      selections.current.set(next, {
+        start: offset,
+        end: offset,
+        backward: false,
+        top: field.scrollTop,
+      });
+      if (text === value) {
+        paintLyricField(field, value);
+        selectField(field, offset, offset);
+      }
+    }
+    change(next);
+    if (inspectCursor && field instanceof HTMLTextAreaElement)
+      inspect(field, next);
+  }
+  function insertFieldText(field: HTMLDivElement, insertion: string) {
+    const { start, end } = fieldSelection(field);
+    const text = fieldText(field);
+    updateField(
+      field,
+      text.slice(0, start) + insertion + text.slice(end),
+      start + insertion.length,
+    );
+  }
+  function handleHistory(e: React.KeyboardEvent<LyricField>) {
+    if (history && (e.metaKey || e.ctrlKey) && /^(z|y)$/iu.test(e.key)) {
+      e.preventDefault();
+      history(e.shiftKey || e.key.toLowerCase() === "y");
+    }
+  }
   function reveal(n: number) {
     if (n < 0) return;
     const field = editor.current;
@@ -396,7 +503,7 @@ export function LyricsEditor({
     if (bounds.top >= window.innerHeight || bounds.bottom <= 0)
       field.scrollIntoView({ block: "nearest" });
     field.focus({ preventScroll: true });
-    field.setSelectionRange(offset, offset);
+    selectField(field, offset, offset);
     field.scrollTop = Math.max(0, n * rowHeight - field.clientHeight / 3);
     setSelected(n);
     if (inspectCursor) inspect(field);
@@ -496,7 +603,13 @@ export function LyricsEditor({
         <EditorPane className="editor-pane">
           {beforeEditor}
           <div className="editor-caption">
-            <label htmlFor={editorId}>
+            <label
+              id={editorId + "-label"}
+              htmlFor={editorId}
+              onClick={() => {
+                if (pinyinLayout) editor.current?.focus();
+              }}
+            >
               {readOnly ? "Insertion preview" : "Lyrics editor"}
             </label>
             {!readOnly && (
@@ -522,7 +635,16 @@ export function LyricsEditor({
               <input
                 type="checkbox"
                 checked={showPinyin}
-                onChange={(e) => setShowPinyin(e.target.checked)}
+                onChange={(e) => {
+                  const field = editor.current;
+                  if (field)
+                    pendingSelection.current = {
+                      ...fieldSelection(field),
+                      top: field.scrollTop,
+                      left: field.scrollLeft,
+                    };
+                  setShowPinyin(e.target.checked);
+                }}
               />{" "}
               Show Pinyin
             </label>
@@ -620,68 +742,84 @@ export function LyricsEditor({
                   </div>
                 ))}
               </div>
-              <textarea
-                id={editorId}
-                ref={(el) => {
-                  editor.current = el;
-                  if (el && !el.dataset.ready) {
-                    el.dataset.ready = "true";
-                    if (active && (initialLine || readOnly))
-                      requestAnimationFrame(() => reveal(initialLine));
+              {pinyinLayout ? (
+                <div
+                  id={editorId}
+                  ref={attachField}
+                  role="textbox"
+                  aria-multiline="true"
+                  aria-labelledby={editorId + "-label"}
+                  aria-readonly={readOnly || undefined}
+                  aria-invalid={issues.length > 0 || undefined}
+                  aria-describedby={
+                    issue ? summaryId + " " + problemId : summaryId
                   }
-                }}
-                aria-invalid={issues.length > 0 || undefined}
-                aria-describedby={
-                  issue ? summaryId + " " + problemId : summaryId
-                }
-                className="raw document-input"
-                placeholder={"[Verse]\nOne lyric per line"}
-                readOnly={readOnly}
-                wrap="off"
-                spellCheck={false}
-                value={value}
-                onScroll={(e) => {
-                  if (layer.current) {
-                    layer.current.scrollTop = e.currentTarget.scrollTop;
-                    layer.current.scrollLeft = e.currentTarget.scrollLeft;
-                  }
-                  if (gutter.current)
-                    gutter.current.scrollTop = e.currentTarget.scrollTop;
-                }}
-                onSelect={(e) => {
-                  const el = e.currentTarget;
-                  selections.current.set(lines, {
-                    start: el.selectionStart,
-                    end: el.selectionEnd,
-                    top: el.scrollTop,
-                  });
-                  if (inspectCursor) inspect(el);
-                  setSelected(
-                    value.slice(0, el.selectionStart).split("\n").length - 1,
-                  );
-                }}
-                onChange={(e) => {
-                  setHighlighted(undefined);
-                  const field = e.currentTarget;
-                  const next = editLines(
-                    lines,
-                    field.value,
-                    field.selectionStart,
-                  );
-                  change(next);
-                  if (inspectCursor) inspect(field, next);
-                }}
-                onKeyDown={(e) => {
-                  if (
-                    history &&
-                    (e.metaKey || e.ctrlKey) &&
-                    (e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")
-                  ) {
+                  className="raw document-input"
+                  contentEditable={readOnly ? false : "plaintext-only"}
+                  tabIndex={readOnly ? 0 : undefined}
+                  spellCheck={false}
+                  onScroll={(e) => syncScroll(e.currentTarget)}
+                  onCompositionStart={() => {
+                    composing.current = true;
+                  }}
+                  onCompositionEnd={(e) => {
+                    composing.current = false;
+                    updateField(e.currentTarget);
+                  }}
+                  onInput={(e) => {
+                    if (!composing.current) updateField(e.currentTarget);
+                  }}
+                  onPaste={(e) => {
                     e.preventDefault();
-                    history(e.shiftKey || e.key.toLowerCase() === "y");
+                    if (readOnly) return;
+                    insertFieldText(
+                      e.currentTarget,
+                      e.clipboardData
+                        .getData("text/plain")
+                        .replace(/\r\n?/gu, "\n"),
+                    );
+                  }}
+                  onKeyDown={(e) => {
+                    if (
+                      !readOnly &&
+                      !e.nativeEvent.isComposing &&
+                      e.key === "Enter"
+                    ) {
+                      e.preventDefault();
+                      insertFieldText(e.currentTarget, "\n");
+                    } else handleHistory(e);
+                  }}
+                />
+              ) : (
+                <textarea
+                  id={editorId}
+                  ref={attachField}
+                  aria-invalid={issues.length > 0 || undefined}
+                  aria-describedby={
+                    issue ? summaryId + " " + problemId : summaryId
                   }
-                }}
-              />
+                  className="raw document-input"
+                  placeholder={"[Verse]\nOne lyric per line"}
+                  readOnly={readOnly}
+                  wrap="off"
+                  spellCheck={false}
+                  value={value}
+                  onScroll={(e) => syncScroll(e.currentTarget)}
+                  onSelect={(e) => {
+                    const el = e.currentTarget;
+                    selections.current.set(lines, {
+                      ...fieldSelection(el),
+                      top: el.scrollTop,
+                    });
+                    if (inspectCursor) inspect(el);
+                    setSelected(
+                      value.slice(0, el.selectionStart).split("\n").length - 1,
+                    );
+                  }}
+                  onChange={(e) => updateField(e.currentTarget)}
+                  onKeyDown={handleHistory}
+                />
+              )}
             </div>
           </div>
           <div className="document-summary" id={summaryId} aria-live="polite">

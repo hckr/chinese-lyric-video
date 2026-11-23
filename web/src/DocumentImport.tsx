@@ -1,3 +1,4 @@
+import type { LyricField } from "./lyric-field.ts";
 import { probeTracks } from "./waveform-stream.ts";
 import type { VerifiedSplitAudio } from "./AutomaticTiming";
 import { ImportAudioSplits } from "./ImportAudioSplits";
@@ -82,7 +83,7 @@ export function DocumentImport({
 }: {
   publishHistory: (h: EditorHistory | null) => void;
   source: { text: string };
-  editor: RefObject<HTMLTextAreaElement | null>;
+  editor: RefObject<LyricField | null>;
   active: boolean;
   locked: boolean;
   runImport: (load: () => Promise<Project>, audio: File | null) => void;

@@ -18,7 +18,7 @@ A **phrase** is a unique complete lyric line with shared EN/PL translations; rep
 
 ## Pinyin for lexical words and idioms
 
-Use contiguous Pinyin for ordinary lexical words and retain spaced readings for idiom tokens. Use lowercase, tone-marked Hanyu Pinyin in dictionary forms. Preserve dictionary tones regardless of context; do not apply tone sandhi or other contextual tone changes.
+Use contiguous Pinyin for ordinary lexical words. For entries tagged `(idiom)` in CC-CEDICT, keep the dictionary’s syllable spacing. CC-CEDICT’s syllable separators do not establish lexical boundaries. Use lowercase, tone-marked Hanyu Pinyin in dictionary forms. Preserve dictionary tones regardless of context; do not apply tone sandhi or other contextual tone changes.
 
 | Hanzi token | Correct `pinyin` field | Spaced form  |
 | ----------- | ---------------------- | ------------ |
@@ -31,8 +31,8 @@ Use contiguous Pinyin for ordinary lexical words and retain spaced readings for 
 - **Different lexical tokens** are separated when rendering a full sentence's word-by-word Pinyin, e.g. `我` (`wǒ`) + `喜欢` (`xǐhuan`) → `wǒ xǐhuan`. The rule is about individual word fields, **not** removing all spaces from displayed lyric lines.
 - Contextual annotations with empty Hanzi (such as `[if]`) may have empty Pinyin; do not force a fabricated reading for them. Do not infer lexical boundaries from Pinyin spaces alone.
 - AI generation and revision prompts, the Python postprocessing pipeline, API response validation, editor validation, and exported files must all use this invariant. Prefer returning structured word tokens over a single unsegmented Pinyin string.
-- **New AI drafts** use contiguous Pinyin for ordinary words such as `xǐhuan` and may use spaces for a single idiom token such as 一丝一毫 with `yī sī yī háo`. The validator checks syllables against the Hanzi and draft review flags ambiguous spaced alignment. Author-provided readings retain their spaces on import. “Fix spacing” is an explicit edit to the reading.
-- When **merging**, concatenating the two token Pinyin strings without a space is a useful _draft_, but verify required apostrophes and the dictionary reading, preserving dictionary tones. When **splitting**, ask for both new readings explicitly unless a reliable aligned segmentation already exists. The user can revise everything before confirming.
+- **New AI drafts** use contiguous Pinyin for ordinary words such as `xǐhuan` and may use spaces for a single idiom token such as 一丝一毫 with `yī sī yī háo`. The validator checks syllables against the Hanzi and draft review flags ambiguous spaced alignment. Author-provided readings retain their spaces on import. “Fix spacing” is shown for a matching dictionary pronunciation with a supported spelling. Unknown idiom boundaries and readings absent from the dictionary keep their supplied spelling.
+- When **merging**, prefer an exact dictionary spelling for the supplied pronunciation. The fallback joins the two readings with required apostrophes and retains internal groups already present. When **splitting**, ask for both new readings explicitly unless a reliable aligned segmentation already exists. The user can revise everything before confirming.
 
 ## Implemented operations and remaining requirements
 
@@ -40,7 +40,7 @@ Use contiguous Pinyin for ordinary lexical words and retain spaced readings for 
 
 [split-suggestions.ts](../../web/src/split-suggestions.ts) aligns supplied Pinyin only when there is exactly one syllable alignment. It reuses a gloss only when matching project tokens have one unique nonempty meaning. Ambiguous readings/glosses stay blank; no compound meaning or pronunciation is invented. All suggestions remain editable before confirmation.
 
-Frontend validation checks syllable validity/count, gloss completeness and Hanzi coverage. Explicit Fix spacing joins supplied readings and inserts apostrophes before vowel-initial syllables; it edits only the working project. Existing imported values remain untouched until that action. Legacy TS retains segmentation values; project JSON additionally retains token IDs and approval state.
+Frontend validation checks syllable validity/count, gloss completeness and Hanzi coverage. The dictionary inspector compares all exact pronunciation alternatives and warns without blocking when the supplied tones or syllables differ. Explicit Fix spacing applies a supported spelling only to the working project. Existing imported values remain untouched until that action. Legacy TS retains segmentation values; project JSON additionally retains token IDs and approval state.
 
 The Python generation prompt requests contiguous readings for ordinary words and spaced readings for idioms. Python and React check Pinyin syllable counts and source coverage. The editor keeps proposed segmentation separate until the owner applies it.
 

@@ -326,6 +326,11 @@ const server = http.createServer((req, res) => {
             HTMLInputElement | HTMLTextAreaElement
           >(selector)!;
           if (!el) throw Error("Missing input " + selector);
+          if (el instanceof HTMLDivElement) {
+            el.textContent = value;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            return;
+          }
           const proto =
             el.tagName === "TEXTAREA"
               ? HTMLTextAreaElement.prototype
@@ -1269,6 +1274,27 @@ const server = http.createServer((req, res) => {
       (await read()).phrases[0].translation.en,
       "Browser-edited English",
     );
+    await page.evaluate(() =>
+      document
+        .querySelector<HTMLInputElement>('[aria-label="Pinyin 1"]')!
+        .focus(),
+    );
+    await fill('[aria-label="Pinyin 1"]', "duī");
+    const mismatchDeadline = Date.now() + 5000;
+    const readingMismatch = () =>
+      page.evaluate(
+        () =>
+          document
+            .querySelector(".dictionary-lookup .warning")
+            ?.textContent?.includes(
+              "absent from the local dictionary alternatives",
+            ) ?? false,
+      );
+    while (!(await readingMismatch()) && Date.now() < mismatchDeadline)
+      await settle();
+    assert.ok(await readingMismatch());
+    await fill('[aria-label="Pinyin 1"]', "duì");
+    assert.equal(await readingMismatch(), false);
     const times = (await read()).occurrences;
     await page.evaluate(() =>
       document
@@ -1516,18 +1542,38 @@ const server = http.createServer((req, res) => {
         .click(),
     );
     await settle();
+    const beforeSpacing = await read();
     assert.ok(
-      await page.evaluate(() =>
-        [...document.querySelectorAll<HTMLButtonElement>("button")].some(
-          (b) => b.textContent === "Fix spacing",
-        ),
-      ),
+      beforeSpacing.phrases
+        .flatMap((p) => p.words)
+        .some((w) => w.hanzi === "不清" && /\s/u.test(w.pinyin)),
     );
+    await page.evaluate(() => {
+      const word = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          '.token input[aria-label^="Hanzi "]',
+        ),
+      ].find((input) => input.value === "不清");
+      word
+        ?.closest(".token")
+        ?.querySelector<HTMLInputElement>('input[aria-label^="Pinyin "]')
+        ?.focus();
+    });
+    const spacingDeadline = Date.now() + 5000;
+    while (
+      !(await page.evaluate(() =>
+        [...document.querySelectorAll(".dictionary-lookup button")].some(
+          (button) => button.textContent === "Fix spacing",
+        ),
+      )) &&
+      Date.now() < spacingDeadline
+    )
+      await settle();
     await click("Fix spacing");
     assert.ok(
       (await read()).phrases
         .flatMap((p) => p.words)
-        .some((w) => w.hanzi === "不清" && w.pinyin === "bùqīng"),
+        .some((word) => word.hanzi === "不清" && word.pinyin === "bùqīng"),
     );
     fs.mkdirSync("out/workbench", { recursive: true });
     const shot = await page

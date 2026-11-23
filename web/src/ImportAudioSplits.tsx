@@ -1,3 +1,4 @@
+import type { LyricField } from "./lyric-field.ts";
 import type { VerifiedSplitAudio } from "./AutomaticTiming";
 import { useEffect, useRef, useState } from "react";
 import type { Project } from "./domain";
@@ -25,7 +26,7 @@ export function ImportAudioSplits({
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const editor = useRef<HTMLTextAreaElement>(null);
+  const editor = useRef<LyricField>(null);
   const player = useRef<HTMLAudioElement>(null);
   const stop = useRef<number | undefined>(undefined);
   const [url, setUrl] = useState("");

@@ -1,5 +1,5 @@
 import type { Word } from "./domain.ts";
-import { alignedReadings } from "./split-suggestions.ts";
+import { alignedReadings } from "./pinyin-alignment.ts";
 
 /** Align explicit space-delimited parts only when the supplied reading is unambiguous. */
 export function readingParts(word: Word): { hanzi: string; pinyin: string }[] {

@@ -2291,12 +2291,12 @@ main > header {
   flex: 1;
 }
 .editor-decoration,
-.editor-body textarea.document-input,
+.editor-body .document-input,
 .editor-gutter {
   height: clamp(260px, 42vh, 520px);
   box-sizing: border-box;
 }
-.editor-body textarea.document-input,
+.editor-body .document-input,
 .editor-decoration {
   font:
     calc(16px * var(--editor-scale)) / var(--editor-row-height) ui-monospace,
@@ -2332,7 +2332,7 @@ main > header {
 .editor-decoration .heading-text {
   color: #8fcaff;
 }
-.editor-body textarea.document-input {
+.editor-body .document-input {
   position: relative;
   background: transparent;
   color: transparent;
@@ -2427,7 +2427,7 @@ main > header {
   .document-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .editor-body textarea.document-input,
+  .editor-body .document-input,
   .editor-decoration {
     font-size: calc(14px * var(--editor-scale));
   }
@@ -2518,7 +2518,7 @@ main > header {
   margin: 0;
 }
 .document-import .editor-decoration,
-.document-import .editor-body textarea.document-input,
+.document-import .editor-body .document-input,
 .document-import .editor-gutter {
   height: var(--editor-height);
 }
@@ -3032,13 +3032,12 @@ main > header {
   margin: 0;
 }
 .editor-surface[data-pinyin] .editor-decoration,
-.editor-surface[data-pinyin] textarea.document-input,
+.editor-surface[data-pinyin] .document-input,
 .editor-surface[data-pinyin] .editor-gutter > div {
   padding-top: calc(14px * var(--editor-scale));
 }
-.editor-surface[data-pinyin] textarea.document-input,
+.editor-surface[data-pinyin] .document-input,
 .editor-surface[data-pinyin] .editor-decoration {
-  letter-spacing: 0.6em;
   padding-inline: max(8px, 0.4em);
 }
 .editor-decoration .editor-reading,
@@ -3097,7 +3096,7 @@ main > header {
 }
 .import-audio-splits .editor-decoration,
 .import-audio-splits .editor-gutter,
-.import-audio-splits .editor-body textarea.document-input {
+.import-audio-splits .editor-body .document-input {
   height: 200px;
   min-height: 0;
 }
@@ -3177,4 +3176,26 @@ main > header {
 .video-tabs button[aria-pressed="true"] {
   border-color: #55adf2;
   color: #82c8ff;
+}
+
+.dictionary-lookup-header {
+  container-type: inline-size;
+}
+@container (max-width: 300px) {
+  .dictionary-word {
+    grid-column: 1 / -1;
+  }
+  .dictionary-wiktionary {
+    justify-self: start;
+  }
+}
+
+.editor-body div.document-input {
+  overflow: auto;
+}
+.editor-surface[data-pinyin] .editor-han {
+  letter-spacing: 0.6em;
+}
+.document-input .editor-han::selection {
+  background: #4b88ab66;
 }

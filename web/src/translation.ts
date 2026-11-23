@@ -89,10 +89,8 @@ export function draftIssues(
 export function alignmentWarnings(value: DraftValue) {
   return typeof value === "string"
     ? []
-    : value.flatMap((word, i) =>
-        word.hanzi &&
-        /\s/u.test(word.pinyin.trim()) &&
-        !alignedReadings({ ...word, id: String(i) })
+    : value.flatMap((word) =>
+        word.hanzi && /\s/u.test(word.pinyin.trim()) && !alignedReadings(word)
           ? [`Check how the reading aligns with ${word.hanzi}.`]
           : [],
       );

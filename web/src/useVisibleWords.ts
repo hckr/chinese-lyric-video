@@ -1,3 +1,5 @@
+import { dictionaryReadings } from "./dictionary-readings.ts";
+import type { DictionaryEntry } from "./dictionary-service.ts";
 import { useEffect, useRef, useState } from "react";
 import { parseProject, type Word } from "./domain";
 
@@ -30,8 +32,11 @@ export function useVisibleWords(texts: string[]) {
       if (!response.ok) return;
       const { project, terms } = await response.json();
       const readings = Object.fromEntries(
-        Object.entries(terms as Record<string, { pinyin: string }[]>).map(
-          ([term, entries]) => [term, entries[0]?.pinyin ?? ""],
+        Object.entries(terms as Record<string, DictionaryEntry[]>).map(
+          ([term, entries]) => [
+            term,
+            dictionaryReadings(entries)[0]?.pinyin ?? "",
+          ],
         ),
       );
       for (const phrase of parseProject(JSON.stringify(project)).phrases)
