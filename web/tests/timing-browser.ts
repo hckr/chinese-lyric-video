@@ -4,6 +4,7 @@ import type { openBrowser } from "@remotion/renderer";
 import { rawProject, type Project } from "../src/domain.ts";
 import { formatRulerTime, reviewTiming, rulerMarks } from "../src/timing.ts";
 import { importLegacy } from "../src/legacy.ts";
+import { syntheticWav } from "./synthetic-wav.ts";
 
 type Page = Awaited<
   ReturnType<Awaited<ReturnType<typeof openBrowser>>["newPage"]>
@@ -931,6 +932,91 @@ export async function timingAcceptance(
     "keyboard activation focuses missing Pinyin",
   );
   await click("Timing");
+  const bilingual = rawProject(
+    "你好 weekend 再见\nHey girl be my lady",
+    "Multilingual preview",
+    "Fixture",
+  );
+  bilingual.phrases[0].words = [
+    {
+      id: "greeting",
+      hanzi: "你好",
+      pinyin: "nǐhǎo",
+      translation: { en: "hello" },
+    },
+    {
+      id: "goodbye",
+      hanzi: "再见",
+      pinyin: "zàijiàn",
+      translation: { en: "goodbye" },
+    },
+  ];
+  bilingual.phrases[1].lyricKey = "Hey girl, be my lady";
+  bilingual.phrases[1].translation.en = "Hey girl, be my lady";
+  bilingual.occurrences[0].startMs = 1000;
+  bilingual.occurrences[0].endMs = 1900;
+  bilingual.occurrences[1].startMs = 2000;
+  bilingual.occurrences[1].endMs = 3000;
+  await upload("preview.json", JSON.stringify(bilingual));
+  await click("Timing");
+  await page.evaluate(
+    (bytes) => {
+      const input = document.querySelector<HTMLInputElement>(
+        '[aria-label="Local audio file"]',
+      )!;
+      const data = new DataTransfer();
+      data.items.add(
+        new File([new Uint8Array(bytes)], "preview.wav", { type: "audio/wav" }),
+      );
+      input.files = data.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+    [...syntheticWav(4)],
+  );
+  await wait(
+    () => page.evaluate(() => document.querySelector("audio")!.readyState >= 2),
+    "preview audio loaded",
+  );
+  await select("line-0");
+  await wait(
+    () =>
+      page.evaluate(
+        () =>
+          !!document.querySelector("[data-playing-lyric] .lyric-reading-latin"),
+      ),
+    "mixed lyric playback preview",
+  );
+  assert.deepEqual(
+    await page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          ".timing-text-preview .lyric-reading-pinyin",
+        ),
+      ].map((reading) => reading.textContent),
+    ),
+    ["nǐhǎo", "weekend", "zàijiàn"],
+  );
+  await select("line-1");
+  await wait(
+    () =>
+      page.evaluate(
+        () => !!document.querySelector('[data-playing-lyric="line-1"]'),
+      ),
+    "English-only playback preview",
+  );
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const preview = document.querySelector('[data-playing-lyric="line-1"]')!;
+      const inspector = document.querySelector(".timing-text-preview")!;
+      return [
+        preview.querySelector(".lyric-reading") === null,
+        inspector.querySelector(".lyric-reading") === null,
+        preview.querySelector(".playback-translations p")?.textContent,
+        inspector.querySelector("p")?.textContent,
+      ];
+    }),
+    [true, true, "Hey girl, be my lady", "Hey girl, be my lady"],
+  );
   console.log(
     "M2 acceptance passed: real local WAV playback/waveform, exact capture, repeated occurrence independence, missing-Pinyin navigation by click and keyboard, drag/trim, undo/redo/reset, export/reimport, reload/relink and mobile layout.",
   );

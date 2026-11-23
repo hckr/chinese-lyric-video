@@ -1,3 +1,4 @@
+import { englishLyric } from "./lyric-length.ts";
 import { AutomaticTiming, type VerifiedSplitAudio } from "./AutomaticTiming";
 import {
   provisionalPlacements,
@@ -949,16 +950,22 @@ export function TimingEditor({
           {playingLyrics.length ? (
             playingLyrics.map((o) => {
               const text = project.phrases.find((p) => p.id === o.phraseId);
+              const latinOnly = text && englishLyric(text.lyricKey);
               return text ? (
                 <div key={o.id} data-playing-lyric={o.id}>
                   <LyricReading
                     phrase={text}
                     onMissingReading={(wordId) => onReview(o.id, wordId)}
                   />
-                  {showTranslations && (
+                  {(showTranslations || latinOnly) && (
                     <div className="playback-translations">
-                      <p>{text.translation.en || "\u00a0"}</p>
-                      <p>{text.translation.pl || "\u00a0"}</p>
+                      <p>
+                        {(showTranslations && text.translation.en) ||
+                          (latinOnly ? text.lyricKey : "\u00a0")}
+                      </p>
+                      {showTranslations && (
+                        <p>{text.translation.pl || "\u00a0"}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1613,7 +1620,9 @@ export function TimingEditor({
                   phrase={phrase}
                   onMissingReading={(wordId) => onReview(cue.id, wordId)}
                 />
-                {phrase.translation.en && <p>{phrase.translation.en}</p>}
+                {(phrase.translation.en || englishLyric(phrase.lyricKey)) && (
+                  <p>{phrase.translation.en || phrase.lyricKey}</p>
+                )}
                 {phrase.translation.pl && <p>{phrase.translation.pl}</p>}
               </div>
               <p className="timing-review-status">
