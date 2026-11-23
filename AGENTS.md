@@ -26,18 +26,10 @@
 
 - Capture actionable suggestions, bugs, follow-ups and deferred requirements in `agent-docs/ROADMAP.md` as **unprioritized** work if not implemented in the current task. Avoid duplicates; link to an existing detailed document where possible. Casual ideas are not authorization to implement them.
 - At the end of a meaningful implementation slice, update relevant documentation to reflect verified behavior and unresolved work. Distinguish proposed, implemented, accepted and independently verified states. Do not silently change priorities, acceptance criteria or scope.
-- When preparing an accepted checkpoint for commit, write its documentation for someone reading it after the commit. Record what shipped, what was verified, and what remains open. Remove completed approval and commit instructions. Use Git to determine whether changes are staged or committed.
+- When preparing an accepted checkpoint for commit, write its documentation. Documentation should be written for someone who is reading it after it is already committed. Record what shipped, what was verified, and what remains open. Do not stage or commit anything. If the user asks, write out appropriate commands and proposed commit message.
 - Propose removal/merging of obsolete documentation instead of deleting it during unrelated implementation. Prefer one useful living reference for each sufficiently complex topic; history already exists in Git.
 
 ## Subagents
 
-When substantial screenshot inspection, regression failure investigation, or a
-bounded review could benefit from a cheaper subagent, suggest that option to the
-user before delegating. Explain briefly what the subagent would inspect and why
-delegation may reduce cost. Avoid suggesting delegation for routine passing test
-runs or small tasks where coordination overhead is likely to outweigh savings.
-
-If the user approves, give the subagent focused context and request a concise
-report with actionable findings and supporting evidence. Avoid inheriting the
-full conversation when the task can be explained independently. Do not claim
-guaranteed cost savings.
+- When substantial screenshot inspection, regression failure investigation, or a bounded review could benefit from a cheaper subagent, suggest that option to the user before delegating. Explain briefly what the subagent would inspect and why delegation may reduce cost. Avoid suggesting delegation for routine passing test runs or small tasks where coordination overhead is likely to outweigh savings.
+- If the user approves, give the subagent focused context and request a concise report with actionable findings and supporting evidence. Avoid inheriting the full conversation when the task can be explained independently. Do not claim guaranteed cost savings.

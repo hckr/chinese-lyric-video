@@ -13,6 +13,8 @@ export type LyricLineVariant = "landscape" | "portrait";
 
 type LyricLineProps = {
   line: LineData;
+  layout?: import("../../../web/src/designs").Design["overrides"][string];
+  showPinyin?: boolean;
   /**
    * "full"        — Pinyin above, Hanzi, per-word EN gloss, full EN+PL translation.
    *                 Used by LyricVideo, LyricVideoShort, LyricVideo2, and Outro.
@@ -29,7 +31,13 @@ type LyricLineProps = {
 };
 
 export const LyricLine: React.FC<LyricLineProps> = React.memo(
-  ({ line, mode = "full", variant = "landscape" }) => {
+  ({
+    line,
+    layout,
+    showPinyin = true,
+    mode = "full",
+    variant = "landscape",
+  }) => {
     const isOnlyPinyin = mode === "only-pinyin";
     const isPortrait = variant === "portrait";
 
@@ -72,7 +80,20 @@ export const LyricLine: React.FC<LyricLineProps> = React.memo(
 
     return (
       <>
-        <AbsoluteFill style={screenContainerStyle}>
+        <AbsoluteFill
+          style={
+            layout
+              ? {
+                  ...screenContainerStyle,
+                  paddingInline:
+                    layout.margin === undefined
+                      ? undefined
+                      : layout.margin + "%",
+                  transform: `translateY(${layout.vertical}%) scale(${layout.scale})`,
+                }
+              : screenContainerStyle
+          }
+        >
           <div style={sentenceRowStyle}>
             {line.words
               .filter((word) => !isOnlyPinyin || word.hanzi)
@@ -80,16 +101,24 @@ export const LyricLine: React.FC<LyricLineProps> = React.memo(
                 <div key={wIndex} style={wordBlockStyle}>
                   {isOnlyPinyin ? (
                     <>
-                      <span style={chineseStyle}>{word.hanzi}</span>
+                      {layout?.hanzi !== false && (
+                        <span style={chineseStyle}>{word.hanzi}</span>
+                      )}
                       <span style={pinyinOnlyPinyinStyle}>{word.pinyin}</span>
                     </>
                   ) : (
                     <>
-                      <span style={pinyinStyle}>{word.pinyin}</span>
-                      <span style={chineseStyle}>{word.hanzi}</span>
-                      <span style={wordTranslationEnStyle}>
-                        {word.translation.en}
-                      </span>
+                      {showPinyin && (
+                        <span style={pinyinStyle}>{word.pinyin}</span>
+                      )}
+                      {layout?.hanzi !== false && (
+                        <span style={chineseStyle}>{word.hanzi}</span>
+                      )}
+                      {layout?.gloss !== false && (
+                        <span style={wordTranslationEnStyle}>
+                          {word.translation.en}
+                        </span>
+                      )}
                     </>
                   )}
                 </div>
@@ -97,8 +126,12 @@ export const LyricLine: React.FC<LyricLineProps> = React.memo(
           </div>
           {!isOnlyPinyin && (
             <div style={fullTranslationContainerStyle}>
-              <div style={fullTranslationEnStyle}>{line.translation.en}</div>
-              <div style={fullTranslationPlStyle}>{line.translation.pl}</div>
+              {layout?.english !== false && (
+                <div style={fullTranslationEnStyle}>{line.translation.en}</div>
+              )}
+              {layout?.polish !== false && (
+                <div style={fullTranslationPlStyle}>{line.translation.pl}</div>
+              )}
             </div>
           )}
         </AbsoluteFill>

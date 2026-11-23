@@ -1,3 +1,5 @@
+import "./remotion/design/load-render-fonts";
+import { WorkbenchJobs } from "./remotion/templates/WorkbenchJobs";
 import { Composition, Still } from "remotion";
 import { LyricVideo } from "./LyricVideo";
 import { LyricVideoThumbnail } from "./LyricVideoThumbnail";
@@ -201,6 +203,7 @@ export const RemotionRoot: React.FC = () => {
           mode: "full",
         }}
       />
+      <WorkbenchJobs />
     </>
   );
 };

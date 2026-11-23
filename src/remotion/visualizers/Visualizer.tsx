@@ -8,8 +8,20 @@ import { useAudioData, visualizeAudio } from "@remotion/media-utils";
  * composed twice in LyricVideo2 to achieve the double-blend effect.
  */
 export const Visualizer: React.FC<{
+  bars?: "both" | "top" | "bottom";
+  color?: string;
+  intensity?: number;
   audioData: ReturnType<typeof useAudioData>;
-}> = ({ audioData }) => {
+  dataOffsetInSeconds?: number;
+  blendLayer?: boolean;
+}> = ({
+  audioData,
+  color = "white",
+  intensity = 1,
+  bars = "both",
+  dataOffsetInSeconds = 0,
+  blendLayer = false,
+}) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
 
@@ -36,6 +48,7 @@ export const Visualizer: React.FC<{
       frame: sampleFrame,
       audioData,
       numberOfSamples,
+      dataOffsetInSeconds,
     });
 
     raw.forEach((v, i) => {
@@ -54,13 +67,15 @@ export const Visualizer: React.FC<{
     justifyContent: "center",
     gap: 7,
     width: "100%",
-    opacity: 0.1,
+    opacity: 0.1 * intensity,
+    mixBlendMode: blendLayer ? "overlay" : undefined,
+    pointerEvents: "none",
   };
 
   const gradientString = (dir: "top" | "bottom") =>
     `linear-gradient(
       to ${dir},
-      white,
+      ${color},
       rgba(255,255,255,0.2) 10%,
       rgba(255,255,255,0.1) 15%,
       rgba(255,255,255,0.3) 25%,
@@ -70,32 +85,42 @@ export const Visualizer: React.FC<{
 
   return (
     <>
-      <AbsoluteFill style={{ ...wrapperStyle, alignItems: "flex-start" }}>
-        {mirrored.map((v, i) => (
-          <div
-            key={`bt${i}`}
-            style={{
-              background: gradientString("top"),
-              width: 8,
-              height: heightVal(v),
-              mixBlendMode: "overlay",
-            }}
-          />
-        ))}
-      </AbsoluteFill>
-      <AbsoluteFill style={{ ...wrapperStyle, alignItems: "flex-end" }}>
-        {mirrored.map((v, i) => (
-          <div
-            key={`bb${i}`}
-            style={{
-              background: gradientString("bottom"),
-              width: 8,
-              height: heightVal(v),
-              mixBlendMode: "overlay",
-            }}
-          />
-        ))}
-      </AbsoluteFill>
+      {bars !== "bottom" && (
+        <AbsoluteFill
+          data-visualizer-bars="top"
+          style={{ ...wrapperStyle, alignItems: "flex-start" }}
+        >
+          {mirrored.map((v, i) => (
+            <div
+              key={`bt${i}`}
+              style={{
+                background: gradientString("top"),
+                width: 8,
+                height: heightVal(v),
+                mixBlendMode: blendLayer ? undefined : "overlay",
+              }}
+            />
+          ))}
+        </AbsoluteFill>
+      )}
+      {bars !== "top" && (
+        <AbsoluteFill
+          data-visualizer-bars="bottom"
+          style={{ ...wrapperStyle, alignItems: "flex-end" }}
+        >
+          {mirrored.map((v, i) => (
+            <div
+              key={`bb${i}`}
+              style={{
+                background: gradientString("bottom"),
+                width: 8,
+                height: heightVal(v),
+                mixBlendMode: blendLayer ? undefined : "overlay",
+              }}
+            />
+          ))}
+        </AbsoluteFill>
+      )}
     </>
   );
 };

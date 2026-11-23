@@ -1,3 +1,4 @@
+import { probeTracks } from "./waveform-stream.ts";
 import type { VerifiedSplitAudio } from "./AutomaticTiming";
 import { ImportAudioSplits } from "./ImportAudioSplits";
 import { needsImportSplit } from "./automatic-timing";
@@ -496,7 +497,9 @@ export function DocumentImport({
           afterEditor={
             <>
               <div className="document-audio">
-                <label htmlFor="document-audio-file">Audio (optional)</label>
+                <label htmlFor="document-audio-file">
+                  Song media (audio or video, optional)
+                </label>
                 <input
                   id="document-audio-file"
                   hidden={!!file}
@@ -582,12 +585,23 @@ export function DocumentImport({
                       const p = withEvidence(
                         await prepare(lines, title, artist),
                       );
+                      const media =
+                        file && mediaDuration && mediaDuration > 0
+                          ? {
+                              name: file.name,
+                              size: file.size,
+                              lastModified: file.lastModified,
+                              durationMs: mediaDuration,
+                              ...(await probeTracks(file).catch(() => ({}))),
+                            }
+                          : undefined;
                       return {
                         ...p,
+                        ...(media ? { audio: media } : {}),
                         ...(comparison?.timingRun
                           ? {
                               timingRun: comparison.timingRun,
-                              audio: comparison.audio,
+                              audio: media ?? comparison.audio,
                               timingSettings: comparison.timingSettings,
                             }
                           : {}),

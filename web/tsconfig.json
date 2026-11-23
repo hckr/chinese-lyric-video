@@ -13,5 +13,5 @@
     "noUnusedLocals": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src"]
+  "include": ["src", "tests/loop-web-render-fixture.tsx"]
 }

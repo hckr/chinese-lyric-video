@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Project } from "./domain.ts";
 import { mediaMs } from "./timing.ts";
-import { decodeWaveform } from "./waveform-stream.ts";
+import { decodeWaveform, probeTracks } from "./waveform-stream.ts";
 
 export function useLocalAudio(
   selectedFile: File | null,
@@ -20,6 +20,11 @@ export function useLocalAudio(
   };
   const file = useRef<File | null>(null);
   const version = useRef(0);
+  const [waveSource, setWaveSource] = useState<{
+    file: File;
+    duration: number;
+  }>();
+  const completedWave = useRef<typeof waveSource>(undefined);
   const analysis = useRef<AbortController | null>(null);
   const [url, setUrl] = useState("");
   const [durationMs, setDuration] = useState<number>();
@@ -131,13 +136,15 @@ export function useLocalAudio(
     ref.current?.pause();
     file.current = selectedFile;
     setError("");
+    setWaveSource(undefined);
+    completedWave.current = undefined;
     setDuration(undefined);
     setPosition(0);
     setPeaks([]);
     setWaveStatus("Waiting for audio metadata…");
     setUrl(URL.createObjectURL(selectedFile));
   }, [selectedFile]);
-  const metadata = async () => {
+  const metadata = () => {
     const audio = ref.current,
       selected = file.current,
       generation = version.current;
@@ -148,30 +155,57 @@ export function useLocalAudio(
       return;
     }
     setDuration(duration);
-    live.current.onMetadata({
+    const baseMetadata = {
       name: selected.name,
       size: selected.size,
       lastModified: selected.lastModified,
       durationMs: duration,
-    });
-    analysis.current?.abort();
+    };
+    live.current.onMetadata(baseMetadata);
+    void probeTracks(selected)
+      .then((tracks) => {
+        if (version.current === generation && file.current === selected)
+          live.current.onMetadata({ ...baseMetadata, ...tracks });
+      })
+      .catch(() => {
+        /* Native playback remains available for unrecognized containers. */
+      });
+    setWaveSource((prev) =>
+      prev?.file === selected && prev.duration === duration
+        ? prev
+        : { file: selected, duration },
+    );
+  };
+  useEffect(() => {
+    if (
+      !active ||
+      !waveSource ||
+      waveSource.file !== selectedFile ||
+      completedWave.current === waveSource
+    )
+      return;
     const controller = new AbortController();
     analysis.current = controller;
     setWaveStatus("Analyzing audio track…");
-    try {
-      const peaks = await decodeWaveform(selected, duration, controller.signal);
-      if (version.current !== generation || controller.signal.aborted) return;
-      setPeaks(peaks);
-      setWaveStatus("");
-    } catch (error) {
-      if (version.current === generation && !controller.signal.aborted)
+    void decodeWaveform(waveSource.file, waveSource.duration, controller.signal)
+      .then((values) => {
+        if (controller.signal.aborted) return;
+        completedWave.current = waveSource;
+        setPeaks(values);
+        setWaveStatus("");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        completedWave.current = waveSource;
         setWaveStatus(
           `${error instanceof Error ? error.message : "Waveform analysis unavailable."} Playback and timing remain available.`,
         );
-    } finally {
+      });
+    return () => {
+      controller.abort();
       if (analysis.current === controller) analysis.current = null;
-    }
-  };
+    };
+  }, [active, waveSource, selectedFile]);
 
   const seek = (ms: number) => {
     const audio = ref.current;
@@ -221,6 +255,7 @@ export function useLocalAudio(
     setPlaying(false);
     setDuration(undefined);
     setPeaks([]);
+    setWaveSource(undefined);
     setWaveStatus("Waveform unavailable for this file.");
     setError(
       "This file could not be played. Choose a supported local audio file; your project and timings are retained.",

@@ -170,3 +170,19 @@ export async function decodeWaveform(
     input.dispose();
   }
 }
+
+export async function probeTracks(file: File) {
+  const input = new Input({
+    formats: ALL_FORMATS,
+    source: new BlobSource(file),
+  });
+  try {
+    const [video, audio] = await Promise.all([
+      input.getPrimaryVideoTrack(),
+      input.getPrimaryAudioTrack(),
+    ]);
+    return { hasVideo: !!video, hasAudio: !!audio };
+  } finally {
+    input.dispose();
+  }
+}

@@ -1,20 +1,6 @@
-import { loadFont as loadNotoSansSC } from "@remotion/google-fonts/NotoSansSC";
-import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { loadFont as loadLexendDeca } from "@remotion/google-fonts/LexendDeca";
-
-export const { fontFamily: notoSansSCFont } = loadNotoSansSC("normal", {
-  weights: ["400"],
-});
-
-export const { fontFamily: interFont } = loadInter("normal", {
-  weights: ["400"],
-  subsets: ["latin", "latin-ext"],
-});
-
-export const { fontFamily: lexendDecaFont } = loadLexendDeca("normal", {
-  weights: ["400"],
-  subsets: ["latin", "latin-ext"],
-});
+export { fontFamily as notoSansSCFont } from "@remotion/google-fonts/NotoSansSC";
+export { fontFamily as interFont } from "@remotion/google-fonts/Inter";
+export { fontFamily as lexendDecaFont } from "@remotion/google-fonts/LexendDeca";
 
 /** Dense multi-offset text stroke at 1px offset. */
 export function heavyTextShadow(color: string): string {

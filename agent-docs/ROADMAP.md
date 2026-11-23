@@ -1,22 +1,23 @@
 # Active roadmap and work backlog
 
-**As of 2026-11-21.** Automatic Timing & Review is complete, Streamlit retirement is committed, and Checkpoint C is implemented.
+**As of 2026-11-23.** Checkpoint E is implemented in Workbench 0.5.0.
 
 This is the **single authoritative list** of priorities and unfinished work. Details live in linked references, not repeated here. Checkpoints are broad migration objectives; smaller features can be implemented before, within or between checkpoints. **Only the owner sets priorities.**
 
 ## Near-term priorities — proposed order, not a locked schedule
 
-| Work                                              | State                                                                   | Intent / dependency                                                                                                                                                                                                                                                                                     |
-| ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Checkpoint E — preview and render integration** | Planned after D                                                         | Connect UI settings to actual Remotion preview/render using shared configuration; preserve manual `.ts`/project JSON export. See [preview/render integration](react-workbench/REMOTION_REFACTOR.md#how-the-react-ui-consumes-this) and [tests](react-workbench/TEST_PLAN.md#m5--ui-to-remotion).        |
+| Work         | State | Intent / dependency |
+| ------------ | ----- | ------------------- |
+| nothing left |       |                     |
 
-## Unresolved carry-forwards (not cleared by accepting checkpoint B)
+## Unresolved carry-forwards
 
 - **M0 / renderer baseline:** Capture reliable representative footage frames through the owner's working Chrome/client-side path, plus image+visualizer and all thumbnail families. Required before claiming D visual equivalence. Historical server-side capture failure is a method issue, not proof the working renderer is broken. [Checks and issues](react-workbench/TEST_PLAN.md#known-issues) · [Gate](react-workbench/TEST_PLAN.md#m0--baseline--preservation).
 - **C / live translation quality:** Review literal, contextual glosses, dictionary-tone readings, and natural English and Polish using the optional sample evaluation. Offline fixtures verify mechanics and structure. [Sample and command](../web/README.md#automatic-translation).
 - **M1 / legacy renderer coverage:** Existing TS consumer checks and a sample export render passed, but footage-route/full compatibility verification was still partial in checkpoint A. Reconcile with M0/D, not a blanket claim that legacy exports fail. [Checks and issues](react-workbench/TEST_PLAN.md#known-issues).
 - **Review visual fidelity:** React UI was accepted functionally, but not certified as matching the supplied mockups pixel-for-pixel. Treat any follow-up redesign as a scoped task, not an implied blocker for C. [Checks and issues](react-workbench/TEST_PLAN.md#known-issues).
 - **Timing-device validation:** Checkpoint B acceptance did not independently establish touch interaction or perceptual lyric/audio synchronization quality. Consider targeted checks when relevant, not an automatic reopening of B. [Timing checks](react-workbench/TEST_PLAN.md#m2--timing).
+- **E / browser verification:** Confirm 4K H.264/AAC encoding, render responsiveness and visualizer playback on the owner’s browser. Font-exact reference comparisons also remain open. [Verification and limits](react-workbench/TEST_PLAN.md#m5--ui-to-remotion).
 
 ## Implemented work
 
@@ -38,6 +39,7 @@ Completed work is listed oldest first.
 - **Groq Whisper transcription** — Timing supports Turbo and full Large V3 alongside local Whisper. [Workflow](../web/README.md).
 - **Checkpoint D — Remotion consolidation & templates:** Shared modules, reusable video templates (footage and image+visualizer, landscape/short, full/pinyin-only) and unified thumbnail templates with Studio schema controls. All 7 legacy compositions preserved as thin wrappers; thumbnails verified bit-for-bit against baselines. [Architecture](react-workbench/REMOTION_REFACTOR.md) · [Tests](react-workbench/TEST_PLAN.md#m4--remotion-consolidation).
 - **Lyrics import enhancements (0.4.0)** — The document editor supports explicit section headings, a read-only structure preview, reviewed AI suggestions, and timed audio insertions. YouTube import remains deferred. [Implementation and verification](react-workbench/features/lyrics-import-enhancements/SPEC.md).
+- **Checkpoint E — Video and Export (0.5.0):** Named designs, soundtrack routing, still artwork, ping-pong loops, lyric layouts, portrait excerpts and thumbnail previews share scenes with Export. Direct browser rendering supports MP4 and WebM settings, encoder checks, compatible full-song audio copying, progress and cancellation. Studio batch preparation and legacy TS/project JSON exports remain available. The owner verified direct download and the original Pinyin placement. [Implementation and verification](react-workbench/features/video-workspace/SPEC.md#12-implementation-and-verification-record) · [Workflow](../web/README.md#video-designs-and-studio-web-export).
 
 <!-- Append the next implemented item here. -->
 

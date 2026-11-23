@@ -11,6 +11,7 @@ import { ThumbnailTemplateProps } from "./types";
 
 function resolveAsset(src: string): string {
   if (
+    src.startsWith("blob:") ||
     src.startsWith("http://") ||
     src.startsWith("https://") ||
     src.startsWith("/")
@@ -68,9 +69,8 @@ export const ThumbnailTemplate: React.FC<ThumbnailTemplateProps> = ({
   const effectiveMusicNotesWatermark =
     musicNotesWatermark ?? (isTitleOnly ? "♪♪♪♪" : "♪♬");
 
-  const effectiveMusicNotesStyle =
-    musicNotesStyle ??
-    (isTitleOnly
+  const effectiveMusicNotesStyle: React.CSSProperties = {
+    ...(isTitleOnly
       ? {
           marginTop: -340,
           marginLeft: -120,
@@ -78,7 +78,9 @@ export const ThumbnailTemplate: React.FC<ThumbnailTemplateProps> = ({
           fontStyle: "italic",
           paddingTop: 40,
         }
-      : undefined);
+      : undefined),
+    ...musicNotesStyle,
+  };
 
   const effectiveTopLabel =
     topLabel ??

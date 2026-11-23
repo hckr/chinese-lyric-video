@@ -17,6 +17,7 @@ This folder is primarily working context for agents. Keep it discoverable withou
 | Automatic timing desired review flow, reconciliation and full remaining plan | [Automatic Timing & Review](react-workbench/features/automatic-timing-review/SPEC.md)                                      |
 | Separately proposed app-wide workflow header                                 | [Workflow navigation](react-workbench/features/workflow-navigation/SPEC.md)                                                |
 | Remotion refactor requirements                                               | [react-workbench/REMOTION_REFACTOR.md](react-workbench/REMOTION_REFACTOR.md)                                               |
+| Video designs, preview, export and verification                              | [Video workspace](react-workbench/features/video-workspace/SPEC.md)                                                        |
 | Acceptance gates and remaining unchecked items                               | [react-workbench/TEST_PLAN.md](react-workbench/TEST_PLAN.md)                                                               |
 
 ## Authority

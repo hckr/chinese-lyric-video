@@ -85,7 +85,7 @@ Thumbnails should be **separate compositions** that reuse text/typography, logo,
 
 ## How the React UI consumes this
 
-The Video settings screen edits `VisualConfig`, not arbitrary React component internals. An adapter turns that into Remotion props. First it can show a **style-only mock preview**. When ready, use an actual Remotion Player **importing the shared composition**, with the identical config resolution used for final rendering. Avoid building a separate video renderer in the frontend. Keep the Remotion render entrypoints usable directly even if the workbench doesn't run.
+Video edits typed project settings. The workbench resolves each selected design and variant into props shared by Remotion Player and the Studio composition. Thumbnail uses the same still component for preview and export. Export renders and downloads one selected video in the browser. The Studio matrix prepares selected video and still jobs for manual Studio web rendering. [Workbench workflow](../../web/README.md#video-designs-and-studio-web-export).
 
 Audio spectrum computation can be expensive. Reuse the existing Remotion implementation; distinguish live browser preview from precomputed render audio data when necessary. Ensure previews and exports reflect the same final prop values. Direct rendering, asset-path assignment and filesystem writes must be explicit user actions, never side effects of opening/editing a project. Preserve manual export when preview/render services are unavailable.
 

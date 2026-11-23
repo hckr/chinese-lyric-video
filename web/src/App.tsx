@@ -1,3 +1,7 @@
+import { AssetContext, useVideoFiles } from "./video-assets.tsx";
+import { FootageSettings } from "./FootageSettings.tsx";
+import { StudioHandoff } from "./StudioHandoff.tsx";
+import { VideoDownload } from "./VideoDownload.tsx";
 import type { VerifiedSplitAudio } from "./AutomaticTiming";
 import { wordSpans } from "./word-spans";
 import { ImportAudioSplits } from "./ImportAudioSplits";
@@ -123,6 +127,8 @@ export function App() {
   );
   const [documentSource, setDocumentSource] = useState({ text: "" });
   const [splitAudio, setSplitAudio] = useState<VerifiedSplitAudio>();
+  const videoFiles = useVideoFiles();
+  const [videoTab, setVideoTab] = useState<"Video" | "Thumbnail">("Video");
   const [projectAudio, setProjectAudio] = useState<File | null>(null);
   const [suggestionProgress, setSuggestionProgress] = useState("");
   const [importProgress, setImportProgress] = useState("");
@@ -341,6 +347,8 @@ export function App() {
     setTranslationExchanges([]);
 
     setDocumentSource({ text: "" });
+    videoFiles.clear();
+    setVideoTab("Video");
     setHistory(initial(p));
     setDialog(null);
     navigate("Lyric editor");
@@ -1488,6 +1496,23 @@ export function App() {
           )}
           {screen === "Export data" && project && (
             <div className="two">
+              <AssetContext.Provider value={videoFiles}>
+                <div>
+                  <VideoDownload project={project} file={projectAudio} />
+                  <StudioHandoff
+                    save={(videoSettings) =>
+                      change({ ...project, videoSettings }, {}, true)
+                    }
+                    openVideo={(tab) => {
+                      setVideoTab(tab);
+                      navigate("Video settings");
+                    }}
+                    project={project}
+                    file={projectAudio}
+                    download={download}
+                  />
+                </div>
+              </AssetContext.Provider>
               <section>
                 <h2>Review & compatibility</h2>
                 {conflictingLyrics(project).length > 0 && (
@@ -1626,15 +1651,23 @@ export function App() {
           {screen === "Timing" && !project && (
             <section>Import a song first.</section>
           )}
-          {screen === "Video settings" && (
-            <section>
-              <h2>Video presets and real preview are later checkpoints</h2>
-              <p>
-                Use the existing Remotion workflow to preview and render
-                exported songs.
-              </p>
-            </section>
-          )}
+          {screen === "Video settings" &&
+            (project ? (
+              <AssetContext.Provider value={videoFiles}>
+                <FootageSettings
+                  tab={videoTab}
+                  setTab={setVideoTab}
+                  goExport={() => navigate("Export data")}
+                  file={projectAudio}
+                  project={project}
+                  save={(videoSettings) =>
+                    change({ ...project, videoSettings }, {}, true)
+                  }
+                />
+              </AssetContext.Provider>
+            ) : (
+              <section>Import a song first.</section>
+            ))}
           {project &&
             removalId &&
             (() => {

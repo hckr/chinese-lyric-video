@@ -1,10 +1,11 @@
 import { rawProject } from "../src/domain.ts";
 import { automaticTiming, cachedTimingModels } from "../timing-api.ts";
 import { detectedAudioAcceptance } from "./detected-audio-browser.ts";
-import { waveformMedia } from "./waveform-media.ts";
+import { attachTimingMedia, waveformMedia } from "./waveform-media.ts";
 import { browserExecutable } from "./browser-executable.ts";
 import { lyricsGrouping } from "./lyrics-grouping.ts";
 import { importLyrics } from "../import-api.ts";
+import { createRenderAssets } from "../render-assets.ts";
 import { build } from "esbuild";
 import { withTimingBaseline } from "../src/timing.ts";
 import { importWorkflow } from "./import-workflow.ts";
@@ -41,7 +42,13 @@ const built = await build({
   bundle: true,
   write: false,
   outfile: "app.js",
-  define: { "process.env.NODE_ENV": JSON.stringify("production") },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(
+      process.argv.includes("--original-playback")
+        ? "development"
+        : "production",
+    ),
+  },
 });
 const assets = new Map(
   built.outputFiles.map((file) => [path.basename(file.path), file.contents]),
@@ -69,7 +76,14 @@ const idiom = {
   translation: { en: "the slightest bit" },
 };
 let releaseTranslation: (() => void) | undefined;
+const renderAssets = process.argv.includes("--video-download")
+  ? await createRenderAssets()
+  : undefined;
 const server = http.createServer((req, res) => {
+  if (renderAssets && req.url?.startsWith("/api/render-assets")) {
+    void renderAssets.serve(req, res).catch(() => res.destroy());
+    return;
+  }
   const requestPath = req.url ?? "/";
   if (requestPath === "/api/translation/providers") {
     res.end(
@@ -337,6 +351,443 @@ const server = http.createServer((req, res) => {
       assert.deepEqual(
         errors.filter((error) => !error.includes("ERR_BLOCKED_BY_CLIENT")),
         [],
+      );
+      return;
+    }
+    if (process.argv.includes("--video-download")) {
+      await upload(
+        "song.ts",
+        fs.readFileSync("src/Angela_Zhang_Keep_Walking.ts", "utf8"),
+      );
+      const project = await read();
+      assert(project);
+      await page.evaluate(() => {
+        const key = "lyric-workbench-v1";
+        const saved = JSON.parse(localStorage.getItem(key)!);
+        saved.videoSettings = {
+          variant: "short",
+          selected: ["original/short"],
+          excerpt: { startMs: 10000, endMs: 10400 },
+        };
+        localStorage.setItem(key, JSON.stringify(saved));
+      });
+      await page.goto({ url, timeout: 30000 });
+      await page.evaluate(() => {
+        const real = VideoEncoder.isConfigSupported.bind(VideoEncoder);
+        VideoEncoder.isConfigSupported = (config) =>
+          config.hardwareAcceleration === "prefer-hardware"
+            ? Promise.resolve({
+                config,
+                supported: config.codec.startsWith("avc1."),
+              })
+            : real(config);
+      });
+      await click("Export data");
+      const render = "Render video (WebM)";
+      const defaultDeadline = Date.now() + 10000;
+      let hardwareDefault = false;
+      while (!hardwareDefault && Date.now() < defaultDeadline) {
+        hardwareDefault = await page.evaluate(() => {
+          const [format, codec] = document.querySelectorAll<HTMLSelectElement>(
+            ".export-jobs fieldset select",
+          );
+          return (
+            format?.value === "mp4" &&
+            codec?.value === "h264" &&
+            codec.selectedOptions[0]?.textContent?.includes(
+              "Hardware preferred",
+            )
+          );
+        });
+        if (!hardwareDefault) await settle();
+      }
+      assert(
+        hardwareDefault,
+        "MP4/H.264 should be selected when it alone reports hardware support",
+      );
+      assert(
+        await page.evaluate(
+          () =>
+            [...document.querySelectorAll("button")].find((button) =>
+              button.textContent?.startsWith("Render video ("),
+            )?.disabled,
+        ),
+      );
+      assert(
+        await page.evaluate(() => {
+          const headings = [...document.querySelectorAll("h2")].map(
+            (heading) => heading.textContent,
+          );
+          const direct = headings.indexOf("Render and download video");
+          return (
+            direct >= 0 &&
+            headings.indexOf("Prepare for Remotion Studio") > direct
+          );
+        }),
+      );
+      await click("Timing");
+      await attachTimingMedia(page, "public/做你的猫 [rEV1VWwwAyA].mp4");
+      await click("Export data");
+      await page.evaluate(() => {
+        const format = document.querySelector<HTMLSelectElement>(
+          ".export-jobs fieldset select",
+        )!;
+        format.value = "webm";
+        format.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      const codecDeadline = Date.now() + 10000;
+      let codecMarked = false;
+      while (!codecMarked && Date.now() < codecDeadline) {
+        codecMarked = await page.evaluate(() => {
+          const option = document.querySelector(
+            '.export-jobs fieldset option[value="vp8"]',
+          );
+          return /VP8 · (Hardware preferred|Encoding available)/.test(
+            option?.textContent ?? "",
+          );
+        });
+        if (!codecMarked) await settle();
+      }
+      assert(codecMarked, "The codec list should check VP8 automatically");
+      await click("Check encoder support");
+      const supportDeadline = Date.now() + 10000;
+      let encoderSupported = false;
+      while (!encoderSupported && Date.now() < supportDeadline) {
+        encoderSupported = await page.evaluate(
+          () =>
+            document
+              .querySelector(".export-jobs fieldset [role=status]")
+              ?.textContent?.startsWith("Encoding supported") === true,
+        );
+        if (!encoderSupported) await settle();
+      }
+      assert(encoderSupported, "Expected VP8 encoder support");
+      await click(render);
+      await click("Cancel render");
+      await click(render);
+      const deadline = Date.now() + 90000;
+      let bytes: number[] | null = null;
+      while (!bytes && Date.now() < deadline) {
+        bytes = await page.evaluate(async () => {
+          const link = document.querySelector<HTMLAnchorElement>(
+            'a[download$=".webm"]',
+          );
+          if (!link) {
+            const status = document.querySelector(
+              ".export-jobs [aria-live]",
+            )?.textContent;
+            if (status && status !== "Render canceled.") throw Error(status);
+            return null;
+          }
+          return Array.from(
+            new Uint8Array(await (await fetch(link.href)).arrayBuffer()),
+          );
+        });
+        if (!bytes) await settle();
+      }
+      assert(bytes, "Expected a downloadable WebM");
+      const {
+        Input,
+        BufferSource,
+        BlobSource,
+        EncodedPacketSink,
+        ALL_FORMATS,
+      } = await import("mediabunny");
+      const { inspectAudioCopy, muxOriginalAudio, sourceVideoFps } =
+        await import("../src/export-media.ts");
+      const rendered = new File([Uint8Array.from(bytes)], "excerpt.webm", {
+        type: "video/webm",
+      });
+      const input = new Input({
+        source: new BufferSource(Uint8Array.from(bytes)),
+        formats: ALL_FORMATS,
+      });
+      try {
+        const video = await input.getPrimaryVideoTrack();
+        assert(video);
+        assert.equal(await video.getDisplayWidth(), 1080);
+        assert.equal(await video.getDisplayHeight(), 1920);
+        assert.equal((await input.getAudioTracks()).length, 1);
+        assert(Math.abs((await input.computeDuration()) - 0.4) < 0.08);
+        const audio = await input.getPrimaryAudioTrack();
+        assert(audio);
+        const referenceRate = await sourceVideoFps(
+          new File(
+            [fs.readFileSync("public/做你的猫 [rEV1VWwwAyA].mp4")],
+            "source.mp4",
+          ),
+        );
+        const videoPackets = [];
+        for await (const packet of new EncodedPacketSink(video).packets())
+          videoPackets.push(packet.timestamp);
+        assert(videoPackets.length > 1);
+        const measuredRate =
+          (videoPackets.length - 1) /
+          (Math.max(...videoPackets) - Math.min(...videoPackets));
+        assert(Math.abs(measuredRate - referenceRate) < 0.1);
+        assert.equal(
+          await inspectAudioCopy(
+            rendered,
+            "webm",
+            await input.computeDuration(),
+          ),
+          "",
+        );
+        const remuxed = await muxOriginalAudio(
+          rendered,
+          rendered,
+          "webm",
+          new AbortController().signal,
+        );
+        const copiedInput = new Input({
+          source: new BlobSource(remuxed),
+          formats: ALL_FORMATS,
+        });
+        try {
+          const copiedAudio = await copiedInput.getPrimaryAudioTrack();
+          assert(copiedAudio);
+          const originalPackets = new EncodedPacketSink(audio).packets();
+          for await (const packet of new EncodedPacketSink(
+            copiedAudio,
+          ).packets()) {
+            const original = await originalPackets.next();
+            assert(!original.done);
+            assert.deepEqual(packet.data, original.value.data);
+            assert.equal(packet.timestamp, original.value.timestamp);
+          }
+          assert((await originalPackets.next()).done);
+        } finally {
+          copiedInput.dispose();
+        }
+      } finally {
+        input.dispose();
+      }
+      await click("Prepare selected jobs");
+      await page.evaluate(() => {
+        window.__downloads = [];
+        HTMLAnchorElement.prototype.click = function () {
+          const name = this.download;
+          window.__downloads.push(
+            fetch(this.href).then(async (response) => ({
+              name,
+              text: await response.text(),
+            })),
+          );
+        };
+      });
+      const propsDeadline = Date.now() + 10000;
+      let propsButton = "";
+      while (!propsButton && Date.now() < propsDeadline) {
+        propsButton = await page.evaluate(
+          () =>
+            [...document.querySelectorAll("button")]
+              .map((button) => button.textContent ?? "")
+              .find(
+                (label) =>
+                  label.startsWith("Download ") &&
+                  label.endsWith("-short.json"),
+              ) ?? "",
+        );
+        if (!propsButton) await settle();
+      }
+      assert(propsButton, "Studio should offer the prepared props");
+      await click(propsButton);
+      const [prepared] = await page.evaluate(() =>
+        Promise.all(window.__downloads),
+      );
+      const props = JSON.parse(prepared.text);
+      assert.equal(props.portrait, true);
+      assert.equal(props.videoSrc, props.audioSrc);
+      const range = await fetch(props.videoSrc, {
+        headers: { Range: "bytes=0-31" },
+      });
+      assert.equal(range.status, 206);
+      assert.equal((await range.arrayBuffer()).byteLength, 32);
+      console.log(
+        "Workbench WebM download passed media validation, cancellation, retry and file inspection.",
+      );
+      return;
+    }
+    if (process.argv.includes("--original-playback")) {
+      await upload(
+        "song.ts",
+        fs.readFileSync("src/Angela_Zhang_Keep_Walking.ts", "utf8"),
+      );
+      await click("Timing");
+      await attachTimingMedia(page, "public/做你的猫 [rEV1VWwwAyA].mp4");
+      const savedDeadline = Date.now() + 10000;
+      while (!(await read())?.audio && Date.now() < savedDeadline)
+        await settle();
+      assert((await read())?.audio);
+      await page.goto({ url, timeout: 30000 });
+      await click("Timing");
+      await attachTimingMedia(page, "public/做你的猫 [rEV1VWwwAyA].mp4");
+      await click("Video settings");
+      assert(
+        await page.evaluate(() => {
+          const visualizer = [...document.querySelectorAll("label")]
+            .find((label) => label.textContent === "Visualizer")
+            ?.querySelector<HTMLInputElement>("input");
+          if (!visualizer) return false;
+          if (!visualizer.checked) visualizer.click();
+          return true;
+        }),
+      );
+      const checkIdle = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 16000));
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            settle(),
+            new Promise((_, reject) => {
+              timeout = setTimeout(
+                () => reject(Error("Idle Video workspace stopped responding")),
+                3000,
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
+      await checkIdle();
+      assert.equal(
+        await page.evaluate(
+          () =>
+            document.querySelector(".design-preview :is(video, audio)") !==
+            null,
+        ),
+        false,
+        "Opening Video should leave the preview unloaded",
+      );
+      await click("Load preview");
+      await checkIdle();
+      const barHeights = () =>
+        page.evaluate(() =>
+          [
+            ...document.querySelectorAll<HTMLElement>(
+              '.design-preview [data-visualizer-bars="top"] > div',
+            ),
+          ].map((bar) => bar.style.height),
+        );
+      const pausedHeights = await barHeights();
+      assert(
+        pausedHeights.length > 0,
+        "Visualizer bars should render while paused",
+      );
+      assert(
+        await page.evaluate(
+          () =>
+            document.querySelector<HTMLVideoElement>(".design-preview video")
+              ?.paused,
+        ),
+      );
+      assert(
+        await page.evaluate(
+          () =>
+            performance
+              .getEntriesByType("resource")
+              .filter((entry) => entry.name.includes("/notosanssc/")).length <
+            10,
+        ),
+        "Opening the paused preview should not fetch the entire CJK font",
+      );
+      let visualizerAnimated = false;
+      for (const target of [3, 12]) {
+        const until = Date.now() + 15000;
+        let started = false;
+        while (!started && Date.now() < until) {
+          started = await page.evaluate(() => {
+            const play = document.querySelector<HTMLButtonElement>(
+              '.design-preview [aria-label="Play video"]',
+            );
+            if (!play || !document.querySelector(".design-preview video"))
+              return false;
+            play.click();
+            return true;
+          });
+          if (!started) await settle();
+        }
+        assert(started, "Original footage should be playable");
+        let time = 0;
+        while (time < target && Date.now() < until) {
+          time = await page.evaluate(
+            () =>
+              document.querySelector<HTMLVideoElement>(".design-preview video")
+                ?.currentTime ?? 0,
+          );
+          if (!visualizerAnimated)
+            visualizerAnimated = (await barHeights()).some(
+              (height, i) => height !== pausedHeights[i],
+            );
+          await settle();
+        }
+        assert(
+          time >= target,
+          "The original video should advance past " + target + " seconds",
+        );
+        const state = await page.evaluate(() => {
+          const video = document.querySelector<HTMLVideoElement>(
+            ".design-preview video",
+          )!;
+          const audible = [
+            ...document.querySelectorAll<HTMLMediaElement>("video,audio"),
+          ].filter((el) => !el.paused && !el.muted && el.volume > 0);
+          document
+            .querySelector<HTMLButtonElement>(
+              '.design-preview [aria-label="Pause video"]',
+            )!
+            .click();
+          return {
+            audible: audible.length,
+            embedded: audible.includes(video),
+            frames: video.getVideoPlaybackQuality().totalVideoFrames,
+          };
+        });
+        assert.equal(state.audible, 1);
+        assert(state.embedded);
+        assert(state.frames > 1);
+        if (target === 12)
+          assert.match(
+            await page.evaluate(
+              () =>
+                document.querySelector(".design-preview")!.textContent ?? "",
+            ),
+            /梦/,
+          );
+        await settle();
+        assert(
+          await page.evaluate(
+            () =>
+              document.querySelector<HTMLVideoElement>(".design-preview video")!
+                .paused,
+          ),
+        );
+      }
+      assert(
+        visualizerAnimated,
+        "Visualizer bars should respond during playback",
+      );
+      await click("Close preview");
+      assert.equal(
+        await page.evaluate(
+          () => !!document.querySelector(".design-preview video"),
+        ),
+        false,
+      );
+      await click("Timing");
+      const waveDeadline = Date.now() + 65000;
+      let waveReady = false;
+      while (!waveReady && Date.now() < waveDeadline) {
+        waveReady = await page.evaluate(
+          () =>
+            document.querySelectorAll(".timing-wave svg line").length === 1600,
+        );
+        if (!waveReady) await settle();
+      }
+      assert(waveReady, "Returning to Timing should finish the waveform");
+      console.log(
+        "Original MP4 preview passed sustained playback, pause/resume and one audible soundtrack.",
       );
       return;
     }
@@ -1263,6 +1714,7 @@ const server = http.createServer((req, res) => {
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
+    await renderAssets?.close();
   }
 })().catch((e) => {
   console.error(e);

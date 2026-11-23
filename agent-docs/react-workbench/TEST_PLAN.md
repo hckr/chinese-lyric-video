@@ -139,11 +139,15 @@ Verified:
 
 ## M5 — UI to Remotion
 
-- [ ] Toggling background mode changes the correct renderer path, not merely preview CSS.
-- [ ] Changing visualizer primary color in UI appears in actual render, with preset resolution consistent between preview and final.
-- [ ] Playhead/cue selection previews the correct phrase/frame; ms/frame conversion tested at actual composition FPS.
-- [ ] Missing/moved local files produce a clear media relink instruction instead of fabricated preview.
-- [ ] Manual TS/JSON export continues to work even if direct preview/render API is unavailable.
+Run `node web/tests/browser.ts --video-download` to exercise missing media, cancellation, retry and the download of a portrait WebM. The test checks that MP4/H.264 is selected when it is the only hardware-preferred codec reported, then checks encoder support and inspects dimensions, duration, source-matched video packet cadence and audio track count. It checks that remuxed audio packets retain their bytes and timestamps, then prepares and downloads Studio props and checks the prepared media URL. A separate remux check preserved all 10,947 AAC packets and timestamps from 做你的猫. On the cached headless Chromium in the test environment, the 4K H.264/AAC capability query passed and the actual encode probe failed. A successful 4K H.264 export on the owner’s browser and responsiveness measurements remain open.
+
+The original-footage playback regression runs with `node web/tests/browser.ts --original-playback`. It restores a saved fixture project, relinks `public/做你的猫 [rEV1VWwwAyA].mp4` in Timing, enables the visualizer, waits 16 seconds in Video before loading the preview, and waits another 16 seconds with the Player paused. It checks that no preview media mounts before **Load preview**, then verifies animated bars during playback through the first lyric, pause/resume, one audible element, **Close preview**, and waveform completion on return to Timing. With the visualizer on, the original Player path failed the paused responsiveness check in headless Chromium. The revised Player reads short audio windows and applies blend modes to whole bar groups. Studio rendering uses the full-track analysis and per-bar blends. The owner’s browser and project combination still needs confirmation. The workbench browser suite and project tests passed during implementation. The dedicated `workbench:test:video` check encodes a ten-frame ping-pong clip, decodes its RGB frames and audio, and compares each frame with the Player. Original footage, an artwork/visualizer portrait excerpt and three thumbnail modes produced downloadable files in the browser renderer. Browser checks exercised asset selection and preparation at desktop and mobile widths. Twelve legacy footage and thumbnail PNGs matched HEAD under identical substitute fonts, including intro, active lyrics, repeated and long lyrics, overlay, portrait and outro. Changing white bars to red changed 64,629 pixels in a controlled 1920 × 1080 render. The offline composition check listed all fourteen registrations. The production Google Fonts host was unreachable in the sandbox. [Feature verification](features/video-workspace/SPEC.md#12-implementation-and-verification-record).
+
+- [x] Toggling background mode changes the correct renderer path, not merely preview CSS.
+- [x] Changing visualizer primary color in UI appears in actual render, with preset resolution consistent between preview and final.
+- [x] Choosing the second timed lyric in Video and applying its range displayed that lyric at the first portrait frame. Resolver tests check rounded excerpt boundaries at 23.976 and 25 FPS.
+- [x] Missing/moved local files produce a clear media relink instruction instead of fabricated preview.
+- [x] Manual TS/JSON export continues to work even if direct preview/render API is unavailable.
 
 ## Review policy
 

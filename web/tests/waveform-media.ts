@@ -4,7 +4,7 @@ import type { openBrowser } from "@remotion/renderer";
 type Page = Awaited<
   ReturnType<Awaited<ReturnType<typeof openBrowser>>["newPage"]>
 >;
-export async function waveformMedia(page: Page) {
+export async function attachTimingMedia(page: Page, name: string) {
   // Remotion's minimal CDP type map omits these standard DOM-domain commands.
   const client = page._client() as unknown as {
     send(
@@ -19,17 +19,18 @@ export async function waveformMedia(page: Page) {
       params: { nodeId: number; files: string[] },
     ): Promise<unknown>;
   };
-  async function file(name: string) {
-    const doc = await client.send("DOM.getDocument");
-    const node = await client.send("DOM.querySelector", {
-      nodeId: doc.value.root.nodeId,
-      selector: '[aria-label="Local audio file"]',
-    });
-    await client.send("DOM.setFileInputFiles", {
-      nodeId: node.value.nodeId,
-      files: [path.resolve(name)],
-    });
-  }
+
+  const doc = await client.send("DOM.getDocument");
+  const node = await client.send("DOM.querySelector", {
+    nodeId: doc.value.root.nodeId,
+    selector: '[aria-label="Local audio file"]',
+  });
+  await client.send("DOM.setFileInputFiles", {
+    nodeId: node.value.nodeId,
+    files: [path.resolve(name)],
+  });
+}
+export async function waveformMedia(page: Page) {
   async function wave() {
     const deadline = Date.now() + 65000;
     while (Date.now() < deadline) {
@@ -57,7 +58,7 @@ export async function waveformMedia(page: Page) {
         Error("Whole-file arrayBuffer forbidden by regression test"),
       );
   });
-  await file("public/Angela_Zhang_Keep_Walking.mp4");
+  await attachTimingMedia(page, "public/Angela_Zhang_Keep_Walking.mp4");
   await wave();
   assert.ok(
     await page.evaluate(() =>
@@ -75,8 +76,11 @@ export async function waveformMedia(page: Page) {
   );
   await page.evaluate(() => document.querySelector("audio")!.pause());
   // Replace an analysis immediately; old work must never publish over the new file.
-  await file("public/Angela_Zhang_Keep_Walking.mp4");
-  await file("public/Macchiato_Special_Affection_for_You.mp4");
+  await attachTimingMedia(page, "public/Angela_Zhang_Keep_Walking.mp4");
+  await attachTimingMedia(
+    page,
+    "public/Macchiato_Special_Affection_for_You.mp4",
+  );
   await wave();
   assert.equal(
     await page.evaluate(

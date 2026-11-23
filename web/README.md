@@ -15,7 +15,7 @@ Open **http://127.0.0.1:5173** yourself. The command never opens a browser. The 
 5. **Mark phrase reviewed** records review and segmentation approval once validation passes. Editing a sentence invalidates review without erasing segmentation approval. Editing word structure invalidates its approval. Download project JSON to retain workbench metadata; legacy TS carries only the renderer's established data contract.
 6. **Export data** lists warnings and previews the actual TS. Download the legacy module, manually place/reference it under `src/`, and use the existing Remotion workflow. Missing raw timings remain null in JSON and become warned zero placeholders in a TS draft. Incomplete/unreviewed/invalid manual data requires explicit acknowledgement before draft download; it is never silently normalized. The app never overwrites source files.
 
-Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word rows and unambiguous readings while preserving repetitions. Contextual glosses and English/Polish sentences start empty. The dictionary inspector shows reference definitions. There is no paid AI request or browser API key. Raw import does not upload audio/media. Automatic timing and occurrence review are available in Timing. Video settings and synchronized Remotion Player integration remain later checkpoints.
+Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chinese text, strip headings/credits and draft word rows and unambiguous readings while preserving repetitions. Contextual glosses and English/Polish sentences start empty. The dictionary inspector shows reference definitions. There is no paid AI request or browser API key. Raw import does not upload audio/media. Automatic timing and occurrence review are available in Timing. Video settings and Remotion Player preview are available in Video.
 
 Browser recovery stores the current project, not the undo stack. History is bounded to 100 edits; source imports begin a new history. Reselecting a phrase preserves its committed edits. Save a portable JSON before clearing browser data. The browser's static TypeScript parser adds bundle size (roughly 11 MB unminified development JS); this avoids introducing an API/server merely for local file parsing.
 
@@ -38,7 +38,7 @@ Waveform analysis runs in the browser and is skipped for files over 32 MiB or
 eight minutes. Playback and ruler editing remain available when the browser can
 play the media. No media is uploaded.
 
-The JSON schema remains version 1 with optional timing review, run, settings, and audio metadata. Old `timingBaseline` data is retired on save. Existing version-1 projects load; older strict workbench versions may reject files with these new fields. Legacy TS omits workbench metadata. The text preview is layout only; Remotion media assignment and rendering remain explicit manual steps.
+The JSON schema remains version 1 with optional timing review, run, settings, and audio metadata. Old `timingBaseline` data is retired on save. Existing version-1 projects load; older strict workbench versions may reject files with these new fields. Legacy TS omits workbench metadata. Video settings persist in project JSON. Video previews use Remotion Player. Export supports direct browser video downloads and prepares props for manual Studio web rendering.
 
 Beat detection is deferred after the fixed-tempo experiment proved unreliable on real music. The review workflow and its verification record are documented in [Automatic Timing & Review](../agent-docs/react-workbench/features/automatic-timing-review/SPEC.md).
 
@@ -82,6 +82,18 @@ Gemini and writes results to an ignored output directory.
 ```sh
 python-src/venv/bin/python python-src/evaluate_translation.py python-src/tests/fixtures/translation-evaluation.txt --live --output out/workbench/translation-evaluation
 ```
+
+## Video designs and Studio web export
+
+Attach the song media during Import or Timing. Open **Video** to add a named design, choose original footage, artwork or a loop, and choose a variant. Select **Load preview** to start the Player and **Close preview** to release it. The default soundtrack is the Timing recording. **Master soundtrack** can select another playable recording. When original footage supplies the soundtrack, the preview plays its picture and sound together in one native video element. Choosing another soundtrack mutes the footage.
+
+Use **Landscape · only Pinyin (over Hanzi)** for the original centered overlay. **Landscape · without Pinyin** keeps the full translation layout. For a portrait short, apply an excerpt in minutes, seconds and milliseconds. Each design and variant can override lyric visibility, framing, margins, scale, position and branding. Loop clips have an independent trim, speed and repeat, ping-pong or final-frame hold. **Thumbnail** edits the still modes and can reuse the selected design's artwork.
+
+In **Export**, choose a design and output variant under **Render and download video**. Set the container, codec, resolution, frame rate and video quality or bitrate under **File settings**. **Auto** measures the video background’s frame rate from its packets and uses 30 fps for still artwork. Codec options automatically show browser-reported availability and hardware preference. The initial selection prefers a codec that passed the hardware-preferred check, including switching to MP4 when only MP4 codecs pass. Manual selections take precedence. **Check encoder support** encodes a short test file and tries a hardware-preferred configuration. Browsers can fall back to software. **Copy audio when possible** preserves compatible full-song audio packets. Excerpts and incompatible tracks use encoding, with the reason shown before rendering. Select **Render video**, wait for encoding, then use the download link. The workbench renders one video at a time in a browser with WebCodecs encoding support. Leaving Export cancels an active render and releases its download.
+
+Under **Prepare for Remotion Studio**, check the individual design/variant cells and thumbnail jobs, then choose **Prepare selected jobs**. Download the props for each successful job. Keep this workbench server running, launch Studio using the command beside that download, select **Workbench-Video** or **Workbench-Thumbnail**, and choose web rendering. Studio reports render progress and offers the encoded output. A server restart expires the temporary asset URLs. Reopen the project, relink the requested files and prepare the jobs again. Project JSON stores settings and media labels. Prepared props reference files in the local server's temporary directory.
+
+Run `npm run workbench:test:video` for a local browser regression that compares Player frames with an encoded WebM across both ping-pong turns and measures the decoded soundtrack level.
 
 ## Application versioning
 

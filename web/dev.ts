@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { translateLyrics } from "./translation-api.ts";
 import { automaticTiming, cachedTimingModels } from "./timing-api.ts";
+import { createRenderAssets } from "./render-assets.ts";
 import http from "node:http";
 import { importLyrics } from "./import-api.ts";
 // Separate loopback-only file editor. Uses the explicitly declared esbuild development dependency.
@@ -34,10 +35,13 @@ import fs from "node:fs/promises";
     await ctx.dispose();
   } else {
     const frontend: { server?: http.Server } = {};
+    const assets = await createRenderAssets();
     const shutdown = () => {
       frontend.server?.close();
       frontend.server?.closeAllConnections();
-      void ctx.dispose().then(() => process.exit(0));
+      void Promise.all([ctx.dispose(), assets.close()]).then(() =>
+        process.exit(0),
+      );
     };
     process.once("SIGTERM", shutdown);
     process.once("SIGINT", shutdown);
@@ -48,6 +52,13 @@ import fs from "node:fs/promises";
       port: 0,
     });
     frontend.server = http.createServer((req, res) => {
+      if (
+        req.url === "/api/render-assets" ||
+        req.url?.startsWith("/api/render-assets/")
+      ) {
+        void assets.serve(req, res).catch(() => res.destroy());
+        return;
+      }
       if (req.url === "/api/translation/providers" && req.method === "GET") {
         execFile(
           process.env.WORKBENCH_PYTHON ||

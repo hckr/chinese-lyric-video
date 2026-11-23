@@ -12,6 +12,7 @@ const darkOverlay: React.CSSProperties = { background: "rgba(0,0,0,0.5)" };
 
 function resolveAsset(src: string): string {
   if (
+    src.startsWith("blob:") ||
     src.startsWith("http://") ||
     src.startsWith("https://") ||
     src.startsWith("/")
@@ -27,10 +28,13 @@ function resolveAsset(src: string): string {
  * variant ("landscape" | "short"), optional sequenceOffset, watermark, and outro.
  */
 export const VideoLyricTemplate: React.FC<VideoLyricTemplateProps> = ({
+  renderScene,
+  layout,
   lines = defaultSongData.lines,
   videoSrc = "Angela_Zhang_Keep_Walking.mp4",
   lyricMode = "full",
   variant = "landscape",
+  showPinyin = true,
   sequenceOffset = 0,
   showWatermark = true,
   watermarkText = "@SingInMandarin",
@@ -42,28 +46,35 @@ export const VideoLyricTemplate: React.FC<VideoLyricTemplateProps> = ({
     lines && lines.length > 0 ? lines : defaultSongData.lines;
   const resolvedVideoSrc = resolveAsset(videoSrc);
 
+  const lyrics = effectiveLines.map((line) => {
+    const { startFrame, duration } = msToFrameDuration(
+      line.startMs,
+      line.endMs,
+      fps,
+    );
+    return (
+      <Sequence key={line.id} from={startFrame} durationInFrames={duration}>
+        {showDimOverlay && <AbsoluteFill style={darkOverlay} />}
+        <LyricLine
+          layout={layout}
+          line={line}
+          showPinyin={showPinyin}
+          mode={lyricMode}
+          variant={variant === "short" ? "portrait" : "landscape"}
+        />
+      </Sequence>
+    );
+  });
   const content = (
     <>
-      <VideoBackground src={resolvedVideoSrc} />
-
-      {effectiveLines.map((line) => {
-        const { startFrame, duration } = msToFrameDuration(
-          line.startMs,
-          line.endMs,
-          fps,
-        );
-        return (
-          <Sequence key={line.id} from={startFrame} durationInFrames={duration}>
-            {showDimOverlay && <AbsoluteFill style={darkOverlay} />}
-            <LyricLine
-              line={line}
-              mode={lyricMode}
-              variant={variant === "short" ? "portrait" : "landscape"}
-            />
-          </Sequence>
-        );
-      })}
-
+      {renderScene ? (
+        renderScene(lyrics)
+      ) : (
+        <>
+          <VideoBackground src={resolvedVideoSrc} />
+          {lyrics}
+        </>
+      )}
       {outro && (
         <Outro
           outroStart={outro.outroStart}

@@ -30,11 +30,11 @@ Use a lightweight React + TypeScript app in `web/`, preserving existing Remotion
 
 The source contracts are [React domain schemas](../../web/src/domain.ts), [legacy importer/exporter](../../web/src/legacy.ts), and [Python models](../../python-src/workbench/models.py). Do not copy an illustrative model into application code.
 
-React project JSON uses `format: "lyric-workbench"`, `schemaVersion: 1`, metadata, phrases, occurrences and source. Phrases have stable token IDs, a `pending`/`reviewed` state and `segmentationApproved`; occurrences reference phrase IDs and allow null timing. Optional timing baselines, lightweight audio metadata and fixed-membership lyric groups persist. Optional translation work stores draft values, source and vocabulary fingerprints, dictionary evidence for vocabulary proposals, generation settings, and applied provenance. Local media bytes/object URLs, on-demand dictionary lookup results and view layout stay in the session. Old phrase notes/dictionary fields are discarded on load. Visual configuration and video/image media references are not implemented schema fields.
+React project JSON uses `format: "lyric-workbench"`, `schemaVersion: 1`, metadata, phrases, occurrences and source. Phrases have stable token IDs, a `pending`/`reviewed` state and `segmentationApproved`; occurrences reference phrase IDs and allow null timing. Optional timing baselines, lightweight audio metadata and fixed-membership lyric groups persist. Optional translation work stores draft values, source and vocabulary fingerprints, dictionary evidence for vocabulary proposals, generation settings, and applied provenance. Local media bytes/object URLs, on-demand dictionary lookup results and view layout stay in the session. Old phrase notes/dictionary fields are discarded on load. Optional videoSettings stores named designs, source references, variant overrides, excerpts, thumbnails and export selections.
 
 Python projects use `version: 1`, phrase text, separate vocabulary/translation states and provenance, plus a timeline keyed by lyric text with non-null zero placeholders. They have no token IDs. The translation adapter creates a temporary Python model for prompts and validation. React owns project persistence, stable token and occurrence IDs, authored edits, and timing.
 
-Browser files use session-local File/Blob object URLs and require relinking after reload. Remotion currently resolves named assets with `staticFile` from `public/`; project downloads do not bundle those assets. Asset persistence, preview resolution and a possible local asset service remain future work, not guarantees that arbitrary filesystem paths will resolve.
+Browser files use session-local File/Blob object URLs and require relinking after reload. Legacy compositions use named assets under `public/`. Direct video export reads session-local media and encodes in the browser. Preparing Studio jobs stages selected files in a temporary directory behind the existing loopback server. Studio reads opaque, range-capable URLs. Preview, direct export and Studio share the scene and job resolver. Direct export checks browser codecs and can mux the encoded master audio into compatible full-song outputs.
 
 The [approved Timing review plan](features/automatic-timing-review/SPEC.md#14-completion-plan--documentation-commit-before-implementation)
 adds independent occurrence review, automatic/reviewed snapshots, pending detected
@@ -55,7 +55,7 @@ explicit choice, and unknown identity is not claimed as matching.
 ## One song, two interoperable artifacts
 
 - **Legacy `.ts` export:** preserve the existing `TIMELINE` and `LYRICS_DICT` structure and `get lines()` default song object; include timed occurrence IDs, order, `lyricKey`, EN/PL and word glosses. Omit workbench-only state that current consumer types do not understand.
-- **Project JSON:** canonical editing state holding stable IDs, review metadata, optional unsynchronized/null timings, lightweight audio metadata, groups and schema version. Visual presets and richer media references remain proposed. This is a distinct artifact and must not be mistaken for legacy song data. Make it versioned and validate it. The app should warn if exporting a `.ts` before all timings are set.
+- **Project JSON:** canonical editing state holding stable IDs, review metadata, optional unsynchronized/null timings, lightweight audio metadata, groups and schema version. Design and thumbnail settings retain lightweight asset references. This is a distinct artifact and must not be mistaken for legacy song data. Make it versioned and validate it. The app should warn if exporting a `.ts` before all timings are set.
 
 Versioned JSON is important for a local editor: TypeScript may be used for the first import but shouldn't become a hardcoded UI storage format indefinitely. Design an adapter to read/export old songs; do not force changes on the existing song files during the first milestone.
 
@@ -73,7 +73,7 @@ The committed example uses const arrays, spreads, static object literals, non-AS
 
 ## Configuration policy
 
-Three levels, in precedence order: **built-in safe defaults < named video preset < per-song overrides**. Composition-level props can override the resolved config for Studio experiments where appropriate. Resist a flat component with dozens of unrelated optional props: prefer discriminated background variants, typed grouped options, and small reusable subcomponents. Different video modes should share common lyric drawing, not automatically share all background implementation.
+Workbench resolution applies built-in defaults, the selected background look, the named design, and its output-variant overrides in that order. Composition-level props can override the resolved config for Studio experiments where appropriate. Resist a flat component with dozens of unrelated optional props: prefer discriminated background variants, typed grouped options, and small reusable subcomponents. Different video modes should share common lyric drawing, not automatically share all background implementation.
 
 ## Implemented local Python integration
 

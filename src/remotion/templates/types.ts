@@ -49,6 +49,9 @@ export const VideoLyricTemplateSchema = z.object({
   showDimOverlay: z.boolean().default(true),
 });
 export type VideoLyricTemplateProps = {
+  renderScene?: (lyrics: React.ReactNode) => React.ReactNode;
+  layout?: import("../../../web/src/designs").Design["overrides"][string];
+  showPinyin?: boolean;
   lines?: TimedLineData[];
   videoSrc?: string;
   lyricMode?: LyricMode;
@@ -151,6 +154,13 @@ export const ThumbnailModeSchema = z.enum([
 export type ThumbnailMode = z.infer<typeof ThumbnailModeSchema>;
 
 export const ThumbnailTemplateSchema = z.object({
+  titleWords: z.array(TitleWordSchema).optional(),
+  musicNotesStyle: z
+    .object({
+      color: z.string().optional(),
+      opacity: z.number().min(0).max(1).optional(),
+    })
+    .optional(),
   bgImageSrc: z.string().default("thumbnail-bg-369.png"),
   bgImageOpacity: z.number().default(0.6),
   musicNotesWatermark: z.string().default("♪♬"),

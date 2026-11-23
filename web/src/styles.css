@@ -3087,3 +3087,69 @@ main > header {
   width: 100%;
   min-width: 0;
 }
+
+.design-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.design-workspace label {
+  display: block;
+  margin: 0.5rem 0;
+}
+.design-preview {
+  min-width: 0;
+  position: sticky;
+  top: 1rem;
+}
+@media (max-width: 760px) {
+  .design-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .design-preview {
+    position: static;
+  }
+}
+.export-jobs {
+  grid-column: 1/-1;
+  min-width: 0;
+}
+.export-matrix {
+  overflow: auto;
+  max-width: 100%;
+}
+.export-matrix table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.export-matrix th,
+.export-matrix td {
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.export-matrix small {
+  display: block;
+}
+.export-jobs code {
+  overflow-wrap: anywhere;
+}
+.export-matrix .job-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.video-tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid #314155;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+.video-tabs button[aria-pressed="true"] {
+  border-color: #55adf2;
+  color: #82c8ff;
+}

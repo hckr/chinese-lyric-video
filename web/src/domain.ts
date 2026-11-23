@@ -1,3 +1,4 @@
+import { videoSettingsSchema } from "./video-settings.ts";
 import { lyricCount, lyricLimit } from "./lyric-length.ts";
 import { translationSchema } from "./translation-schema.ts";
 import { syllableCounts } from "./pinyin-validation.ts";
@@ -120,11 +121,14 @@ export const projectSchema = z
         name: z.string().min(1),
         size: z.number().int().nonnegative(),
         lastModified: z.number().int().nonnegative(),
+        hasAudio: z.boolean().optional(),
+        hasVideo: z.boolean().optional(),
         durationMs: z.number().int().positive(),
       })
       .strict()
       .optional(),
     timingSettings: timingSettingsSchema.optional(),
+    videoSettings: videoSettingsSchema.optional(),
     timingRun: z
       .object({
         id: z.string(),
