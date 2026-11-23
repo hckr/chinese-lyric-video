@@ -1,3 +1,6 @@
+import { RulerMarks } from "./RulerMarks";
+import { TimingFields } from "./TimingFields";
+import { TimingSettings } from "./TimingSettings";
 import { englishLyric } from "../lyric-length.ts";
 import { AutomaticTiming, type VerifiedSplitAudio } from "./AutomaticTiming";
 import {
@@ -18,7 +21,6 @@ import { GroupSidebar } from "./GroupSidebar";
 import { GroupTimeline, type DuplicatePreview } from "./GroupTimeline";
 import {
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   useMemo,
@@ -37,7 +39,6 @@ import {
   editTiming,
   formatTime,
   rulerMarks,
-  formatRulerTime,
   followPlayhead,
   mediaMs,
   moveProjectTiming,
@@ -45,33 +46,8 @@ import {
   resetTiming,
   timingNotices,
   type Boundary,
-  type Snap,
 } from "./timing.ts";
 import { useLocalAudio } from "./useLocalAudio.ts";
-
-function RulerMarks({
-  major,
-  minor,
-  duration,
-}: {
-  major: number[];
-  minor: number[];
-  duration: number;
-}) {
-  const position = (time: number) => `${(time / duration) * 100}%`;
-  return (
-    <>
-      {minor.map((time) => (
-        <i aria-hidden="true" key={time} style={{ left: position(time) }} />
-      ))}
-      {major.map((time) => (
-        <span key={time} style={{ left: position(time) }}>
-          <span className="timing-ruler-label">{formatRulerTime(time)}</span>
-        </span>
-      ))}
-    </>
-  );
-}
 
 function smoothScroll(
   element: HTMLElement,
@@ -109,54 +85,6 @@ type Gesture = {
   draft: Project;
   linkEdges: boolean;
 };
-function TimingFields({
-  cue,
-  onApply,
-}: {
-  cue: Occurrence;
-  onApply: (start: string, end: string) => void;
-}) {
-  const [start, setStart] = useState(String(cue.startMs ?? "")),
-    [end, setEnd] = useState(String(cue.endMs ?? ""));
-  useEffect(() => {
-    setStart(String(cue.startMs ?? ""));
-    setEnd(String(cue.endMs ?? ""));
-  }, [cue.id, cue.startMs, cue.endMs]);
-  return (
-    <form
-      noValidate
-      className="timing-fields"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onApply(start, end);
-      }}
-    >
-      <label>
-        Start (ms)
-        <input
-          aria-label="Start milliseconds"
-          type="number"
-          step="1"
-          min="0"
-          value={start}
-          onChange={(e) => setStart(e.target.value)}
-        />
-      </label>
-      <label>
-        End (ms)
-        <input
-          aria-label="End milliseconds"
-          type="number"
-          step="1"
-          min="0"
-          value={end}
-          onChange={(e) => setEnd(e.target.value)}
-        />
-      </label>
-      <button type="submit">Apply timing</button>
-    </form>
-  );
-}
 export function TimingEditor({
   project: sourceProject,
   localFile,
@@ -257,8 +185,6 @@ export function TimingEditor({
       true,
     );
   const setZoom = (zoom: typeof settings.zoom) => updateSettings({ zoom });
-  const setSnap = (snap: Snap) => updateSettings({ snap });
-  const setLinkEdges = (linkEdges: boolean) => updateSettings({ linkEdges });
   const [boundary, setBoundary] = useState<Boundary>("both");
   const [showTranslations, setShowTranslations] = useState(true);
   const [loopEnabled, setLoopEnabled] = useState(false),
@@ -266,91 +192,6 @@ export function TimingEditor({
   const [identityReady, setIdentityReady] = useState(false);
   const [automaticTimingOpen, setAutomaticTimingOpen] = useState(false);
   const automaticTimingTrigger = useRef<HTMLButtonElement>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsPosition, setSettingsPosition] = useState<{
-    left: number;
-    top: number;
-  }>();
-  const settingsDialog = useRef<HTMLDivElement>(null);
-  const settingsTrigger = useRef<HTMLButtonElement>(null);
-  const closeSettings = (restoreFocus: boolean) => {
-    setSettingsOpen(false);
-    if (restoreFocus) settingsTrigger.current?.focus({ preventScroll: true });
-  };
-  useLayoutEffect(() => {
-    if (!settingsOpen || !active || duplicate) return;
-    const panel = settingsDialog.current!,
-      trigger = settingsTrigger.current!;
-    const position = () => {
-      const anchor = trigger.getBoundingClientRect();
-      const { width, height } = panel.getBoundingClientRect();
-      const above = anchor.top - height - 8,
-        right = anchor.right + 8;
-      const headerBottom =
-        document.querySelector("main > header")?.getBoundingClientRect()
-          .bottom ?? 0;
-      if (above >= headerBottom + 8 && anchor.top <= innerHeight)
-        setSettingsPosition({
-          top: above,
-          left: Math.max(
-            8,
-            Math.min(anchor.right - width, innerWidth - width - 8),
-          ),
-        });
-      else if (
-        right + width + 8 <= innerWidth &&
-        anchor.bottom >= 0 &&
-        anchor.top < innerHeight
-      )
-        setSettingsPosition({
-          top: Math.max(
-            headerBottom + 8,
-            Math.min(anchor.top, innerHeight - height - 8),
-          ),
-          left: right,
-        });
-      else
-        setSettingsPosition({
-          top: Math.max(
-            headerBottom + 8,
-            Math.min(anchor.bottom + 8, innerHeight - height - 8),
-          ),
-          left: Math.max(
-            8,
-            Math.min(anchor.right - width, innerWidth - width - 8),
-          ),
-        });
-    };
-    position();
-    panel.querySelector("select")?.focus({ preventScroll: true });
-    const dismiss = (event: PointerEvent) => {
-      if (
-        !panel.contains(event.target as Node) &&
-        !trigger.contains(event.target as Node)
-      )
-        setSettingsOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || document.querySelector("dialog[open]"))
-        return;
-      event.preventDefault();
-      setSettingsOpen(false);
-      trigger.focus({ preventScroll: true });
-    };
-    window.addEventListener("resize", position);
-    window.addEventListener("scroll", position, true);
-    document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
-    return () => {
-      window.removeEventListener("resize", position);
-      window.removeEventListener("scroll", position, true);
-      document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [settingsOpen, active, duplicate]);
-  useEffect(() => {
-    if (!active || duplicate) setSettingsOpen(false);
-  }, [active, duplicate]);
   const scroll = useRef<HTMLDivElement>(null),
     track = useRef<HTMLDivElement>(null),
     seekRuler = useRef<HTMLSpanElement>(null),
@@ -1048,7 +889,12 @@ export function TimingEditor({
                 </p>
               )}
             </div>
-            <div className="timing-toolbar-actions">
+            <TimingSettings
+              active={active && !duplicate}
+              settings={settings}
+              zoomTo={zoomTo}
+              updateSettings={updateSettings}
+            >
               {project.timingRun && (
                 <button
                   ref={automaticTimingTrigger}
@@ -1081,115 +927,7 @@ export function TimingEditor({
                     : "Regenerate timing…"}
                 </button>
               )}
-              <button
-                ref={settingsTrigger}
-                className="timing-settings-trigger"
-                aria-haspopup="dialog"
-                aria-expanded={settingsOpen}
-                aria-controls="timing-settings-panel"
-                onClick={() => {
-                  setSettingsPosition(undefined);
-                  setSettingsOpen(!settingsOpen);
-                }}
-              >
-                <span className="timing-settings-label">
-                  <span aria-hidden="true">⚙</span> Timing settings
-                </span>
-                <span className="timing-settings-summary">
-                  {zoom}× · {snap === "edges" ? "Edge snap" : "Snap off"} ·{" "}
-                  {linkEdges ? "Edges linked" : "Edges unlinked"}
-                </span>
-              </button>
-            </div>
-            <div
-              hidden={!settingsOpen}
-              ref={settingsDialog}
-              role={settingsOpen ? "dialog" : undefined}
-              id="timing-settings-panel"
-              className="timing-settings"
-              aria-labelledby="timing-settings-title"
-              style={
-                settingsPosition
-                  ? { position: "fixed", ...settingsPosition }
-                  : { position: "fixed", top: 0 }
-              }
-            >
-              <h2 id="timing-settings-title">Timing settings</h2>
-              <label>
-                Zoom
-                <select
-                  aria-label="Timeline zoom"
-                  value={zoom}
-                  onChange={(e) =>
-                    zoomTo(Number(e.target.value) as typeof settings.zoom)
-                  }
-                >
-                  {[1, 2, 4, 8, 16, 32].map((value) => (
-                    <option key={value} value={value}>
-                      {value}×
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Snap
-                <select
-                  aria-label="Timing snap"
-                  value={snap}
-                  onChange={(e) => setSnap(e.target.value as Snap)}
-                >
-                  <option value="off">Off</option>
-                  <option value="edges">Neighboring edges</option>
-                </select>
-              </label>
-              <label className="check">
-                Link touching edges
-                <input
-                  type="checkbox"
-                  checked={linkEdges}
-                  onChange={(e) => setLinkEdges(e.target.checked)}
-                />
-              </label>
-              <label>
-                Before lyric (ms)
-                <input
-                  type="number"
-                  min={0}
-                  max={5000}
-                  value={settings.preRollMs}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (Number.isInteger(n) && n >= 0 && n <= 5000)
-                      updateSettings({ preRollMs: n });
-                  }}
-                />
-              </label>
-              <label>
-                After lyric (ms)
-                <input
-                  type="number"
-                  min={0}
-                  max={5000}
-                  value={settings.postRollMs}
-                  onChange={(e) => {
-                    const n = Number(e.target.value);
-                    if (Number.isInteger(n) && n >= 0 && n <= 5000)
-                      updateSettings({ postRollMs: n });
-                  }}
-                />
-              </label>
-              <label className="check">
-                Auto-advance after review
-                <input
-                  type="checkbox"
-                  checked={settings.autoAdvance}
-                  onChange={(e) =>
-                    updateSettings({ autoAdvance: e.target.checked })
-                  }
-                />
-              </label>
-              <button onClick={() => closeSettings(true)}>Done</button>
-            </div>
+            </TimingSettings>
           </div>
           <div
             className={`timing-scroll ${panning ? "is-panning" : ""} ${audio.playing ? "is-playing" : ""}`}

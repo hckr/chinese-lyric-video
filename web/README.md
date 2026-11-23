@@ -25,6 +25,8 @@ Browser recovery stores the current project, not the undo stack. History is boun
 
 The browser entry point, global styles, and shared lyric and project modules live directly in `web/src`. Feature code lives in `app/`, `import/`, `translations/`, `timing/`, `dictionary/`, `video/`, and `export/`. Each directory contains its components alongside their supporting logic.
 
+In Timing, `TimingEditor` coordinates playback and timeline edits. `RulerMarks` renders both time scales, `TimingFields` holds the start and end input drafts, and `TimingSettings` manages the settings panel and its keyboard focus.
+
 ## Timing workflow (checkpoint B)
 
 1. Open **Timing** after importing a song or raw lyrics. **Lyrics** lists every timed appearance, including repeats. Select a sidebar row or timeline block to seek to its start, both paused and playing. In the lyric editor, each appearance has a **Timing** button that opens its own timing selection; **Translate** returns to the shared phrase editor. Select a `???` marker in the playback preview or timing inspector to open Translations for that appearance and focus the missing Pinyin field. If an AI vocabulary draft splits or merges that word, Translations opens on the lyric. Dismiss the draft to see the original word again.
