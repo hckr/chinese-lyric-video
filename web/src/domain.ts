@@ -1,6 +1,6 @@
-import { videoSettingsSchema } from "./video-settings.ts";
+import { videoSettingsSchema } from "./video/video-settings.ts";
 import { lyricCount, lyricLimit } from "./lyric-length.ts";
-import { translationSchema } from "./translation-schema.ts";
+import { translationSchema } from "./translations/translation-schema.ts";
 import { syllableCounts } from "./pinyin-validation.ts";
 import { z } from "zod";
 

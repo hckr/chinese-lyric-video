@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkAudioBudget, peaksFromSamples } from "../src/waveform-stream.ts";
+import {
+  checkAudioBudget,
+  peaksFromSamples,
+} from "../src/timing/waveform-stream.ts";
 function sample(channels: number[][], rate: number, timestamp: number) {
   let closed = false;
   return {
@@ -97,7 +100,7 @@ test("cancellation and decoder failures release samples instead of publishing pa
 });
 
 test("invalid media duration and pre-cancellation stop before opening any media bytes", async () => {
-  const { decodeWaveform } = await import("../src/waveform-stream.ts");
+  const { decodeWaveform } = await import("../src/timing/waveform-stream.ts");
   const file = new File([], "unused.mp4");
   file.arrayBuffer = () => {
     throw Error("must not read the file");

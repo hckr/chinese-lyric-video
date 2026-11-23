@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { rawProject, parseProject, removeAppearance } from "../src/domain.ts";
-import { withTimingBaseline } from "../src/timing.ts";
+import { withTimingBaseline } from "../src/timing/timing.ts";
 import {
   createGroup,
   sidebarUnits,

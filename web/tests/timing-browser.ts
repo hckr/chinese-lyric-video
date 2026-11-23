@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import type { openBrowser } from "@remotion/renderer";
 import { rawProject, type Project } from "../src/domain.ts";
-import { formatRulerTime, reviewTiming, rulerMarks } from "../src/timing.ts";
+import {
+  formatRulerTime,
+  reviewTiming,
+  rulerMarks,
+} from "../src/timing/timing.ts";
 import { importLegacy } from "../src/legacy.ts";
 import { syntheticWav } from "./synthetic-wav.ts";
 

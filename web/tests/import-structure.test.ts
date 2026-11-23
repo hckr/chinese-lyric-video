@@ -1,5 +1,5 @@
 import { orderGroupedProject } from "../src/lyric-groups.ts";
-import { parseLines, projectDocument } from "../src/lyrics-document.ts";
+import { parseLines, projectDocument } from "../src/import/lyrics-document.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -7,7 +7,7 @@ import {
   groupsOf,
   replaceGroups,
   reviseSource,
-} from "../src/import-structure.ts";
+} from "../src/import/import-structure.ts";
 test("headings and stanzas map source segments and preserve repeated appearances", () => {
   const draft = detectStructure(
     "歌\n作詞：人\n独\n[Verse 2]\n風，雨。\n[Pre-chorus]\n一\n[Chorus]\n風，雨。",
@@ -46,12 +46,12 @@ test("manual ranges and removals survive unrelated edits and flag ambiguous repe
 });
 
 import { lyricCount, suggestPieces, validPieces } from "../src/lyric-length.ts";
-import { changeBoundaries } from "../src/import-structure.ts";
+import { changeBoundaries } from "../src/import/import-structure.ts";
 import {
   addReviewedPieces,
   proposedIntervals,
   type Candidate,
-} from "../src/automatic-timing.ts";
+} from "../src/timing/automatic-timing.ts";
 import { rawProject } from "../src/domain.ts";
 
 test("NFC letter and digit counts and multi-piece review preserve source", () => {

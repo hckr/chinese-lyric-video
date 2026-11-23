@@ -5,7 +5,7 @@ import { createGroup, sidebarUnits } from "../src/lyric-groups.ts";
 import {
   provisionalPlacements,
   timelineLayout,
-} from "../src/timeline-layout.ts";
+} from "../src/timing/timeline-layout.ts";
 function fixture() {
   const p = rawProject("你\n我\n他\n她\n它", "Test", "");
   p.occurrences = p.occurrences.map((cue, i) => ({

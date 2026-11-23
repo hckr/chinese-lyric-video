@@ -85,6 +85,7 @@ These are **not** permission to implement them. Append newly mentioned actionabl
 - **Long-line handling** — Raw import and new Whisper occurrences enforce an 11-element limit on lines containing Hanzi, counting Han characters, Latin words and digits. Import supports phrase splits and joins. Whisper split review preserves word pauses and requires manual boundaries when evidence is missing. Longer saved occurrences remain editable in their original form. [Import and timing verification](react-workbench/features/lyrics-import-enhancements/SPEC.md).
 - **Missing-Pinyin navigation across vocabulary drafts** — Unprioritized. Preserve the selected saved word as an editable target when an active vocabulary draft replaces its segmentation.
 - **Improve English timing coverage on DoDoDo** — Unprioritized. Compare larger cached models on the repeated refrain and rap. The local Base run left 12 English-only lyrics unresolved after retry. [DoDoDo verification](react-workbench/features/automatic-timing-review/SPEC.md#multilingual-timing-and-dododo-verification).
+- **Simplify TimingEditor** — Extract the timeline ruler, time fields, and settings panel into focused components for independent review.
 
 ## Maintenance conventions
 

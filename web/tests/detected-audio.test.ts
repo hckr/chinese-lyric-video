@@ -15,7 +15,7 @@ import {
   resetTiming,
   withTimingBaseline,
   reviewTiming,
-} from "../src/timing.ts";
+} from "../src/timing/timing.ts";
 import { createGroup, duplicateGroup } from "../src/lyric-groups.ts";
 import { exportLegacy, importLegacy } from "../src/legacy.ts";
 function fixture() {

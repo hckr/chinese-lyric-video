@@ -1,4 +1,4 @@
-import type { Design } from "../../../web/src/designs";
+import type { Design } from "../../../web/src/video/designs";
 import { DesignBackground } from "../backgrounds/DesignBackground";
 import { AbsoluteFill, Composition, Still } from "remotion";
 import { VideoLyricTemplate } from "./VideoLyricTemplate";

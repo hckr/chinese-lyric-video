@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dictionaryText, dictionaryParts } from "../src/dictionary-text.ts";
+import {
+  dictionaryText,
+  dictionaryParts,
+} from "../src/dictionary/dictionary-text.ts";
 
 test("dictionary examples display diacritics with unmarked neutral tones", () => {
   assert.equal(

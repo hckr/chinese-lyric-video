@@ -6,8 +6,8 @@ import {
   applyEnglishRetry,
   parseWhisperTranscript,
   validateTimingResult,
-} from "../src/automatic-timing.ts";
-import { resetTiming, withTimingBaseline } from "../src/timing.ts";
+} from "../src/timing/automatic-timing.ts";
+import { resetTiming, withTimingBaseline } from "../src/timing/timing.ts";
 function fixture() {
   const p = withTimingBaseline(rawProject("你好\n世界\n你好", "Test", "Test"));
   return p;
@@ -128,7 +128,7 @@ test("weak estimates require separate opt-in and preserve normal undo/reset beha
 });
 
 test("ETA formats a frontend deadline, counts down and clamps expired estimates", async () => {
-  const { formatTimingEta } = await import("../src/automatic-timing.ts");
+  const { formatTimingEta } = await import("../src/timing/automatic-timing.ts");
   assert.equal(formatTimingEta(65000, 0), "ETA ~1:05");
   assert.equal(formatTimingEta(65000, 1000), "ETA ~1:04");
   assert.equal(formatTimingEta(65000, 70000), "ETA ~0:00");

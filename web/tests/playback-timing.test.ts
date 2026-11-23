@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { rawProject } from "../src/domain.ts";
-import { activeLyrics, moveProjectTiming } from "../src/timing.ts";
+import { activeLyrics, moveProjectTiming } from "../src/timing/timing.ts";
 function fixture() {
   const p = rawProject("你好\n世界\n天空", "Timing", "Test");
   p.occurrences = p.occurrences.map((o, i) => ({

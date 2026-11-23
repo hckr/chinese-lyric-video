@@ -18,12 +18,12 @@ import {
   nextUnreviewed,
   moveProjectTiming,
   validTiming,
-} from "../src/timing.ts";
+} from "../src/timing/timing.ts";
 import {
   applyGeneration,
   addDetectedCandidate,
   useWeakEstimate,
-} from "../src/automatic-timing.ts";
+} from "../src/timing/automatic-timing.ts";
 import {
   createGroup,
   duplicateGroup,

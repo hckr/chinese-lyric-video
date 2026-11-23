@@ -50,7 +50,7 @@ export const VideoLyricTemplateSchema = z.object({
 });
 export type VideoLyricTemplateProps = {
   renderScene?: (lyrics: React.ReactNode) => React.ReactNode;
-  layout?: import("../../../web/src/designs").Design["overrides"][string];
+  layout?: import("../../../web/src/video/designs").Design["overrides"][string];
   showPinyin?: boolean;
   lines?: TimedLineData[];
   videoSrc?: string;

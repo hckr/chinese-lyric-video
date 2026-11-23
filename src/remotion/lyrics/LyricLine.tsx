@@ -13,7 +13,7 @@ export type LyricLineVariant = "landscape" | "portrait";
 
 type LyricLineProps = {
   line: LineData;
-  layout?: import("../../../web/src/designs").Design["overrides"][string];
+  layout?: import("../../../web/src/video/designs").Design["overrides"][string];
   showPinyin?: boolean;
   /**
    * "full"        — Pinyin above, Hanzi, per-word EN gloss, full EN+PL translation.

@@ -1,4 +1,4 @@
-import { rulerMarks, formatRulerTime } from "../src/timing.ts";
+import { rulerMarks, formatRulerTime } from "../src/timing/timing.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
@@ -24,8 +24,8 @@ import {
   timingNotices,
   withTimingBaseline,
   reviewTiming,
-} from "../src/timing.ts";
-import { waveformAllowed, waveformPeaks } from "../src/waveform.ts";
+} from "../src/timing/timing.ts";
+import { waveformAllowed, waveformPeaks } from "../src/timing/waveform.ts";
 
 function fixture() {
   const project = rawProject("你好\n世界\n你好", "Timing", "Test");

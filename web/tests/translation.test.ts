@@ -16,8 +16,11 @@ import {
   content,
   draftIssues,
   fingerprint,
-} from "../src/translation.ts";
-import { defaultTranslation, type Draft } from "../src/translation-schema.ts";
+} from "../src/translations/translation.ts";
+import {
+  defaultTranslation,
+  type Draft,
+} from "../src/translations/translation-schema.ts";
 
 test("dependent translation drafts preserve idiom readings, appearances and undo", () => {
   const project = rawProject("一丝一毫\n一丝一毫", "Test", "Test");

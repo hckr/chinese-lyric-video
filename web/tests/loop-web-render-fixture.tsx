@@ -15,7 +15,7 @@ import {
 } from "mediabunny";
 import { renderMediaOnWeb } from "@remotion/web-renderer";
 import { AbsoluteFill } from "remotion";
-import { designSchema } from "../src/designs.ts";
+import { designSchema } from "../src/video/designs.ts";
 import { DesignBackground } from "../../src/remotion/backgrounds/DesignBackground.tsx";
 import { syntheticWav } from "./synthetic-wav.ts";
 

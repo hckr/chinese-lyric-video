@@ -13,6 +13,11 @@ await fs.mkdir(path.join(fixture, "web"));
 await fs.cp(path.join(root, "web/src"), path.join(fixture, "web/src"), {
   recursive: true,
 });
+await fs.copyFile(
+  path.join(root, "package.json"),
+  path.join(fixture, "package.json"),
+);
+await fs.symlink(path.join(root, "src"), path.join(fixture, "src"));
 for (const file of ["index.html", "tsconfig.json", "package.json"])
   await fs.copyFile(
     path.join(root, "web", file),
@@ -75,7 +80,7 @@ try {
   await page.goto({ url, timeout: 30000 });
   // Allow the initial build's SSE event to settle before triggering the next build.
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  const app = path.join(fixture, "web/src/App.tsx");
+  const app = path.join(fixture, "web/src/app/App.tsx");
   await fs.writeFile(
     app,
     (await fs.readFile(app, "utf8")).replace(

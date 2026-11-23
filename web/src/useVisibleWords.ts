@@ -1,5 +1,5 @@
-import { dictionaryReadings } from "./dictionary-readings.ts";
-import type { DictionaryEntry } from "./dictionary-service.ts";
+import { dictionaryReadings } from "./dictionary/dictionary-readings.ts";
+import type { DictionaryEntry } from "./dictionary/dictionary-service.ts";
 import { useEffect, useRef, useState } from "react";
 import { parseProject, type Word } from "./domain";
 

@@ -7,7 +7,7 @@ import { lyricsGrouping } from "./lyrics-grouping.ts";
 import { importLyrics } from "../import-api.ts";
 import { createRenderAssets } from "../render-assets.ts";
 import { build } from "esbuild";
-import { withTimingBaseline } from "../src/timing.ts";
+import { withTimingBaseline } from "../src/timing/timing.ts";
 import { importWorkflow } from "./import-workflow.ts";
 import { timingReviewAcceptance } from "./timing-review-browser.ts";
 import { timingAcceptance } from "./timing-browser.ts";
@@ -499,7 +499,7 @@ const server = http.createServer((req, res) => {
         ALL_FORMATS,
       } = await import("mediabunny");
       const { inspectAudioCopy, muxOriginalAudio, sourceVideoFps } =
-        await import("../src/export-media.ts");
+        await import("../src/export/export-media.ts");
       const rendered = new File([Uint8Array.from(bytes)], "excerpt.webm", {
         type: "video/webm",
       });

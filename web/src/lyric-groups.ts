@@ -5,7 +5,12 @@ import {
   type Occurrence,
   type Project,
 } from "./domain.ts";
-import { editTiming, snappedTime, timingNotices, type Snap } from "./timing.ts";
+import {
+  editTiming,
+  snappedTime,
+  timingNotices,
+  type Snap,
+} from "./timing/timing.ts";
 
 export function createGroup(
   project: Project,

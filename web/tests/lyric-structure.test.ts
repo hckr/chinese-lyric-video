@@ -13,7 +13,7 @@ import {
   redo,
   type History,
 } from "../src/domain.ts";
-import { withTimingBaseline } from "../src/timing.ts";
+import { withTimingBaseline } from "../src/timing/timing.ts";
 import { importLegacy, exportLegacy } from "../src/legacy.ts";
 
 function fixture() {

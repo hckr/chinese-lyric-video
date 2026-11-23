@@ -8,7 +8,7 @@ import {
   patchIndex,
   projectDocument,
   sectionContext,
-} from "../src/lyrics-document.ts";
+} from "../src/import/lyrics-document.ts";
 import { lyricCount, suggestPieces, validPieces } from "../src/lyric-length.ts";
 import { rawProject } from "../src/domain.ts";
 

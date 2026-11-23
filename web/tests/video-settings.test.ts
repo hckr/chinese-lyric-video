@@ -6,7 +6,7 @@ import { parseProject, serializeProject } from "../src/domain.ts";
 import {
   resolveFootageJob,
   videoSettingsSchema,
-} from "../src/video-settings.ts";
+} from "../src/video/video-settings.ts";
 
 test("footage variants preserve authored data and round absolute excerpt edges", () => {
   const project = importLegacy(
@@ -41,10 +41,10 @@ test("footage variants preserve authored data and round absolute excerpt edges",
   assert.equal(serializeProject(project), original);
 });
 
-import { designSchema } from "../src/designs.ts";
-import { jobMedia, resolveThumbnail } from "../src/video-settings.ts";
+import { designSchema } from "../src/video/designs.ts";
+import { jobMedia, resolveThumbnail } from "../src/video/video-settings.ts";
 import { loopFrame } from "../../src/remotion/backgrounds/loop-frame.ts";
-import { parseVideoTime } from "../src/video-time.ts";
+import { parseVideoTime } from "../src/video/video-time.ts";
 
 test("loop frame order and time inputs agree at both turnarounds", () => {
   const cycle = (length: number, mode: "once" | "repeat" | "ping-pong") =>

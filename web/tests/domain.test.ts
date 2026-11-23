@@ -2,8 +2,11 @@ import {
   chineseRedirect,
   resolveWiktionary,
   wiktionaryUrl,
-} from "../src/wiktionary.ts";
-import { alignedReadings, splitSuggestions } from "../src/split-suggestions.ts";
+} from "../src/dictionary/wiktionary.ts";
+import {
+  alignedReadings,
+  splitSuggestions,
+} from "../src/translations/split-suggestions.ts";
 import { strict as assert } from "node:assert";
 import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";

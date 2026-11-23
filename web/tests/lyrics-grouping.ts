@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import type { openBrowser } from "@remotion/renderer";
 import { rawProject, type Project } from "../src/domain.ts";
-import { withTimingBaseline } from "../src/timing.ts";
+import { withTimingBaseline } from "../src/timing/timing.ts";
 type Page = Awaited<
   ReturnType<Awaited<ReturnType<typeof openBrowser>>["newPage"]>
 >;

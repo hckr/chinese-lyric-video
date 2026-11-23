@@ -4,11 +4,11 @@ import {
   dictionaryReadings,
   dictionarySpelling,
   readingKey,
-} from "../src/dictionary-readings.ts";
+} from "../src/dictionary/dictionary-readings.ts";
 import { readingParts } from "../src/reading-parts.ts";
 import { parseProject, rawProject } from "../src/domain.ts";
 import { exportLegacy, importLegacy } from "../src/legacy.ts";
-import { splitSuggestions } from "../src/split-suggestions.ts";
+import { splitSuggestions } from "../src/translations/split-suggestions.ts";
 
 test("dictionary reading order is stable and only archaic-only readings move", () => {
   const readings = dictionaryReadings([

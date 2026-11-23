@@ -22,7 +22,7 @@ import {
   visualizeAudio,
 } from "@remotion/media-utils";
 import { Input, UrlSource, ALL_FORMATS, CanvasSink } from "mediabunny";
-import type { Design } from "../../../web/src/designs";
+import type { Design } from "../../../web/src/video/designs";
 import { Visualizer } from "../visualizers/Visualizer";
 import { loopFrame } from "./loop-frame";
 
