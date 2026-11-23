@@ -55,7 +55,7 @@ def matches(expected, observed):
     return pairs[::-1]
 
 
-def evaluate(song, transcript, clip_end_ms):
+def alignment_reference():
     converter = OpenCC("t2s")
     path = ROOT / "public/cedict_1_0_ts_utf-8_mdbg.txt"
     entries = dictionary_entries(str(path), path.stat().st_mtime_ns)
@@ -68,6 +68,11 @@ def evaluate(song, transcript, clip_end_ms):
                 if re.fullmatch(r"[A-Za-züÜ:]+[0-5]", raw):
                     values.add(normalize(raw).lower())
             readings[char] = values
+    return converter, readings
+
+
+def evaluate(song, transcript, clip_end_ms):
+    converter, readings = alignment_reference()
     cues = [
         c
         for c in song["TIMELINE"]

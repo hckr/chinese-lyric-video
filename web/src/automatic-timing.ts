@@ -185,6 +185,109 @@ export function formatTimingEta(deadline: number, now: number): string {
   return `ETA ~${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+export function englishRetryIds(project: Project): string[] {
+  const phrases = new Map(project.phrases.map((p) => [p.id, p.lyricKey]));
+  return project.occurrences
+    .filter(
+      (o) =>
+        o.startMs === null &&
+        o.endMs === null &&
+        /[a-z]/iu.test(phrases.get(o.phraseId) ?? ""),
+    )
+    .map((o) => o.id);
+}
+
+export function applyEnglishRetry(
+  project: Project,
+  raw: unknown,
+  duration: number,
+  provider: "local" | "groq",
+  model: string,
+): Project {
+  const runId = project.timingRun?.id;
+  if (!runId) return project;
+  const result = validateTimingResult(
+    raw,
+    project,
+    project.occurrences.map((o) => o.id),
+    duration,
+  );
+  const eligible = new Set(englishRetryIds(project));
+  const proposals = new Map(result.lines.map((line) => [line.id, line]));
+  const bounded = result.lines.filter(
+    (line) =>
+      eligible.has(line.id) &&
+      line.observedStartMs !== undefined &&
+      line.observedEndMs !== undefined,
+  );
+  const overlaps = new Set<string>();
+  for (let i = 1; i < bounded.length; i++) {
+    if (bounded[i - 1].observedEndMs! > bounded[i].observedStartMs!) {
+      overlaps.add(bounded[i - 1].id);
+      overlaps.add(bounded[i].id);
+    }
+  }
+  let changed = false;
+  const occurrences = project.occurrences.map((o, index, rows) => {
+    const proposal = proposals.get(o.id);
+    const startMs =
+      proposal?.observedStartMs ?? proposal?.weakEstimate?.startMs;
+    const endMs = proposal?.observedEndMs ?? proposal?.weakEstimate?.endMs;
+    if (
+      !eligible.has(o.id) ||
+      overlaps.has(o.id) ||
+      !proposal ||
+      startMs === undefined ||
+      endMs === undefined
+    )
+      return o;
+    const previous = rows
+      .slice(0, index)
+      .reverse()
+      .find((row) => row.startMs !== null || row.endMs !== null);
+    const following = rows
+      .slice(index + 1)
+      .find((row) => row.startMs !== null || row.endMs !== null);
+    if (
+      (previous && (previous.endMs === null || startMs < previous.endMs)) ||
+      (following && (following.startMs === null || endMs > following.startMs))
+    )
+      return o;
+    const suggestion = {
+      startMs,
+      endMs,
+      runId,
+      language: "en" as const,
+      provider,
+      model,
+      reasons: proposal.reasons,
+      matched: proposal.matched,
+      total: proposal.total,
+    };
+    if (proposal.weakEstimate) {
+      if (proposal.matched === 0) return o;
+      if (
+        o.weakTiming &&
+        (o.weakTiming.matched ?? 0) >= (proposal.matched ?? 0)
+      )
+        return o;
+      changed = true;
+      return { ...o, weakTiming: suggestion, timingIssue: suggestion };
+    }
+    changed = true;
+    return {
+      ...o,
+      startMs,
+      endMs,
+      timingReview: "needs-review" as const,
+      weakTiming: undefined,
+      timingIssue: undefined,
+      automaticTiming: suggestion,
+    };
+  });
+  return changed ? projectSchema.parse({ ...project, occurrences }) : project;
+}
+
 export type GenerationPolicy = "preserve-reviewed" | "replace-all";
 export function applyGeneration(
   project: Project,
@@ -241,9 +344,10 @@ export function applyGeneration(
       return {
         ...o,
         timingIssue: context,
-        weakTiming: line.weakEstimate
-          ? { ...line.weakEstimate, ...context }
-          : undefined,
+        weakTiming:
+          line.weakEstimate && line.matched !== 0
+            ? { ...line.weakEstimate, ...context }
+            : undefined,
       };
     }),
     timingRun: {

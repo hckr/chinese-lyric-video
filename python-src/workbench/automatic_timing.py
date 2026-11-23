@@ -1,14 +1,21 @@
 """Local timing worker. Emits newline-delimited progress/results, never downloads models."""
 
+import itertools
 import json
+import re
 import sys
 from pathlib import Path
 
-from .timing_evaluation import evaluate
+from .boundary_alignment import assigned_lines
+from .timing_evaluation import alignment_reference, evaluate, toneless
 
 
 def emit(value):
     print(json.dumps(value, ensure_ascii=False), flush=True)
+
+
+class MediaDecodeError(ValueError):
+    pass
 
 
 def normalized_audio(audio_path):
@@ -72,7 +79,7 @@ def normalized_audio(audio_path):
                         )
                         break
         if decoder is None:
-            raise ValueError(
+            raise MediaDecodeError(
                 "No installed FFmpeg decoder is available. Use a mono 16kHz PCM WAV file or install FFmpeg manually."
             )
         try:
@@ -101,7 +108,7 @@ def normalized_audio(audio_path):
                 check=True,
             )
         except (OSError, subprocess.CalledProcessError) as error:
-            raise ValueError(
+            raise MediaDecodeError(
                 "The installed FFmpeg decoder could not decode this recording. Use a mono 16kHz PCM WAV file, or repair your local FFmpeg installation."
             ) from error
         audio = np.frombuffer(decoded.stdout, dtype="<i2").astype(np.float32) / 32768
@@ -112,6 +119,55 @@ def normalized_audio(audio_path):
         "encoding": "mono-f32le-16000",
     }
     return audio, identity
+
+
+def english_retry(project, transcript, duration):
+    phrases = {phrase["id"]: phrase["lyricKey"] for phrase in project["phrases"]}
+    occurrences = project["occurrences"]
+    lines = {
+        row["id"]: {"id": row["id"], "text": phrases[row["phraseId"]], "reasons": []}
+        for row in occurrences
+    }
+    converter, readings = alignment_reference()
+    left = 0
+    position = 0
+    for untimed, group in itertools.groupby(
+        occurrences, lambda row: row["startMs"] is None and row["endMs"] is None
+    ):
+        rows = list(group)
+        position += len(rows)
+        if not untimed:
+            left = rows[-1]["endMs"] if rows[-1]["endMs"] is not None else duration
+            continue
+        following = occurrences[position] if position < len(occurrences) else None
+        right = following["startMs"] if following else duration
+        if (
+            right is None
+            or right <= left
+            or not any(
+                re.search(r"[a-z]", phrases[row["phraseId"]], re.IGNORECASE)
+                for row in rows
+            )
+        ):
+            continue
+        window = []
+        for segment in transcript["segments"]:
+            words = [
+                word
+                for word in segment["words"]
+                if left <= round(word["start"] * 1000)
+                and round(word["end"] * 1000) <= right
+            ]
+            if words:
+                window.append({"words": words})
+        cues = [dict(row, lyricKey=phrases[row["phraseId"]]) for row in rows]
+        proposals = assigned_lines(
+            cues, {"segments": window}, converter, readings, toneless, strict_edges=True
+        )
+        for proposal in proposals:
+            if re.search(r"[a-z]", proposal["text"], re.IGNORECASE):
+                lines[proposal["id"]] = proposal
+    return {"lines": list(lines.values()), "additions": []}
 
 
 def run(request):
@@ -134,10 +190,22 @@ def run(request):
     end = request.get("endMs", duration)
     if not 0 <= start < end <= duration:
         raise ValueError("Invalid alignment range")
-    transcript = request.get("transcript")
+    retry = request.get("englishRetry", False)
+    language = "en" if retry else request.get("language", "zh")
+    if language not in ("zh", "en", "auto"):
+        raise ValueError("Unsupported transcription language")
+    language = None if language == "auto" else language
+    transcript = None if retry else request.get("transcript")
     identity = None
     if request.get("audioPath"):
         audio, identity = normalized_audio(request["audioPath"])
+    expected_identity = request.get("expectedAudioSha256")
+    if (
+        retry
+        and expected_identity
+        and (not identity or expected_identity != identity["sha256"])
+    ):
+        raise ValueError("The linked audio differs from the original timing run.")
     provider = request.get("provider", "local")
     if provider not in ("local", "groq"):
         raise ValueError("Unsupported timing provider")
@@ -145,7 +213,10 @@ def run(request):
         from .groq_whisper import transcribe
 
         transcript = transcribe(
-            audio, request.get("model", "whisper-large-v3-turbo"), emit
+            audio,
+            request.get("model", "whisper-large-v3-turbo"),
+            emit,
+            language=language,
         )
     elif transcript is None:
         import torch
@@ -165,7 +236,7 @@ def run(request):
         emit({"progress": "Transcribing audio; this can take several minutes"})
         transcript = model.transcribe(
             audio,
-            language="zh",
+            **({"language": language} if language else {}),
             word_timestamps=True,
             fp16=False,
             verbose=False,
@@ -209,6 +280,14 @@ def run(request):
         or sum(len(w["word"]) for s in segments for w in s["words"]) > 7000
     ):
         raise ValueError("Alignment input is too large; select a smaller range")
+    if retry:
+        emit(
+            {
+                "result": english_retry(project, transcript, duration),
+                "audioIdentity": identity,
+            }
+        )
+        return
     result = evaluate(song, transcript, request["durationMs"])
     lines = result["modes"]["assigned_toneless"]["lines"]
     owned = {(a["startMs"], a["endMs"]) for line in lines for a in line["assignment"]}
@@ -275,6 +354,9 @@ def run(request):
 if __name__ == "__main__":
     try:
         run(json.loads(sys.stdin.read()))
+    except MediaDecodeError as error:
+        emit({"error": str(error), "code": "media-decode"})
+        sys.exit(1)
     # Report unexpected failures through the worker protocol.
     except Exception as error:  # noqa: BLE001
         emit({"error": str(error)})

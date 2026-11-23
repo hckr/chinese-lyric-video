@@ -1251,4 +1251,135 @@ export async function timingReviewAcceptance(
   assert.deepEqual(transferred.occurrences, grouped.occurrences);
   await click("Undo");
   assert.deepEqual(await read(), grouped);
+  const multilingual = rawProject(
+    "你好\nTry again\nDon't go",
+    "Multilingual",
+    "Fixture",
+  );
+  await upload("multilingual.json", JSON.stringify(multilingual));
+  await click("Timing");
+  await loadAudio("linked-recording.mp4");
+  await page.evaluate(() => {
+    window.__timingFetch = window.fetch;
+    let calls = 0;
+    window.fetch = async (input, init) => {
+      if (!String(input).includes("/api/automatic-timing"))
+        return window.__timingFetch(input, init);
+      const data = new Uint8Array(await (init!.body as Blob).arrayBuffer());
+      const separator = data.indexOf(10);
+      const request = JSON.parse(
+        new TextDecoder().decode(data.slice(0, separator)),
+      );
+      const response = (packet: unknown) =>
+        new Response(JSON.stringify(packet) + "\n");
+      if (request.language !== "auto")
+        return response({ error: "Expected auto language." });
+      if (++calls === 1)
+        return response({
+          error: "Synthetic decoder failure",
+          code: "media-decode",
+        });
+      const wav = new DataView(data.buffer, separator + 1);
+      if (wav.getUint16(22, true) !== 1 || wav.getUint32(24, true) !== 16000)
+        return response({ error: "Expected mono 16 kHz PCM WAV." });
+      if (request.englishRetry !== (calls === 3))
+        return response({ error: "Unexpected timing pass." });
+      return response({
+        audioIdentity: { sha256: "c".repeat(64), encoding: "mono-f32le-16000" },
+        result: {
+          lines: [
+            {
+              id: "line-0",
+              text: "你好",
+              reasons: [],
+              observedStartMs: 1000,
+              observedEndMs: 1500,
+            },
+            {
+              id: "line-1",
+              text: "Try again",
+              reasons: ["Fewer than half of the expected units matched"],
+              ...(request.englishRetry
+                ? {
+                    weakEstimate: { startMs: 1600, endMs: 1900 },
+                    matched: 1,
+                    total: 3,
+                  }
+                : {}),
+            },
+            {
+              id: "line-2",
+              text: "Don't go",
+              reasons: [],
+              ...(request.englishRetry
+                ? { observedStartMs: 2000, observedEndMs: 2500 }
+                : {}),
+            },
+          ],
+          additions: [],
+        },
+      });
+    };
+  });
+  await showSetup();
+  await page.evaluate(() => {
+    const select = document.querySelector<HTMLSelectElement>(
+      'select:has(option[value="auto"])',
+    )!;
+    select.value = "auto";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await generate();
+  await wait(
+    async () => (await read()).occurrences[0].startMs === 1000,
+    "auto first pass after decode fallback",
+  );
+  const beforeRetry = await read();
+  assert.equal(beforeRetry.audio?.name, "linked-recording.mp4");
+  assert.equal(beforeRetry.occurrences[2].startMs, null);
+  await showSetup();
+  await click("Retry untimed lyrics in English");
+  await wait(
+    async () => (await read()).occurrences[2].startMs === 2000,
+    "English retry",
+  );
+  const retried = await read();
+  assert.deepEqual(retried.occurrences[0], beforeRetry.occurrences[0]);
+  assert.deepEqual(retried.timingRun, beforeRetry.timingRun);
+  assert.equal(retried.occurrences[2].automaticTiming?.language, "en");
+  assert.equal(retried.occurrences[2].timingReview, "needs-review");
+  await click("Play lyric");
+  await wait(
+    () => page.evaluate(() => !document.querySelector("audio")!.paused),
+    "audition retry",
+  );
+  await page.evaluate(() => document.querySelector("audio")!.pause());
+  assert.equal(retried.occurrences[1].startMs, null);
+  assert.equal(retried.occurrences[1].weakTiming?.startMs, 1600);
+  assert.deepEqual(
+    await page.evaluate(() =>
+      Array.from(document.querySelectorAll("[data-occurrence]"), (row) =>
+        row.getAttribute("data-occurrence"),
+      ),
+    ),
+    ["line-0", "line-1", "line-2"],
+  );
+  await page.evaluate(() =>
+    document
+      .querySelector<HTMLButtonElement>('[data-weak-cue="line-1"] button')!
+      .click(),
+  );
+  await wait(
+    () =>
+      page.evaluate(
+        () =>
+          Math.abs(document.querySelector("audio")!.currentTime - 1.6) < 0.05,
+      ),
+    "seek to provisional estimate",
+  );
+  await click("Undo");
+  assert.deepEqual(await read(), beforeRetry);
+  await page.evaluate(() => {
+    window.fetch = window.__timingFetch;
+  });
 }

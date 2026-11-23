@@ -219,6 +219,7 @@ def test_low_anchor_rows_offer_only_contiguous_positive_weak_estimates():
     assert "observedStartMs" not in weak
     assert "Unresolved" in weak["reasons"][0]
     assert "weakEstimate" not in row([])
+    assert "weakEstimate" not in row([{"word": "桌子", "start": 1, "end": 2}])
     assert "weakEstimate" not in row(
         [{"word": "你", "start": 1, "end": 2}, {"word": "桌子", "start": 8, "end": 9}]
     )

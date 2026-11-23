@@ -1,3 +1,4 @@
+import { timingWav } from "./timing-audio.ts";
 import {
   useEffect,
   useLayoutEffect,
@@ -15,6 +16,8 @@ import {
   addDetectedCandidate,
   needsImportSplit,
   applyGeneration,
+  applyEnglishRetry,
+  englishRetryIds,
   formatTimingEta,
   parseWhisperTranscript,
   type GenerationPolicy,
@@ -212,12 +215,15 @@ export function AutomaticTiming({
     const timer = window.setInterval(() => setNow(performance.now()), 1000);
     return () => clearInterval(timer);
   }, [busy, deadline]);
-  const run = async (identityOnly = false) => {
+  const convertedAudio = useRef<{ file: File; wav: Blob } | undefined>(
+    undefined,
+  );
+  const run = async (identityOnly = false, englishRetry = false) => {
     if (!file || !duration || busy) return;
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true);
-    if (!identityOnly) onComparisonStart?.();
+    if (!identityOnly && !englishRetry) onComparisonStart?.();
     setFailed(false);
     setStatus(identityOnly ? "Checking normalized audio…" : "Uploading audio…");
     setPercent(undefined);
@@ -225,58 +231,105 @@ export function AutomaticTiming({
     const source = inputs,
       audio = file;
     try {
-      const response = await fetch("/api/automatic-timing", {
-        method: "POST",
-        signal: abort.signal,
-        body: new Blob([
-          JSON.stringify({
-            project,
-            durationMs: duration,
-            model,
-            provider: settings.provider ?? "local",
-            transcript: identityOnly ? undefined : transcript,
-            identityOnly,
-            ids: project.occurrences.map((o) => o.id),
-            startMs: 0,
-            endMs: duration,
-          }) + "\n",
-          file,
-        ]),
-      });
-      if (!response.body) throw Error("Timing service unavailable.");
-      const reader = response.body.getReader(),
-        decoder = new TextDecoder();
-      let buffer = "",
-        result: unknown,
-        hash: typeof identity;
-      const consume = (line: string) => {
-        if (!line.trim()) return;
-        const message = JSON.parse(line);
-        if (message.error) throw Error(message.error);
-        if (message.progress) setStatus(message.progress);
-        if (Number.isFinite(message.transcriptionPercent))
-          setPercent(message.transcriptionPercent);
-        if (Number.isFinite(message.etaSeconds)) {
-          const n = performance.now();
-          setNow(n);
-          setDeadline(n + message.etaSeconds * 1000);
+      const request = async (media: Blob) => {
+        const response = await fetch("/api/automatic-timing", {
+          method: "POST",
+          signal: abort.signal,
+          body: new Blob([
+            JSON.stringify({
+              project,
+              durationMs: duration,
+              model,
+              provider: settings.provider ?? "local",
+              language: settings.language ?? "zh",
+              englishRetry,
+              expectedAudioSha256: englishRetry
+                ? project.timingRun?.audioIdentity?.sha256
+                : undefined,
+              transcript: identityOnly || englishRetry ? undefined : transcript,
+              identityOnly,
+              ids: project.occurrences.map((o) => o.id),
+              startMs: 0,
+              endMs: duration,
+            }) + "\n",
+            media,
+          ]),
+        });
+        if (!response.body) throw Error("Timing service unavailable.");
+        const reader = response.body.getReader(),
+          decoder = new TextDecoder();
+        let buffer = "",
+          result: unknown,
+          hash: typeof identity,
+          failure: Error | undefined;
+        const consume = (line: string) => {
+          if (!line.trim()) return;
+          const message = JSON.parse(line);
+          if (message.error)
+            failure ??= Object.assign(Error(message.error), {
+              code: message.code,
+            });
+          if (message.progress) setStatus(message.progress);
+          if (Number.isFinite(message.transcriptionPercent))
+            setPercent(message.transcriptionPercent);
+          if (Number.isFinite(message.etaSeconds)) {
+            const n = performance.now();
+            setNow(n);
+            setDeadline(n + message.etaSeconds * 1000);
+          }
+          if (message.audioIdentity)
+            hash = audioIdentitySchema.parse(message.audioIdentity);
+          if (message.result) result = message.result;
+        };
+        try {
+          while (true) {
+            const chunk = await reader.read();
+            abort.signal.throwIfAborted();
+            if (chunk.done) break;
+            buffer += decoder.decode(chunk.value, { stream: true });
+            let newline: number;
+            while ((newline = buffer.indexOf("\n")) >= 0) {
+              consume(buffer.slice(0, newline));
+              buffer = buffer.slice(newline + 1);
+            }
+          }
+          consume(buffer);
+          if (failure) throw failure;
+          return { result, hash };
+        } finally {
+          await reader.cancel().catch(() => {});
         }
-        if (message.audioIdentity)
-          hash = audioIdentitySchema.parse(message.audioIdentity);
-        if (message.result) result = message.result;
       };
-      while (true) {
-        const chunk = await reader.read();
-        if (abort.signal.aborted || controller.current !== abort) return;
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        let newline: number;
-        while ((newline = buffer.indexOf("\n")) >= 0) {
-          consume(buffer.slice(0, newline));
-          buffer = buffer.slice(newline + 1);
+      const cached =
+        convertedAudio.current?.file === audio
+          ? convertedAudio.current.wav
+          : undefined;
+      let packet: Awaited<ReturnType<typeof request>>;
+      try {
+        packet = await request(cached ?? audio);
+      } catch (error) {
+        if (
+          cached ||
+          !(error instanceof Error) ||
+          !("code" in error) ||
+          error.code !== "media-decode"
+        )
+          throw error;
+        abort.signal.throwIfAborted();
+        setStatus("Decoding audio in the browser…");
+        let wav: Blob;
+        try {
+          wav = await timingWav(audio, abort.signal);
+        } catch {
+          abort.signal.throwIfAborted();
+          throw Error(
+            "Neither the timing worker nor this browser could decode the linked audio.",
+          );
         }
+        convertedAudio.current = { file: audio, wav };
+        packet = await request(wav);
       }
-      consume(buffer);
+      const { result, hash } = packet;
       if (
         abort.signal.aborted ||
         controller.current !== abort ||
@@ -288,6 +341,30 @@ export function AutomaticTiming({
       if (identityOnly) {
         if (!hash) throw Error("Audio identity could not be checked.");
         setStatus("");
+      } else if (englishRetry) {
+        if (!result) throw Error("English retry ended without results.");
+        const current = live.current.project;
+        const previousIdentity = current.timingRun?.audioIdentity;
+        if (previousIdentity && previousIdentity.sha256 !== hash?.sha256)
+          throw Error("The linked audio differs from the original timing run.");
+        const before = englishRetryIds(current);
+        const next = applyEnglishRetry(
+          current,
+          result,
+          duration,
+          settings.provider ?? "local",
+          model,
+        );
+        const remaining = englishRetryIds(next);
+        const first = before.find((id) => !remaining.includes(id));
+        if (next !== current)
+          live.current.onChange(next, first ?? selectedId ?? before[0], true);
+        const estimates = next.occurrences.filter(
+          (o) => remaining.includes(o.id) && o.weakTiming,
+        ).length;
+        setStatus(
+          `English retry timed ${before.length - remaining.length} lyrics. ${remaining.length} remain untimed${estimates ? `, including ${estimates} with estimates` : ""}.`,
+        );
       } else {
         if (!result)
           throw Error("Timing ended without results; project retained.");
@@ -347,13 +424,14 @@ export function AutomaticTiming({
     added && project.occurrences.some((o) => o.id === added.id)
       ? added
       : undefined;
+  const unavailable = busy || !file || !duration || !project.occurrences.length;
+  const modelUnavailable = groq
+    ? !groqAvailable
+    : !models.includes(settings.model);
   const disabled =
-    busy ||
+    unavailable ||
     (!groq && (readingTranscript || !!transcriptError)) ||
-    !file ||
-    !duration ||
-    !project.occurrences.length ||
-    (!transcript && (groq ? !groqAvailable : !models.includes(settings.model)));
+    (!transcript && modelUnavailable);
   const dismissCandidates = (id?: string) => {
     const run = project.timingRun;
     if (!run) return;
@@ -486,6 +564,31 @@ export function AutomaticTiming({
                 </select>
               </label>
             )}
+            {!transcript && (
+              <label>
+                Transcription language
+                <select
+                  value={settings.language ?? "zh"}
+                  disabled={busy}
+                  onChange={(e) =>
+                    onChange(
+                      {
+                        ...project,
+                        timingSettings: {
+                          ...settings,
+                          language: e.target.value === "auto" ? "auto" : "zh",
+                        },
+                      },
+                      selectedId ?? project.occurrences[0]?.id ?? "",
+                      true,
+                    )
+                  }
+                >
+                  <option value="zh">Mandarin</option>
+                  <option value="auto">Auto-detect</option>
+                </select>
+              </label>
+            )}
             {(project.timingRun ||
               project.occurrences.some(
                 (o) => o.startMs !== null || o.endMs !== null,
@@ -598,6 +701,16 @@ export function AutomaticTiming({
         </div>
       </div>
       <div className="automatic-timing-feedback">
+        {!comparison &&
+          project.timingRun &&
+          englishRetryIds(project).length > 0 && (
+            <button
+              disabled={unavailable || modelUnavailable}
+              onClick={() => void run(false, true)}
+            >
+              Retry untimed lyrics in English
+            </button>
+          )}
         {busy && (
           <button
             onClick={() => {

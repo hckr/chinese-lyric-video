@@ -1,3 +1,4 @@
+import type { ProvisionalPlacement } from "./timeline-layout.ts";
 import { TimingConfirmDialog } from "./TimingConfirmDialog";
 import {
   useEffect,
@@ -134,6 +135,7 @@ function GroupDialog({
 }
 export function GroupSidebar({
   project,
+  placements,
   selectedId,
   selectedGroup,
   onSelect,
@@ -142,6 +144,7 @@ export function GroupSidebar({
   duration,
 }: {
   project: Project;
+  placements: ReadonlyMap<string, ProvisionalPlacement>;
   selectedId?: string;
   selectedGroup?: string;
   onSelect: (id: string) => void;
@@ -180,7 +183,7 @@ export function GroupSidebar({
   } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null),
     trigger = useRef<HTMLButtonElement | null>(null);
-  const units = sidebarUnits(project),
+  const units = sidebarUnits(project, placements),
     rows = units.flatMap((unit) => unit.members);
   const bulkIds = new Set(
     rows
@@ -327,7 +330,9 @@ export function GroupSidebar({
           <span className="detected-audio-badge">Detected from audio</span>
         )}
       <span>
-        {formatTime(cue.startMs)} → {formatTime(cue.endMs)}
+        {placements.has(cue.id)
+          ? `Estimate · ${formatTime(placements.get(cue.id)!.startMs)} → ${formatTime(placements.get(cue.id)!.endMs)}`
+          : `${formatTime(cue.startMs)} → ${formatTime(cue.endMs)}`}
       </span>
       {timingNotices(
         project.occurrences,

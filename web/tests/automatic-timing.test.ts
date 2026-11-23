@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { rawProject, commit, undo, redo, type History } from "../src/domain.ts";
 import {
   acceptTiming,
+  applyEnglishRetry,
   parseWhisperTranscript,
   validateTimingResult,
 } from "../src/automatic-timing.ts";
@@ -152,4 +153,41 @@ test("transcript import accepts word timings and rejects JSON that cannot drive 
       /word timestamps/,
     );
   }
+});
+
+test("English retry updates only safe untimed lyrics and retains the original run", () => {
+  const project = rawProject("你好\nDon't go\nMonday\n再见", "Mixed", "Test");
+  project.occurrences[0] = {
+    ...project.occurrences[0],
+    startMs: 0,
+    endMs: 1000,
+    timingReview: "reviewed",
+  };
+  project.occurrences[2].startMs = 3000;
+  project.timingRun = {
+    id: "first-pass",
+    model: "base",
+    transcriptProvenance: "generated",
+    candidates: [{ id: "candidate", text: "intro", startMs: 50, endMs: 100 }],
+  };
+  const lines = project.occurrences.map((o, index) => ({
+    id: o.id,
+    text: project.phrases[index].lyricKey,
+    observedStartMs: 1200,
+    observedEndMs: 2500,
+    reasons: [],
+  }));
+  const next = applyEnglishRetry(project, { lines }, 5000, "local", "base");
+  assert.equal(next.occurrences[1].automaticTiming?.language, "en");
+  assert.equal(next.occurrences[1].timingReview, "needs-review");
+  assert.deepEqual(next.timingRun, project.timingRun);
+  assert.deepEqual(
+    next.occurrences.filter((_, i) => i !== 1),
+    project.occurrences.filter((_, i) => i !== 1),
+  );
+  lines[1].observedEndMs = 3100;
+  assert.equal(
+    applyEnglishRetry(project, { lines }, 5000, "local", "base"),
+    project,
+  );
 });

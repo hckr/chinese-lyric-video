@@ -3199,3 +3199,11 @@ main > header {
 .document-input .editor-han::selection {
   background: #4b88ab66;
 }
+
+.timing-block.timing-block-estimate {
+  border-style: dashed;
+  background: var(--surface);
+}
+.timing-block.timing-block-estimate .timing-block-label {
+  cursor: pointer;
+}

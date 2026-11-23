@@ -1,5 +1,9 @@
 import { AutomaticTiming, type VerifiedSplitAudio } from "./AutomaticTiming";
-import { timelineLayout, type TimelineLayout } from "./timeline-layout.ts";
+import {
+  provisionalPlacements,
+  timelineLayout,
+  type TimelineLayout,
+} from "./timeline-layout.ts";
 import {
   orderGroupedProject,
   groupRange,
@@ -398,10 +402,16 @@ export function TimingEditor({
       },
       repeat,
     );
+  const placements = useMemo(
+    () => provisionalPlacements(sourceProject, duration),
+    [sourceProject, duration],
+  );
   const baseTimelineMs = Math.max(
     duration ?? 30000,
     1000,
-    ...project.occurrences.map((o) => Math.max(o.startMs ?? 0, o.endMs ?? 0)),
+    ...project.occurrences.map((o) =>
+      Math.max(o.startMs ?? 0, o.endMs ?? 0, placements.get(o.id)?.endMs ?? 0),
+    ),
   );
   const timelineMs = duplicate?.extent ?? baseTimelineMs;
   const timelineRuler = useMemo(
@@ -452,6 +462,22 @@ export function TimingEditor({
   useEffect(() => {
     layoutHistory.current.set(project, layout);
   }, [layout, project]);
+  const provisional = useMemo(() => {
+    const occurrences = project.occurrences.flatMap((o) => {
+      const placement = placements.get(o.id);
+      return placement
+        ? [{ ...o, startMs: placement.startMs, endMs: placement.endMs }]
+        : [];
+    });
+    return {
+      occurrences,
+      layout: timelineLayout({
+        ...project,
+        occurrences,
+        lyricGroups: undefined,
+      }),
+    };
+  }, [project, placements]);
   const sidebar = useRef<HTMLDivElement>(null);
   const notices = timingNotices(project.occurrences, index, duration);
   const remainingUntimed = project.occurrences.filter(
@@ -530,10 +556,14 @@ export function TimingEditor({
     const following = project.occurrences
       .slice(index + 1)
       .find((o) => o.startMs !== null);
-    const anchorMs = cue.startMs ?? previous?.endMs ?? following?.startMs;
+    const estimate = placements.get(cue.id);
+    const anchorMs =
+      cue.startMs ?? estimate?.startMs ?? previous?.endMs ?? following?.startMs;
     if (scroller && board && anchorMs != null && !gesture.current) {
       const start = (anchorMs / timelineMs) * board.clientWidth;
-      const end = ((cue.endMs ?? anchorMs) / timelineMs) * board.clientWidth;
+      const end =
+        ((cue.endMs ?? estimate?.endMs ?? anchorMs) / timelineMs) *
+        board.clientWidth;
       if (
         start < scroller.scrollLeft ||
         end > scroller.scrollLeft + scroller.clientWidth
@@ -544,8 +574,13 @@ export function TimingEditor({
     }
     if (scroller && !gesture.current) {
       const block = [
-        ...scroller.querySelectorAll<HTMLElement>("[data-cue]"),
-      ].find((element) => element.dataset.cue === cue.id);
+        ...scroller.querySelectorAll<HTMLElement>(
+          "[data-cue], [data-weak-cue]",
+        ),
+      ].find(
+        (element) =>
+          (element.dataset.cue ?? element.dataset.weakCue) === cue.id,
+      );
       if (block) {
         const blockRect = block.getBoundingClientRect();
         const viewportRect = scroller.getBoundingClientRect();
@@ -606,8 +641,8 @@ export function TimingEditor({
     onSelect(id);
     setError("");
     const next = project.occurrences.find((o) => o.id === id);
-    if (seek && next?.startMs !== null && next?.startMs !== undefined)
-      audio.seek(next.startMs);
+    const start = next?.startMs ?? placements.get(id)?.startMs;
+    if (seek && start !== undefined) audio.seek(start);
   };
   const step = (delta: number) => {
     const next = project.occurrences[index + delta];
@@ -951,7 +986,7 @@ export function TimingEditor({
           select(id);
           requestAnimationFrame(() => {
             const block = scroll.current?.querySelector<HTMLElement>(
-              `[data-cue="${CSS.escape(id)}"] .timing-block-label`,
+              `[data-cue="${CSS.escape(id)}"] .timing-block-label, [data-weak-cue="${CSS.escape(id)}"] .timing-block-label`,
             );
             block?.focus({ preventScroll: true });
           });
@@ -969,6 +1004,7 @@ export function TimingEditor({
         >
           <GroupSidebar
             project={project}
+            placements={placements}
             selectedId={cue?.id}
             selectedGroup={selectedGroup}
             duration={duration}
@@ -1281,7 +1317,13 @@ export function TimingEditor({
               <div
                 className="timing-lanes"
                 style={{
-                  height: layout.height + (duplicate ? layout.height + 80 : 0),
+                  height:
+                    layout.height +
+                    (duplicate
+                      ? layout.height + 80
+                      : provisional.occurrences.length
+                        ? provisional.layout.height
+                        : 0),
                 }}
               >
                 <GroupTimeline
@@ -1319,6 +1361,39 @@ export function TimingEditor({
                     );
                   }}
                 />
+                {!duplicate &&
+                  provisional.occurrences.map((o) => {
+                    const lyric = project.phrases.find(
+                      (p) => p.id === o.phraseId,
+                    )?.lyricKey;
+                    return (
+                      <div
+                        key={o.id}
+                        data-weak-cue={o.id}
+                        className={`timing-block timing-block-estimate ${o.id === cue?.id ? "selected" : ""}`}
+                        style={{
+                          left: `${(o.startMs / timelineMs) * 100}%`,
+                          width: `${((o.endMs - o.startMs) / timelineMs) * 100}%`,
+                          top:
+                            layout.height +
+                            (provisional.layout.tops.get(o.id) ?? 0),
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="timing-block-label"
+                          aria-label={`Select timing estimate for ${lyric}`}
+                          onClick={() => select(o.id)}
+                        >
+                          <span>Estimate</span>
+                          <strong>{lyric}</strong>
+                          <span>
+                            {formatTime(o.startMs)} → {formatTime(o.endMs)}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 {displayed
                   .filter((o) => layout.tops.has(o.id))
                   .map((o) => (
@@ -1659,11 +1734,17 @@ export function TimingEditor({
                 </button>
               </div>
               <div className="timing-diagnostics">
-                {cue.timingIssue && !cue.weakTiming && (
-                  <p className="timing-notice">
-                    Last generation: {cue.timingIssue.reasons.join(" ")}
-                  </p>
-                )}
+                {cue.timingIssue &&
+                  (!cue.weakTiming ||
+                    (cue.weakTiming.matched ?? cue.timingIssue.matched) ===
+                      0) && (
+                    <p className="timing-notice">
+                      Last generation: {cue.timingIssue.reasons.join(" ")}
+                      {cue.timingIssue.matched !== undefined &&
+                        cue.timingIssue.total !== undefined &&
+                        ` ${cue.timingIssue.matched}/${cue.timingIssue.total} units matched.`}
+                    </p>
+                  )}
                 {automatic &&
                   (automaticDiffers ||
                     automatic.reasons.some((reason) => reason.trim()) ||
@@ -1688,41 +1769,43 @@ export function TimingEditor({
                       )}
                     </details>
                   )}
-                {cue.weakTiming && (
-                  <div className="timing-weak-estimate">
-                    <p>
-                      Weak estimate: {formatTime(cue.weakTiming.startMs)}–
-                      {formatTime(cue.weakTiming.endMs)}
-                    </p>
-                    <p>{cue.weakTiming.reasons.join(" ")}</p>
-                    {cue.weakTiming.matched !== undefined &&
-                      cue.weakTiming.total !== undefined && (
-                        <p>
-                          {cue.weakTiming.matched}/{cue.weakTiming.total}{" "}
-                          matching units
-                        </p>
-                      )}
-                    <button
-                      disabled={!available || !identityReady}
-                      onClick={() => listen(cue.weakTiming!)}
-                    >
-                      Listen to weak estimate
-                    </button>
-                    <button
-                      disabled={!identityReady}
-                      onClick={() =>
-                        attempt(() =>
-                          onChange(
-                            useWeakEstimate(project, cue.id, duration),
-                            cue.id,
-                          ),
-                        )
-                      }
-                    >
-                      Use estimate anyway
-                    </button>
-                  </div>
-                )}
+                {cue.weakTiming &&
+                  (cue.weakTiming.matched ?? cue.timingIssue?.matched) !==
+                    0 && (
+                    <div className="timing-weak-estimate">
+                      <p>
+                        Weak estimate: {formatTime(cue.weakTiming.startMs)}–
+                        {formatTime(cue.weakTiming.endMs)}
+                      </p>
+                      <p>{cue.weakTiming.reasons.join(" ")}</p>
+                      {cue.weakTiming.matched !== undefined &&
+                        cue.weakTiming.total !== undefined && (
+                          <p>
+                            {cue.weakTiming.matched}/{cue.weakTiming.total}{" "}
+                            matching units
+                          </p>
+                        )}
+                      <button
+                        disabled={!available || !identityReady}
+                        onClick={() => listen(cue.weakTiming!)}
+                      >
+                        Listen to weak estimate
+                      </button>
+                      <button
+                        disabled={!identityReady}
+                        onClick={() =>
+                          attempt(() =>
+                            onChange(
+                              useWeakEstimate(project, cue.id, duration),
+                              cue.id,
+                            ),
+                          )
+                        }
+                      >
+                        Use estimate anyway
+                      </button>
+                    </div>
+                  )}
                 {cue.reviewedTiming && cue.automaticTiming && (
                   <button
                     onClick={() =>

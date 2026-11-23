@@ -66,3 +66,40 @@ export function timelineLayout(project: Project): TimelineLayout {
   }
   return result;
 }
+
+export type ProvisionalPlacement = {
+  startMs: number;
+  endMs: number;
+  sidebarMs: number;
+};
+
+/** Lay out weak estimates without writing any actual timing. */
+export function provisionalPlacements(project: Project, duration?: number) {
+  const placements = new Map<string, ProvisionalPlacement>();
+  let followingStart = Infinity;
+  const nextStarts = project.occurrences.map(() => Infinity);
+  for (let i = project.occurrences.length - 1; i >= 0; i--) {
+    const cue = project.occurrences[i];
+    nextStarts[i] = followingStart;
+    if (cue.startMs !== null) followingStart = cue.startMs;
+  }
+
+  for (const [index, cue] of project.occurrences.entries()) {
+    const weak = cue.weakTiming;
+    if (
+      cue.startMs !== null ||
+      cue.endMs !== null ||
+      !weak ||
+      (weak.matched ?? cue.timingIssue?.matched) === 0 ||
+      weak.endMs <= weak.startMs ||
+      (duration !== undefined && weak.endMs > duration)
+    )
+      continue;
+    placements.set(cue.id, {
+      startMs: weak.startMs,
+      endMs: Math.max(weak.startMs + 1000, weak.endMs),
+      sidebarMs: Math.min(weak.startMs, nextStarts[index] - 0.5),
+    });
+  }
+  return placements;
+}

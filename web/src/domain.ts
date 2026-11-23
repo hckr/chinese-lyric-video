@@ -56,6 +56,7 @@ export const timingSettingsSchema = z
     snap: z.enum(["off", "edges"]).default("edges"),
     linkEdges: z.boolean().default(false),
     provider: z.enum(["local", "groq"]).optional(),
+    language: z.enum(["zh", "auto"]).optional(),
     groqModel: z
       .enum(["whisper-large-v3-turbo", "whisper-large-v3"])
       .optional(),
@@ -77,6 +78,9 @@ export const audioIdentitySchema = z
 const timingContextSchema = z.object({
   runId: z.string(),
   reasons: z.array(z.string()),
+  language: z.literal("en").optional(),
+  provider: z.enum(["local", "groq"]).optional(),
+  model: z.string().optional(),
   matched: z.number().int().nonnegative().optional(),
   total: z.number().int().nonnegative().optional(),
 });

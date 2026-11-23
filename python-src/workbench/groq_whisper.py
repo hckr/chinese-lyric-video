@@ -13,7 +13,7 @@ from .config import load_api_key
 MODELS = ("whisper-large-v3-turbo", "whisper-large-v3")
 
 
-def transcribe(audio, model, emit):
+def transcribe(audio, model, emit, language="zh"):
     if model not in MODELS:
         raise ValueError("Unsupported Groq Whisper model")
     key = load_api_key("GROQ_API_KEY")
@@ -33,7 +33,7 @@ def transcribe(audio, model, emit):
                 headers={"Authorization": "Bearer " + key},
                 data={
                     "model": model,
-                    "language": "zh",
+                    **({"language": language} if language else {}),
                     "response_format": "verbose_json",
                     "timestamp_granularities[]": ["segment", "word"],
                 },

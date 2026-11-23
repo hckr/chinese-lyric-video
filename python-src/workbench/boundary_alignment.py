@@ -3,11 +3,12 @@
 import itertools
 import re
 
-TOKEN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]|[a-zA-Z]+")
+HAN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+TOKEN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]|[a-zA-Z]+(?:['’][a-zA-Z]+)*")
 
 
 def units(text):
-    return [token.casefold() for token in TOKEN.findall(text)]
+    return [token.casefold().replace("’", "'") for token in TOKEN.findall(text)]
 
 
 def assign(expected, observed, equivalent):
@@ -46,7 +47,9 @@ def assign(expected, observed, equivalent):
     return pairs[::-1]
 
 
-def assigned_lines(cues, transcript, converter, readings, toneless):
+def assigned_lines(
+    cues, transcript, converter, readings, toneless, *, strict_edges=False
+):
     expected = [
         (cue["id"], token)
         for cue in cues
@@ -73,6 +76,7 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
     pairs = assign(
         [token for _, token in expected], [x[0] for x in observed], equivalent
     )
+    observed_tokens = [token for token, _, _ in observed]
     rows = []
     for cue in cues:
         positions = [i for i, (id_, _) in enumerate(expected) if id_ == cue["id"]]
@@ -107,6 +111,40 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
             if not owned:
                 rows.append(row)
                 continue
+        weak = low_match
+        if strict_edges:
+            anchor_tokens = [expected[i][1] for i, _, equal in owned if equal]
+            lyric_tokens = [expected[i][1] for i in positions]
+            full_edges = (
+                owned[0][0] == positions[0]
+                and owned[0][2]
+                and owned[-1][0] == positions[-1]
+                and owned[-1][2]
+            )
+            mixed = any(HAN.search(token) for token in lyric_tokens)
+            if (
+                low_match
+                or not full_edges
+                or (mixed and not any(HAN.search(token) for token in anchor_tokens))
+                or not any(token.isascii() for token in anchor_tokens)
+            ):
+                reasons.append(
+                    "Unresolved: English retry requires matched edges and evidence in each lyric language."
+                )
+                weak = True
+            exact_starts = sum(
+                observed_tokens[index : index + len(lyric_tokens)] == lyric_tokens
+                for index, token in enumerate(observed_tokens)
+                if token == lyric_tokens[0]
+            )
+            if exact_starts > 1 or (
+                len(set(lyric_tokens)) == 1
+                and (exact_starts != 1 or anchors != len(lyric_tokens))
+            ):
+                reasons.append(
+                    "Unresolved: repeated English observations are ambiguous."
+                )
+                weak = True
         indices = [j for _, j, _ in owned]
         substitutions = sum(not equal for _, _, equal in owned)
         if substitutions:
@@ -132,8 +170,9 @@ def assigned_lines(cues, transcript, converter, readings, toneless):
             continue
         start, end = observed[indices[0]][1], observed[indices[-1]][2]
         if end > start:
-            if low_match:
-                row["weakEstimate"] = {"startMs": start, "endMs": end}
+            if weak:
+                if anchors:
+                    row["weakEstimate"] = {"startMs": start, "endMs": end}
             else:
                 row.update(observedStartMs=start, observedEndMs=end)
         else:

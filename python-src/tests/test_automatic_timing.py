@@ -206,7 +206,12 @@ def test_normalized_identity_matches_renamed_pcm_and_keeps_external_provenance_u
 
 
 @pytest.mark.parametrize("model", ["whisper-large-v3-turbo", "whisper-large-v3"])
-def test_groq_transcription_alignment(model, monkeypatch, capsys, tmp_path):
+@pytest.mark.parametrize(
+    "language, transmitted", [("zh", "zh"), ("auto", None), ("en", "en")]
+)
+def test_groq_transcription_alignment(
+    model, language, transmitted, monkeypatch, capsys, tmp_path
+):
     import json
 
     import numpy as np
@@ -225,6 +230,9 @@ def test_groq_transcription_alignment(model, monkeypatch, capsys, tmp_path):
         calls.append(kwargs)
         assert kwargs["headers"]["Authorization"] == "Bearer mock"
         assert kwargs["data"]["model"] == model
+        assert kwargs["data"].get("language") == transmitted
+        if transmitted is None:
+            assert "language" not in kwargs["data"]
         assert kwargs["files"]["file"][1][:4] == b"RIFF"
         assert kwargs["data"]["timestamp_granularities[]"] == ["segment", "word"]
         if len(calls) == 1:
@@ -250,6 +258,7 @@ def test_groq_transcription_alignment(model, monkeypatch, capsys, tmp_path):
             "durationMs": 2000,
             "provider": "groq",
             "model": model,
+            "language": language,
         }
     )
     assert waits == [2]
@@ -277,3 +286,90 @@ def test_groq_timing_errors(monkeypatch):
         )
         with pytest.raises(ValueError, match=message):
             groq.transcribe(audio, groq.MODELS[0], lambda _: None)
+
+
+def test_english_retry_matches_contractions_only_in_the_untimed_window():
+    from workbench.automatic_timing import english_retry
+
+    texts = ["你好", "Don't go", "明天 Monday", "Do do do", "再见"]
+    project = {
+        "phrases": [{"id": str(i), "lyricKey": text} for i, text in enumerate(texts)],
+        "occurrences": [
+            {
+                "id": str(i),
+                "phraseId": str(i),
+                "startMs": {0: 0, 4: 8000}.get(i),
+                "endMs": {0: 1000, 4: 9000}.get(i),
+            }
+            for i in range(len(texts))
+        ],
+    }
+    observations = [
+        ("Don't go", 0.1, 0.5),
+        ("Don’t", 1.2, 1.4),
+        ("go", 1.4, 1.7),
+        ("Monday", 2.2, 2.4),
+        ("do do do do", 4, 5),
+    ]
+    transcript = {
+        "segments": [
+            {
+                "words": [
+                    {"word": word, "start": start, "end": end}
+                    for word, start, end in observations
+                ]
+            }
+        ]
+    }
+    result = english_retry(project, transcript, 9000)
+    assert result["additions"] == []
+    assert [line["id"] for line in result["lines"] if "observedStartMs" in line] == [
+        "1"
+    ]
+    assert result["lines"][1]["observedStartMs"] == 1200
+
+
+@pytest.mark.parametrize(
+    "language, options",
+    [("zh", {"language": "zh"}), ("auto", {}), ("en", {"language": "en"})],
+)
+def test_local_whisper_omits_language_for_auto(monkeypatch, language, options):
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from workbench import automatic_timing
+
+    calls = []
+
+    def transcribe(audio, **kwargs):
+        calls.append(kwargs)
+        return {"segments": []}
+
+    is_file = Path.is_file
+    monkeypatch.setattr(
+        Path, "is_file", lambda path: path.suffix == ".pt" or is_file(path)
+    )
+    monkeypatch.setitem(
+        sys.modules, "torch", SimpleNamespace(set_num_threads=lambda count: None)
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "whisper",
+        SimpleNamespace(
+            load_model=lambda path, device: SimpleNamespace(transcribe=transcribe),
+        ),
+    )
+    monkeypatch.setattr(automatic_timing, "normalized_audio", lambda _: ([], None))
+    run(
+        {
+            "project": {
+                "phrases": [{"id": "p", "lyricKey": "你好"}],
+                "occurrences": [{"id": "a", "phraseId": "p"}],
+            },
+            "durationMs": 5000,
+            "audioPath": "unused",
+            "language": language,
+        }
+    )
+    assert calls == [dict(options, word_timestamps=True, fp16=False, verbose=False)]

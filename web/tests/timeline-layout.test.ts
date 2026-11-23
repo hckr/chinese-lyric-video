@@ -1,8 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { rawProject } from "../src/domain.ts";
-import { createGroup } from "../src/lyric-groups.ts";
-import { timelineLayout } from "../src/timeline-layout.ts";
+import { createGroup, sidebarUnits } from "../src/lyric-groups.ts";
+import {
+  provisionalPlacements,
+  timelineLayout,
+} from "../src/timeline-layout.ts";
 function fixture() {
   const p = rawProject("你\n我\n他\n她\n它", "Test", "");
   p.occurrences = p.occurrences.map((cue, i) => ({
@@ -74,4 +77,53 @@ test("arbitrary saved group IDs cannot collide with the standalone band", () => 
   p.lyricGroups![0].id = "standalone";
   const layout = timelineLayout(p);
   assert.ok(layout.rails.has("standalone"));
+});
+
+test("provisional placements omit zero matches and display weak estimates for at least one second", () => {
+  const project = rawProject("先\n甲\n乙\n丙\n后", "Test", "");
+  const unresolved = {
+    runId: "run",
+    matched: 0,
+    total: 4,
+    reasons: [
+      "Unresolved: fewer than half of expected units have matching anchors.",
+    ],
+  };
+  project.occurrences[0] = {
+    ...project.occurrences[0],
+    startMs: 500,
+    endMs: 1000,
+  };
+  for (const index of [1, 2])
+    project.occurrences[index].timingIssue = unresolved;
+  project.occurrences[3].weakTiming = {
+    ...unresolved,
+    matched: 1,
+    startMs: 3100,
+    endMs: 3300,
+  };
+  project.occurrences[4] = {
+    ...project.occurrences[4],
+    startMs: 3200,
+    endMs: 4000,
+  };
+
+  project.occurrences[2].weakTiming = {
+    ...unresolved,
+    startMs: 1800,
+    endMs: 2200,
+  };
+  const placements = provisionalPlacements(project, 4000);
+  assert.deepEqual([...placements.keys()], ["line-3"]);
+  assert.deepEqual(placements.get("line-3"), {
+    startMs: 3100,
+    endMs: 4100,
+    sidebarMs: 3100,
+  });
+  assert.deepEqual(
+    sidebarUnits(project, placements).map(({ id }) => id),
+    ["line-0", "line-3", "line-4", "line-1", "line-2"],
+  );
+  assert.equal(project.occurrences[1].startMs, null);
+  assert.equal(project.occurrences[3].weakTiming?.endMs, 3300);
 });

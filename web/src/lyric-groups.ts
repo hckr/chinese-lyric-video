@@ -1,5 +1,10 @@
 import { lyricCount, lyricLimit } from "./lyric-length.ts";
-import { newId, parseProject, type Project } from "./domain.ts";
+import {
+  newId,
+  parseProject,
+  type Occurrence,
+  type Project,
+} from "./domain.ts";
 import { editTiming, snappedTime, timingNotices, type Snap } from "./timing.ts";
 
 export function createGroup(
@@ -48,7 +53,12 @@ export type GroupUnit = {
   group?: LyricGroup;
   members: Project["occurrences"];
 };
-export function sidebarUnits(project: Project): GroupUnit[] {
+export function sidebarUnits(
+  project: Project,
+  provisionalPositions?: ReadonlyMap<string, { sidebarMs: number }>,
+): GroupUnit[] {
+  const position = (cue: Occurrence) =>
+    cue.startMs ?? provisionalPositions?.get(cue.id)?.sidebarMs ?? Infinity;
   const owners = new Map(
     (project.lyricGroups ?? []).flatMap((g) =>
       g.occurrenceIds.map((id) => [id, g] as const),
@@ -56,9 +66,7 @@ export function sidebarUnits(project: Project): GroupUnit[] {
   );
   const emitted = new Set<string>();
   const sort = (items: Project["occurrences"]) =>
-    [...items].sort(
-      (a, b) => (a.startMs ?? Infinity) - (b.startMs ?? Infinity),
-    );
+    [...items].sort((a, b) => position(a) - position(b));
   const units: GroupUnit[] = [];
   for (const cue of project.occurrences) {
     const group = owners.get(cue.id);
@@ -76,8 +84,8 @@ export function sidebarUnits(project: Project): GroupUnit[] {
   }
   return units.sort(
     (a, b) =>
-      (a.members.find((cue) => cue.startMs !== null)?.startMs ?? Infinity) -
-      (b.members.find((cue) => cue.startMs !== null)?.startMs ?? Infinity),
+      Math.min(...a.members.map(position)) -
+      Math.min(...b.members.map(position)),
   );
 }
 export function orderGroupedProject(project: Project): Project {
