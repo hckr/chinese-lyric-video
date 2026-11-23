@@ -1367,13 +1367,22 @@ export function App() {
                             </details>
                           )}
                           <button
-                            className="primary"
+                            className={
+                              phrase.review === "reviewed"
+                                ? undefined
+                                : "primary"
+                            }
                             disabled={
-                              !!proposedWords ||
-                              Object.keys(preview.sentences).length > 0
+                              phrase.review !== "reviewed" &&
+                              (!!proposedWords ||
+                                Object.keys(preview.sentences).length > 0)
                             }
                             onClick={() =>
                               act(() => {
+                                if (phrase.review === "reviewed") {
+                                  editPhrase({ ...phrase, review: "pending" });
+                                  return;
+                                }
                                 const issues = phraseIssues(phrase);
                                 if (issues.length)
                                   throw Error(issues.join("; "));
@@ -1385,7 +1394,9 @@ export function App() {
                               })
                             }
                           >
-                            Mark phrase reviewed
+                            {phrase.review === "reviewed"
+                              ? "Mark as needing review"
+                              : "Mark phrase reviewed"}
                           </button>
                         </section>
                         <section className="inspector">

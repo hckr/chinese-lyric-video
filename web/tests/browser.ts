@@ -1628,7 +1628,22 @@ const server = http.createServer((req, res) => {
     await click("Redo");
     await click("Mark phrase reviewed");
     const approved = await read();
+    assert.equal(approved.phrases[0].review, "reviewed");
     assert.equal(approved.phrases[0].segmentationApproved, true);
+    const pendingReview = {
+      ...approved,
+      phrases: approved.phrases.map((phrase, index) =>
+        index === 0 ? { ...phrase, review: "pending" } : phrase,
+      ),
+    };
+    await click("Mark as needing review");
+    assert.deepEqual(await read(), pendingReview);
+    await click("Undo");
+    assert.deepEqual(await read(), approved);
+    await click("Redo");
+    assert.deepEqual(await read(), pendingReview);
+    await click("Mark phrase reviewed");
+    assert.deepEqual(await read(), approved);
     const beforeJson = await page.evaluate(() => window.__downloads.length);
     await click("Download project JSON");
     downloads = await page.evaluate(() => Promise.all(window.__downloads));
