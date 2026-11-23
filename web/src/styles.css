@@ -1602,6 +1602,10 @@ main > header[inert],
   color: var(--muted);
   font-size: 0.65em;
 }
+.lyric-reading-pinyin.missing-reading {
+  padding: 0 0.2em;
+  text-decoration: underline;
+}
 .lyric-reading-word strong {
   line-height: 1.5;
 }

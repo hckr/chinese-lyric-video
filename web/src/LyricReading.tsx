@@ -2,7 +2,13 @@ import { readingParts } from "./reading-parts.ts";
 import type { Phrase } from "./domain.ts";
 
 /** Keep each supplied reading attached to its word when the line wraps. */
-export function LyricReading({ phrase }: { phrase: Phrase }) {
+export function LyricReading({
+  phrase,
+  onMissingReading,
+}: {
+  phrase: Phrase;
+  onMissingReading: (wordId: string) => void;
+}) {
   const words = phrase.words.filter((word) => word.hanzi);
   if (!words.length)
     return (
@@ -16,7 +22,18 @@ export function LyricReading({ phrase }: { phrase: Phrase }) {
         <span className="lyric-reading-unit" key={word.id}>
           {readingParts(word).map((part, index) => (
             <span className="lyric-reading-word" key={index}>
-              <span className="lyric-reading-pinyin">{part.pinyin}</span>
+              {word.pinyin.trim() ? (
+                <span className="lyric-reading-pinyin">{part.pinyin}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="lyric-reading-pinyin missing-reading"
+                  aria-label={`Edit missing Pinyin for ${word.hanzi}`}
+                  onClick={() => onMissingReading(word.id)}
+                >
+                  {part.pinyin}
+                </button>
+              )}
               <strong>{part.hanzi}</strong>
             </span>
           ))}

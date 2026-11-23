@@ -181,12 +181,19 @@ export function App() {
   >([]);
   const [dictionaryTerm, setDictionaryTerm] = useState<string | null>(null);
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
+  const focusReading = useRef(false);
+  const selectedReading = useRef<HTMLInputElement>(null);
   const snapshot = history?.present,
     project = snapshot?.project,
     phrase = project?.phrases.find((p) => p.id === snapshot?.phraseId),
     selected = phrase?.words.find((w) => w.id === snapshot?.tokenId),
     index = phrase?.words.findIndex((w) => w.id === selected?.id) ?? -1,
     next = phrase?.words[index + 1];
+  useEffect(() => {
+    if (screen !== "Lyric editor" || !focusReading.current) return;
+    focusReading.current = false;
+    selectedReading.current?.focus();
+  }, [screen, snapshot?.tokenId]);
   useEffect(() => {
     if (screen !== "Lyric editor") return;
     const list = document.querySelector<HTMLElement>(".phrase-list");
@@ -321,7 +328,12 @@ export function App() {
       words: phrase.words.map((w) => (w.id === id ? { ...w, ...patch } : w)),
     });
   };
-  const selectPhrase = (p: Phrase) => {
+  const selectPhrase = (
+    p: Phrase,
+    tokenId = p.words[0]?.id ?? "",
+    occurrenceId = project?.occurrences.find((cue) => cue.phraseId === p.id)
+      ?.id,
+  ) => {
     setDialog(null);
     setHistory((h) =>
       h
@@ -330,10 +342,8 @@ export function App() {
             present: {
               ...h.present,
               phraseId: p.id,
-              tokenId: p.words[0]?.id ?? "",
-              occurrenceId: project?.occurrences.find(
-                (cue) => cue.phraseId === p.id,
-              )?.id,
+              tokenId,
+              occurrenceId,
             },
           }
         : h,
@@ -1223,6 +1233,11 @@ export function App() {
                                   <div>
                                     <input
                                       aria-label={`Pinyin ${i + 1}`}
+                                      ref={
+                                        w.id === snapshot?.tokenId
+                                          ? selectedReading
+                                          : undefined
+                                      }
                                       className={
                                         reading &&
                                         reading.value !== reading.previous
@@ -1636,22 +1651,17 @@ export function App() {
                 onAudioMetadata={(audio) =>
                   setHistory((h) => (h ? attachAudioMetadata(h, audio) : h))
                 }
-                onReview={(id) => {
-                  const target = project.phrases.find((p) => p.id === id);
-                  if (target) {
-                    selectPhrase(target);
-                    setHistory((h) =>
-                      h
-                        ? {
-                            ...h,
-                            present: {
-                              ...h.present,
-                              occurrenceId: snapshot?.occurrenceId,
-                            },
-                          }
-                        : h,
-                    );
-                  }
+                onReview={(occurrenceId, wordId) => {
+                  const occurrence = project.occurrences.find(
+                    (cue) => cue.id === occurrenceId,
+                  );
+                  const target = project.phrases.find(
+                    (p) => p.id === occurrence?.phraseId,
+                  );
+                  if (!target) return;
+                  if (wordId !== undefined) setQuery("");
+                  focusReading.current = wordId !== undefined;
+                  selectPhrase(target, wordId, occurrenceId);
                   setScreen("Lyric editor");
                 }}
                 onUndo={() => setHistory((h) => (h ? undo(h) : h))}

@@ -65,7 +65,7 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string) => void;
   onChange: (project: Project, id: string, preserveOrder?: boolean) => void;
-  onReview: (phraseId: string) => void;
+  onReview: (occurrenceId: string, wordId?: string) => void;
   onRemove: (id: string) => void;
   onAudioMetadata: (audio: NonNullable<Project["audio"]>) => void;
   onUndo: () => void;
@@ -879,7 +879,10 @@ export function TimingEditor({
               const text = project.phrases.find((p) => p.id === o.phraseId);
               return text ? (
                 <div key={o.id} data-playing-lyric={o.id}>
-                  <LyricReading phrase={text} />
+                  <LyricReading
+                    phrase={text}
+                    onMissingReading={(wordId) => onReview(o.id, wordId)}
+                  />
                   {showTranslations && (
                     <div className="playback-translations">
                       <p>{text.translation.en || "\u00a0"}</p>
@@ -1510,13 +1513,16 @@ export function TimingEditor({
                 </button>
                 <button
                   title="Edit translation"
-                  onClick={() => onReview(phrase.id)}
+                  onClick={() => onReview(cue.id)}
                 >
                   Translate
                 </button>
               </div>
               <div className="timing-text-preview">
-                <LyricReading phrase={phrase} />
+                <LyricReading
+                  phrase={phrase}
+                  onMissingReading={(wordId) => onReview(cue.id, wordId)}
+                />
                 {phrase.translation.en && <p>{phrase.translation.en}</p>}
                 {phrase.translation.pl && <p>{phrase.translation.pl}</p>}
               </div>

@@ -808,7 +808,54 @@ export async function timingAcceptance(
     "out/workbench/timing-media-error.png",
     Buffer.from(shot.value.data, "base64"),
   );
+  const missingReading = structuredClone(fixture);
+  missingReading.phrases[0].words = [
+    { id: "you", hanzi: "你", pinyin: "nǐ", translation: { en: "you" } },
+    { id: "good", hanzi: "好", pinyin: "", translation: { en: "good" } },
+  ];
+  await upload("missing-reading.json", JSON.stringify(missingReading));
+  await click("Timing");
+  await select("line-2");
+  const marker =
+    '.timing-text-preview button[aria-label="Edit missing Pinyin for 好"]';
+  await page.evaluate(
+    (selector) => document.querySelector<HTMLButtonElement>(selector)!.click(),
+    marker,
+  );
+  const focusedLabel = () =>
+    page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  assert.equal(await focusedLabel(), "Pinyin 2");
+  assert.deepEqual(await read(), missingReading);
+  await click("Timing");
+  assert.equal(
+    await page.evaluate(() =>
+      document
+        .querySelector('[data-occurrence="line-2"]')
+        ?.getAttribute("aria-pressed"),
+    ),
+    "true",
+  );
+  await page.evaluate(
+    (selector) => document.querySelector<HTMLButtonElement>(selector)!.focus(),
+    marker,
+  );
+  const client = (await page.target().createCDPSession()) as unknown as {
+    send: (method: string, params: Record<string, unknown>) => Promise<unknown>;
+  };
+  for (const type of ["keyDown", "keyUp"]) {
+    await client.send("Input.dispatchKeyEvent", {
+      type,
+      key: " ",
+      code: "Space",
+      windowsVirtualKeyCode: 32,
+    });
+  }
+  await wait(
+    async () => (await focusedLabel()) === "Pinyin 2",
+    "keyboard activation focuses missing Pinyin",
+  );
+  await click("Timing");
   console.log(
-    "M2 acceptance passed: real local WAV playback/waveform, exact capture, repeated occurrence independence, drag/trim, undo/redo/reset, export/reimport, reload/relink and mobile layout.",
+    "M2 acceptance passed: real local WAV playback/waveform, exact capture, repeated occurrence independence, missing-Pinyin navigation by click and keyboard, drag/trim, undo/redo/reset, export/reimport, reload/relink and mobile layout.",
   );
 }
