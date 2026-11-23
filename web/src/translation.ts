@@ -1,4 +1,7 @@
 import {
+  commit,
+  projectSchema,
+  type History,
   hanzi,
   newId,
   validatePinyinWords,
@@ -23,6 +26,48 @@ export const stageLabels: Record<Stage, string> = {
 
 export const translationState = (project: Project) =>
   project.translationWork ?? defaultTranslation;
+
+export function updateTranslationDraftHistory(
+  history: History | null,
+  edit: (
+    work: NonNullable<Project["translationWork"]>,
+  ) => NonNullable<Project["translationWork"]>,
+  phraseId?: string,
+): History | null {
+  if (!history) return history;
+  const { present } = history;
+  if (phraseId && !present.project.phrases.some((p) => p.id === phraseId))
+    return history;
+  return {
+    ...history,
+    present: {
+      ...present,
+      project: {
+        ...present.project,
+        translationWork: edit(translationState(present.project)),
+      },
+    },
+  };
+}
+
+export function applyTranslationHistory(
+  history: History | null,
+  edit: (project: Project) => Project,
+): History | null {
+  if (!history) return history;
+  const { present } = history;
+  const updated = edit(present.project);
+  if (updated === present.project) return history;
+  const words =
+    updated.phrases.find((p) => p.id === present.phraseId)?.words ?? [];
+  return commit(history, {
+    ...present,
+    project: projectSchema.parse(updated),
+    tokenId: words.some((w) => w.id === present.tokenId)
+      ? present.tokenId
+      : (words[0]?.id ?? ""),
+  });
+}
 
 export const wordsWithoutIds = (words: Word[]): DraftWord[] =>
   words.map(({ hanzi, pinyin, translation }) => ({

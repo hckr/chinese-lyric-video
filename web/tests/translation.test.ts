@@ -11,6 +11,8 @@ import { exportLegacy, importLegacy } from "../src/legacy.ts";
 import { readingParts } from "../src/reading-parts.ts";
 import {
   applyDrafts,
+  applyTranslationHistory,
+  updateTranslationDraftHistory,
   content,
   draftIssues,
   fingerprint,
@@ -178,5 +180,56 @@ test("sentence review flags study notes and preserves lyrical asides", () => {
     );
     assert.ok(draftIssues(phrase, stage, "Meow (māo: cat; miāo: meow)").length);
     assert.deepEqual(draftIssues(phrase, stage, "Miau (miau!) [chór]"), []);
+  }
+});
+
+test("translation draft updates preserve history and ignore removed phrases", () => {
+  const project = rawProject("你好", "Test", "Test");
+  const present = { project, phraseId: project.phrases[0].id, tokenId: "" };
+  const history = { present, past: [present], future: [present] };
+  const updated = updateTranslationDraftHistory(
+    history,
+    () => defaultTranslation,
+    present.phraseId,
+  )!;
+  assert.equal(updated.present.project.translationWork, defaultTranslation);
+  assert.equal(updated.past, history.past);
+  assert.equal(updated.future, history.future);
+  assert.equal(
+    updateTranslationDraftHistory(
+      history,
+      () => assert.fail("stale edit"),
+      "missing",
+    ),
+    history,
+  );
+});
+
+test("applying a translation preserves or repairs selection and supports undo", () => {
+  const project = rawProject("你好", "Test", "Test");
+  const phrase = project.phrases[0];
+  const word = {
+    id: "selected",
+    hanzi: "你好",
+    pinyin: "nǐ hǎo",
+    translation: { en: "hello" },
+  };
+  phrase.words = [word];
+  const present = { project, phraseId: phrase.id, tokenId: word.id };
+  const history = { present, past: [], future: [] };
+  assert.equal(
+    applyTranslationHistory(history, (p) => p),
+    history,
+  );
+  for (const ids of [["first", "selected"], ["replacement"], []]) {
+    const changed = applyTranslationHistory(history, (p) => ({
+      ...p,
+      phrases: [{ ...phrase, words: ids.map((id) => ({ ...word, id })) }],
+    }))!;
+    assert.equal(
+      changed.present.tokenId,
+      ids.includes(word.id) ? word.id : (ids[0] ?? ""),
+    );
+    assert.deepEqual(undo(changed).present, present);
   }
 });

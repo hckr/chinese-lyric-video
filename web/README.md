@@ -21,7 +21,7 @@ Browser recovery stores the current project, not the undo stack. History is boun
 
 ## Workbench source layout
 
-`src/App.tsx` owns project history, selection, navigation, and shared media. The header and the Import and Export views live in `WorkbenchHeader`, `ImportWorkspace`, and `ExportWorkspace`. In Translations, `TranslateLyrics` manages drafts and review actions, while `PhraseList`, `PhraseEditor`, and `PhraseInspector` render the three panels. `WordStructureDialog` handles word splitting and merging.
+`src/App.tsx` owns project history, selection, navigation, and shared media. It delegates lyric creation, repetition, removal, and reading restoration to `useLyricStructure`. The header and the Import and Export views live in `WorkbenchHeader`, `ImportWorkspace`, and `ExportWorkspace`. In Translations, `TranslateLyrics` manages drafts and review actions, while `PhraseList`, `PhraseEditor`, and `PhraseInspector` render the three panels. `WordStructureDialog` handles word splitting and merging.
 
 ## Timing workflow (checkpoint B)
 

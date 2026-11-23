@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Phrase, Project, phrasesInAppearanceOrder } from "./domain";
 import { lyricCount, lyricLimit } from "./lyric-length";
 
@@ -14,6 +15,24 @@ export function PhraseList({
   phrase: Phrase | undefined;
   selectPhrase: (p: Phrase, tokenId?: string, occurrenceId?: string) => void;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const selected = list?.querySelector<HTMLElement>(".phrase.selected");
+    if (!list || !selected) return;
+    const item = selected.getBoundingClientRect(),
+      bounds = list.getBoundingClientRect();
+    const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "instant"
+      : "smooth";
+    if (item.top < bounds.top)
+      list.scrollTo({ top: list.scrollTop + item.top - bounds.top, behavior });
+    else if (item.bottom > bounds.bottom)
+      list.scrollTo({
+        top: list.scrollTop + item.bottom - bounds.bottom,
+        behavior,
+      });
+  }, [phrase?.id, query]);
   return (
     <section className="phrases">
       <h2>
@@ -27,7 +46,7 @@ export function PhraseList({
           placeholder="Hanzi or translation"
         />
       </label>
-      <div className="phrase-list">
+      <div className="phrase-list" ref={listRef}>
         {phrasesInAppearanceOrder(project)
           .filter((p) =>
             `${p.lyricKey} ${p.translation.en} ${p.translation.pl}`
