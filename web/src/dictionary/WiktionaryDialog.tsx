@@ -1,4 +1,3 @@
-/* eslint-disable @remotion/warn-native-media-tag -- Browser editor dialog, not a rendered video composition. */
 import { useEffect, useRef, useState } from "react";
 import { resolveWiktionary, wiktionaryUrl } from "./wiktionary";
 

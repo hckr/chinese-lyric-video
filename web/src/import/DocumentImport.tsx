@@ -269,12 +269,14 @@ export function DocumentImport({
     commit({ ...draft, lines: next, comparison: retained });
     if (!retained) setView(false);
   }
+  const changeSource = useRef(change);
+  changeSource.current = change;
   const opened = useRef(source);
   useEffect(() => {
     if (opened.current !== source) {
       opened.current = source;
       lastAlignment.current = undefined;
-      change(linesFrom(source.text), false);
+      changeSource.current(linesFrom(source.text), false);
       setPatches([]);
     }
   }, [source]);
@@ -396,9 +398,10 @@ export function DocumentImport({
   }
   const addedLines = inserted();
   const insertButton = useRef<HTMLButtonElement>(null);
+  const insertionProject = insertion?.project;
   useEffect(() => {
-    if (insertion) insertButton.current?.focus();
-  }, [insertion?.project]);
+    if (insertionProject) insertButton.current?.focus();
+  }, [insertionProject]);
   return (
     <div className="document-import" data-audio-view={view}>
       <div hidden={view}>
@@ -777,10 +780,10 @@ export function DocumentImport({
                       className="primary"
                       ref={insertButton}
                       disabled={
-                        /[\[\]\r\n]/.test(insertion.heading) ||
+                        /[[\]\r\n]/.test(insertion.heading) ||
                         insertion.heading.trim() === "/" ||
                         insertion.added.some((o) =>
-                          /[\[\]\r\n]/.test(
+                          /[[\]\r\n]/.test(
                             insertion.project.phrases.find(
                               (p) => p.id === o.phraseId,
                             )!.lyricKey,

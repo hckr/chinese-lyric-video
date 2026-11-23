@@ -64,8 +64,8 @@ export function parseLines(lines: Line[]) {
       if (!group)
         issues.push({ line, message: "This terminator has no open section." });
       group = undefined;
-    } else if (/[\[\]]/.test(trimmed)) {
-      const name = /^\[([^\[\]]+)\]$/.exec(trimmed)?.[1].trim();
+    } else if (/[[\]]/.test(trimmed)) {
+      const name = /^\[([^[\]]+)\]$/.exec(trimmed)?.[1].trim();
       if (!name || name === "/")
         issues.push({
           line,

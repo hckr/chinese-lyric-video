@@ -174,7 +174,7 @@ export function ImportSuggestions({
       for (const g of responseData.groups) {
         const first = rows[g.start - 1],
           last = rows[g.end - 1];
-        if (!first || !last || g.end < g.start || /[\[\]\r\n]/.test(g.name))
+        if (!first || !last || g.end < g.start || /[[\]\r\n]/.test(g.name))
           continue;
         const section = groups.find((s) => s.id === first.section);
         const start =
@@ -184,14 +184,14 @@ export function ImportSuggestions({
           "[" + g.name + "]",
           ...lines
             .slice(first.line, last.line + 1)
-            .filter((l) => l.text.trim() && !/[\[\]]/.test(l.text))
+            .filter((l) => l.text.trim() && !/[[\]]/.test(l.text))
             .map((l) => l.text),
         ];
         if (
           next &&
           !lines
             .slice(last.line + 1, next.line)
-            .some((l) => !l.text.trim() || /[\[\]]/.test(l.text))
+            .some((l) => !l.text.trim() || /[[\]]/.test(l.text))
         ) {
           const following = groups.find((s) => s.id === next.section);
           after.push(following ? "[" + following.name + "]" : "");

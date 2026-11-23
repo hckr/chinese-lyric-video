@@ -18,7 +18,7 @@ export function lyricHeaders(lines: { text: string }[]) {
   const ambiguous = new Set<Field>();
   const header = lines
     .map((line) => line.text.trim())
-    .filter((line) => line && !/^\[[^\[\]]+\]$/u.test(line))
+    .filter((line) => line && !/^\[[^[\]]+\]$/u.test(line))
     .slice(0, 8);
   for (const [index, line] of header.entries()) {
     const labeled = /^([^:：]+)[:：]\s*(.+)$/u.exec(line);

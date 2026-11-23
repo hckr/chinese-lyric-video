@@ -114,7 +114,7 @@ export function WordStructureDialog({
       document.removeEventListener("keydown", onKey);
       previous?.focus();
     };
-  }, [dialog]);
+  }, [dialog, dialogReturnFocus, setDialog]);
   function populateSplit(at: number) {
     if (!selected || !project) return;
     const suggestion = splitSuggestions(selected, at, project.phrases);

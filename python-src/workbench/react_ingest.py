@@ -7,7 +7,7 @@ from pathlib import Path
 
 from opencc import OpenCC
 
-from .lyric_length import HAN, LATIN, LYRIC_RUN, LYRIC_LIMIT, lyric_count
+from .lyric_length import HAN, LATIN, LYRIC_LIMIT, LYRIC_RUN, lyric_count
 from .pinyin import normalize
 from .songs import HEADING, PUNCTUATION, ROOT, dictionary_entries, project_from_parts
 

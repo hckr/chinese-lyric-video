@@ -12,4 +12,4 @@ if [ "${CODEX_SANDBOX:-}" = seatbelt ] && [ -n "${GIT_EXEC_PATH:-}" ]; then
 fi
 
 # Check index contents without formatting files or re-staging partial edits.
-exec node scripts/check-staged-format.mts
+node scripts/check-staged-format.mts && exec node scripts/check-staged-lint.mts

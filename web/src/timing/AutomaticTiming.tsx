@@ -150,7 +150,7 @@ export function AutomaticTiming({
       else if (button.bottom > bounds.bottom)
         list.scrollTop += button.bottom - bounds.bottom;
     }
-  }, [project]);
+  }, [project, revealTiming]);
   useLayoutEffect(() => {
     if (!focusRerun.current || !project.timingRun || expanded) return;
     focusRerun.current = false;

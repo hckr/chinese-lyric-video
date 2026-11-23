@@ -61,9 +61,10 @@ export function ImportAudioSplits({
     if (!active) player.current?.pause();
   }, [active]);
   const candidate = pending.find((c) => c.id === selected) ?? pending[0];
+  const candidateId = candidate?.id;
   useEffect(() => {
-    if (active && candidate) setReview(false);
-  }, [active, candidate?.id]);
+    if (active && candidateId !== undefined) setReview(false);
+  }, [active, candidateId]);
   if (!candidate) return null;
   const lines = projectDocument(project);
   const after = project.occurrences.find(

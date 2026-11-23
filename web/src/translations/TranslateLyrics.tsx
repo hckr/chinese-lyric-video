@@ -178,6 +178,8 @@ export function TranslateLyrics({
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, [retryAt]);
+  const hasSavedSettings = useRef(Boolean(project.translationWork));
+  hasSavedSettings.current = Boolean(project.translationWork);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/translation/providers", { signal: controller.signal })
@@ -191,7 +193,7 @@ export function TranslateLyrics({
             ? ""
             : "Configure GROQ_API_KEY or GEMINI_API_KEY to translate.",
         );
-        if (!project.translationWork && data.Groq?.length)
+        if (!hasSavedSettings.current && data.Groq?.length)
           setSettings((s) => ({ ...s, provider: "Groq", model: data.Groq[0] }));
       })
       .catch(() => {

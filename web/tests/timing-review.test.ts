@@ -22,7 +22,7 @@ import {
 import {
   applyGeneration,
   addDetectedCandidate,
-  useWeakEstimate,
+  applyWeakEstimate,
 } from "../src/timing/automatic-timing.ts";
 import {
   createGroup,
@@ -164,7 +164,7 @@ test("replace-all preserves review on exact match and reviewed snapshot on chang
   const resumed = parseProject(serializeProject(unresolved));
   assert.deepEqual(resumed.occurrences[1].timingIssue?.reasons, ["missing"]);
   assert.deepEqual(resumed.occurrences[0].weakTiming?.reasons, ["low match"]);
-  const opted = useWeakEstimate(unresolved, "line-0", 10000);
+  const opted = applyWeakEstimate(unresolved, "line-0", 10000);
   assert.equal(opted.occurrences[0].startMs, 1400);
   assert.equal(opted.occurrences[0].timingReview, "needs-review");
   assert.equal(opted.occurrences[0].reviewedTiming!.startMs, 1000);

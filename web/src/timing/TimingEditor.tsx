@@ -27,7 +27,7 @@ import {
   type CSSProperties,
 } from "react";
 import type { Occurrence, Project } from "../domain.ts";
-import { useWeakEstimate } from "./automatic-timing.ts";
+import { applyWeakEstimate } from "./automatic-timing.ts";
 import { defaultTimingSettings, linePinyin } from "../domain.ts";
 import { LyricReading } from "./LyricReading";
 import {
@@ -220,15 +220,17 @@ export function TimingEditor({
     },
     null,
   );
+  const { cancelBounded, url: audioUrl } = audio;
   useEffect(() => {
-    audio.cancelBounded();
+    cancelBounded();
     setLoopEnabled(false);
   }, [
+    cancelBounded,
     cue?.id,
     cue?.startMs,
     cue?.endMs,
     active,
-    audio.url,
+    audioUrl,
     settings.preRollMs,
     settings.postRollMs,
   ]);
@@ -654,7 +656,6 @@ export function TimingEditor({
         aria-label="Audio transport"
       >
         {/* The timing editor uses the media element as its clock, outside Remotion. */}
-        {/* eslint-disable-next-line @remotion/warn-native-media-tag */}
         <audio
           ref={audio.ref}
           src={audio.url || undefined}
@@ -1543,7 +1544,7 @@ export function TimingEditor({
                         onClick={() =>
                           attempt(() =>
                             onChange(
-                              useWeakEstimate(project, cue.id, duration),
+                              applyWeakEstimate(project, cue.id, duration),
                               cue.id,
                             ),
                           )

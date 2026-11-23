@@ -363,7 +363,7 @@ export function applyGeneration(
     },
   });
 }
-export function useWeakEstimate(
+export function applyWeakEstimate(
   project: Project,
   id: string,
   duration?: number,

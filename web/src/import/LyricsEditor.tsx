@@ -385,6 +385,14 @@ export function LyricsEditor({
       if (pending) field.scrollLeft = pending.left;
     }
   }, [lines, editor, pinyinLayout, value]);
+  // Native listeners and reveal requests use the latest editor state.
+  const latestEditorActions = useRef({
+    insertFieldText,
+    inspect,
+    reveal,
+    lines,
+  });
+  latestEditorActions.current = { insertFieldText, inspect, reveal, lines };
   useEffect(() => {
     const field = editor.current;
     function beforeInput(e: Event) {
@@ -394,7 +402,7 @@ export function LyricsEditor({
         (e.inputType === "insertParagraph" || e.inputType === "insertLineBreak")
       ) {
         e.preventDefault();
-        insertFieldText(field, "\n");
+        latestEditorActions.current.insertFieldText(field, "\n");
       }
       if (e.inputType === "historyUndo" || e.inputType === "historyRedo") {
         e.preventDefault();
@@ -403,7 +411,7 @@ export function LyricsEditor({
     }
     field?.addEventListener("beforeinput", beforeInput);
     return () => field?.removeEventListener("beforeinput", beforeInput);
-  }, [editor, pinyinLayout, lines]);
+  }, [editor, pinyinLayout]);
   function inspect(field: LyricField, documentLines = lines) {
     const selection = fieldSelection(field);
     const prefix = fieldText(field).slice(0, selection.start);
@@ -429,7 +437,7 @@ export function LyricsEditor({
         setSelected(
           fieldText(field).slice(0, selection.start).split("\n").length - 1,
         );
-        inspect(field);
+        latestEditorActions.current.inspect(field);
       }
     };
     document.addEventListener("selectionchange", selectionChanged);
@@ -438,7 +446,7 @@ export function LyricsEditor({
       document.removeEventListener("selectionchange", selectionChanged);
       field?.removeEventListener("select", selectionChanged);
     };
-  }, [inspectCursor, editor, lines, onWordReview, pinyinLayout]);
+  }, [inspectCursor, editor, lines, pinyinLayout]);
   function attachField(field: LyricField | null) {
     editor.current = field;
     if (field && !field.dataset.ready) {
@@ -510,11 +518,12 @@ export function LyricsEditor({
   }
   useLayoutEffect(() => {
     if (pendingReveal.current === undefined) return;
-    reveal(pendingReveal.current);
+    latestEditorActions.current.reveal(pendingReveal.current);
     pendingReveal.current = undefined;
   }, [lines]);
   useLayoutEffect(() => {
     if (!revealOccurrence) return;
+    const { lines, reveal } = latestEditorActions.current;
     const index = lines.findIndex((line) => line.id === revealOccurrence.id);
     if (index >= 0) {
       reveal(index);
@@ -530,8 +539,9 @@ export function LyricsEditor({
       (proposal) => patchIndex(lines, proposal) >= 0,
     );
     setSuggestion(actionable);
-    if (actionable) reveal(patchIndex(lines, actionable));
-  }, [active, proposalBatch]);
+    if (actionable)
+      latestEditorActions.current.reveal(patchIndex(lines, actionable));
+  }, [active, lines, proposalBatch, proposals]);
   function showIssue(i: number) {
     const target = issues[i];
     if (!target) return;
@@ -733,7 +743,7 @@ export function LyricsEditor({
                         aria-label={`Apply suggestion on line ${i + 1}`}
                         onClick={() => acceptPatch(proposalAt.get(l.id)!)}
                       >
-                        　↳{" "}
+                        {"\u3000↳ "}
                         {proposalAt.get(l.id)!.label === "Section heading"
                           ? proposalAt.get(l.id)!.after[0]
                           : "Line-break suggestion"}
@@ -1027,7 +1037,9 @@ export function LyricsEditor({
                                 else reveal(row.line);
                               }}
                             >
-                              {row.line + 1}　{row.text}
+                              {row.line + 1}
+                              {"\u3000"}
+                              {row.text}
                             </a>
                           </li>
                         ))}

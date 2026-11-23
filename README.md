@@ -80,12 +80,20 @@ Found an issue with Remotion? [File an issue here](https://github.com/remotion-d
 
 Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
 
-## Formatting
+## Formatting and linting
 
 Install the development tools with `npm install` and `python-src/venv/bin/python -m pip install -r python-src/requirements-dev.txt`.
 
 ```sh
 npm run format:changed      # Format modified and untracked files
+npm run lint                # Run ESLint, TypeScript, and Ruff
+```
+
+Stage your changes after these checks. The installed pre-commit hook checks formatting and ESLint on the staged contents.
+
+Other formatting commands are available when you need them.
+
+```sh
 npm run format:staged       # Format working copies of staged files
 npm run format              # Apply Prettier and Ruff across the repository
 npm run format:check        # Check formatting without changing files
@@ -101,7 +109,9 @@ Prettier 3.8.1 is pinned in package.json; `.prettierrc` defines 2-space indentat
 
 `.prettierignore` excludes generated/local data, dependencies, visual prototype snapshots and the two published song modules. Ruff excludes the original `python-src/translate.py` proof of concept and the virtualenv, including when passed explicitly. Formatting commands never overwrite those excluded files. The setup does not bulk-reformat the already-committed renderer, backend or design documents; their existing formatting differences are reported by the check commands and can be handled in a separate formatting-only change.
 
-`format:changed` includes tracked working-tree changes, staged paths and untracked files, while respecting formatter exclusions. `format:staged` selects paths from the index but formats their **working-tree copies**: neither command stages or updates the index. Review and re-stage formatting changes yourself, especially for partially staged files. Use `format:changed:check` or `format:staged:check` for a read-only check. The pre-commit hook runs `npm run format:index:check` logic against the actual staged Git blobs, blocking unformatted commits without modifying or staging files. If formatter configuration (including ignore rules, EditorConfig and Ruff settings) differs between the index and working tree, the hook blocks the check until you stage the intended configuration or restore its working copy. Unstaged `package.json` edits are allowed when its Prettier settings match the staged copy. Run `npm run format:staged`, review and re-stage to resolve failures. Hook installation is local to each checkout.
+`format:changed` includes tracked working-tree changes, staged paths and untracked files, while respecting formatter exclusions. `format:staged` selects paths from the index but formats their **working-tree copies**: neither command stages or updates the index. Review and re-stage formatting changes yourself, especially for partially staged files. Use `format:changed:check` or `format:staged:worktree:check` for a read-only check. The pre-commit hook runs `npm run format:staged:check` logic against the actual staged Git blobs, blocking unformatted commits without modifying or staging files. If formatter configuration (including ignore rules, EditorConfig and Ruff settings) differs between the index and working tree, the hook blocks the check until you stage the intended configuration or restore its working copy. Unstaged `package.json` edits are allowed when its Prettier settings match the staged copy. Run `npm run format:staged`, review and re-stage to resolve failures. Hook installation is local to each checkout.
+
+Run `npm run lint:eslint` to lint the TypeScript and JavaScript in the Remotion source, workbench, tests, and scripts. The pre-commit hook also runs `npm run lint:staged:check` logic. It lints staged source blobs with the working checkout’s ESLint configuration. Errors block the commit and warnings remain visible for review.
 
 The React development server (`npm run workbench`) automatically refreshes the browser after source changes. Saved project edits are recovered from local storage. It never opens a browser automatically; production builds do not include live reload.
 

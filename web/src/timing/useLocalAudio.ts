@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project } from "../domain.ts";
 import { mediaMs } from "./timing.ts";
 import { decodeWaveform, probeTracks } from "./waveform-stream.ts";
@@ -15,9 +15,9 @@ export function useLocalAudio(
     endMs: number;
     loop: boolean;
   } | null>(null);
-  const cancelBounded = () => {
+  const cancelBounded = useCallback(() => {
     bounded.current = null;
-  };
+  }, []);
   const file = useRef<File | null>(null);
   const version = useRef(0);
   const [waveSource, setWaveSource] = useState<{
@@ -143,7 +143,7 @@ export function useLocalAudio(
     setPeaks([]);
     setWaveStatus("Waiting for audio metadata…");
     setUrl(URL.createObjectURL(selectedFile));
-  }, [selectedFile]);
+  }, [selectedFile, cancelBounded]);
   const metadata = () => {
     const audio = ref.current,
       selected = file.current,

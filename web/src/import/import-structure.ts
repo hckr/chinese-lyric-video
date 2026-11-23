@@ -20,6 +20,7 @@ export function detectStructure(raw: string): Structure {
   const rows: SourceRow[] = [];
   const sections: { name: string; start: number; end: number }[] = [];
   const lines = raw
+    // eslint-disable-next-line no-control-regex -- Recognize legacy line separators.
     .split(/\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/u)
     .map((s) => s.trim());
   const nonempty = lines.filter(Boolean);

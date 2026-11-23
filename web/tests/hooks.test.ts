@@ -96,7 +96,7 @@ test("staged check only compares Prettier settings in package.json", async () =>
   }
 });
 
-test("installed hook blocks an unformatted commit and permits a formatted commit in a temporary repository", async () => {
+test("installed hook blocks formatting and lint errors and permits a formatted commit in a temporary repository", async () => {
   const { root, git, cleanup } = await fixture();
   try {
     await fs.mkdir(path.join(root, ".githooks"));
@@ -110,9 +110,18 @@ test("installed hook blocks an unformatted commit and permits a formatted commit
       path.join(sourceRoot, "scripts/check-staged-format.mts"),
       path.join(root, "scripts/check-staged-format.mts"),
     );
+    await fs.symlink(
+      path.join(sourceRoot, "scripts/check-staged-lint.mts"),
+      path.join(root, "scripts/check-staged-lint.mts"),
+    );
+    await fs.writeFile(
+      path.join(root, "eslint.config.mjs"),
+      'export default [{ files: ["**/*.ts"], rules: { "no-unused-vars": "error" } }];\n',
+    );
+    await fs.mkdir(path.join(root, "src"));
     git("config", "core.hooksPath", ".githooks");
-    await fs.writeFile(path.join(root, "word.ts"), "const word={a:1}\n");
-    git("add", "--", "word.ts");
+    await fs.writeFile(path.join(root, "src/word.ts"), "const word={a:1}\n");
+    git("add", "--", "src/word.ts");
     const commit = () =>
       spawnSync(
         "git",
@@ -132,14 +141,28 @@ test("installed hook blocks an unformatted commit and permits a formatted commit
     const blocked = commit();
     assert.notEqual(blocked.status, 0);
     assert.match(blocked.stderr, /Commit blocked by formatting/);
-    await fs.writeFile(path.join(root, "word.ts"), "const word = { a: 1 };\n");
-    git("add", "--", "word.ts");
-    await fs.writeFile(path.join(root, "word.ts"), "const word={a:2}\n");
+    await fs.writeFile(
+      path.join(root, "src/word.ts"),
+      "const word = { a: 1 };\n",
+    );
+    git("add", "--", "src/word.ts");
+    await fs.writeFile(
+      path.join(root, "src/word.ts"),
+      "export const word = { a: 1 };\n",
+    );
+    const lintBlocked = commit();
+    assert.notEqual(lintBlocked.status, 0);
+    assert.match(lintBlocked.stderr, /no-unused-vars/);
+    git("add", "--", "src/word.ts");
+    await fs.writeFile(path.join(root, "src/word.ts"), "const word={a:2}\n");
     const allowed = commit();
     assert.equal(allowed.status, 0, allowed.stderr);
-    assert.equal(git("show", "HEAD:word.ts"), "const word = { a: 1 };\n");
     assert.equal(
-      await fs.readFile(path.join(root, "word.ts"), "utf8"),
+      git("show", "HEAD:src/word.ts"),
+      "export const word = { a: 1 };\n",
+    );
+    assert.equal(
+      await fs.readFile(path.join(root, "src/word.ts"), "utf8"),
       "const word={a:2}\n",
     );
   } finally {
