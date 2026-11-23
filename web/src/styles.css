@@ -569,17 +569,40 @@ th {
   overflow-wrap: anywhere;
 }
 .timing-scrub {
+  --seek-thumb-size: 16px;
   display: grid;
   align-items: center;
   gap: 6px;
   margin: 0;
   width: 100%;
 }
-.timing-scrub input {
+.timing-scrub input[type="range"] {
+  appearance: none;
+  height: var(--seek-thumb-size);
+  border: 0;
+  border-radius: 0;
   padding: 0;
-  accent-color: var(--accent);
+  background: linear-gradient(var(--border), var(--border)) center / 100% 4px
+    no-repeat;
   width: 100%;
   margin: 0;
+}
+.timing-scrub input::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--seek-thumb-size);
+  height: var(--seek-thumb-size);
+  border-radius: 50%;
+  background: var(--accent);
+}
+.timing-scrub input::-moz-range-thumb {
+  width: var(--seek-thumb-size);
+  height: var(--seek-thumb-size);
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.timing-scrub input:disabled {
+  opacity: 0.45;
 }
 .timing-grid {
   display: grid;
@@ -675,7 +698,7 @@ th {
   height: 100%;
   font-variant-numeric: tabular-nums;
 }
-.timing-ruler > span:last-child {
+.timing-ruler:not(.timing-seek-ruler) > span:last-child {
   transform: translateX(-100%);
   border-left: 0;
   border-right: 1px solid var(--border);
@@ -837,12 +860,16 @@ th {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-.timing-seek-labels {
-  display: flex;
-  justify-content: space-between;
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
+.timing-seek-ruler {
+  /* The native range moves the thumb's center between these insets. */
+  margin-inline: calc(var(--seek-thumb-size) / 2);
+  height: 22px;
+  cursor: inherit;
   color: var(--muted);
+  white-space: nowrap;
+}
+.timing-seek-ruler > span {
+  border-left-color: color-mix(in srgb, var(--accent) 65%, transparent);
 }
 .timing-inspector > .timing-controls {
   margin-bottom: 16px;
@@ -1006,12 +1033,6 @@ html {
   }
   .timing-board-toolbar select {
     max-width: 160px;
-  }
-}
-@media (max-width: 800px) {
-  .timing-seek-labels span:nth-child(2),
-  .timing-seek-labels span:nth-child(4) {
-    visibility: hidden;
   }
 }
 @media (prefers-reduced-motion: reduce) {

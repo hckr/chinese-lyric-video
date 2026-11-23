@@ -385,11 +385,14 @@ export function followPlayhead(
 }
 
 // Regular 1/2/5 intervals keep labels readable at every timeline scale.
-export function rulerTicks(
+export function rulerMarks(
   durationMs: number,
   width: number,
-  spacing = 64,
-): number[] {
+  {
+    spacing = 64,
+    endLabel = true,
+  }: { spacing?: number; endLabel?: boolean } = {},
+): { major: number[]; minor: number[] } {
   if (
     !Number.isFinite(durationMs) ||
     durationMs <= 0 ||
@@ -397,7 +400,7 @@ export function rulerTicks(
     width <= 0 ||
     spacing <= 0
   )
-    return [];
+    return { major: [], minor: [] };
   const desired =
     durationMs / Math.max(1, Math.min(1500, Math.floor(width / spacing)));
   const magnitude = 10 ** Math.floor(Math.log10(desired));
@@ -409,14 +412,31 @@ export function rulerTicks(
   );
   const ticks: number[] = [];
   for (let time = 0; time < durationMs; time += step) ticks.push(time);
-  // The end label sits to the left of its tick. Reserve space for both labels.
-  while (
-    ticks.length > 1 &&
-    ((durationMs - ticks[ticks.length - 1]) / durationMs) * width < 2 * spacing
-  )
+  while (ticks.length > 1) {
+    const lastTick = ticks[ticks.length - 1];
+    // The timeline needs room for two facing labels. The seek ruler only
+    // needs room for the last regular label at the ruler's 12px font size.
+    const requiredWidth = endLabel
+      ? 2 * spacing
+      : 8 * formatRulerTime(lastTick).length + 5;
+    const gap = ((durationMs - lastTick) / durationMs) * width;
+    if (gap >= requiredWidth) break;
     ticks.pop();
-  ticks.push(durationMs);
-  return ticks;
+  }
+  if (endLabel) {
+    ticks.push(durationMs);
+    const minor = ticks.slice(1).flatMap((end, index) => {
+      const start = ticks[index];
+      return [1, 2, 3].map((part) => start + ((end - start) * part) / 4);
+    });
+    return { major: ticks, minor };
+  }
+  const major = new Set(ticks);
+  const minor: number[] = [];
+  for (let time = step / 4; time < durationMs; time += step / 4) {
+    if (!major.has(time)) minor.push(time);
+  }
+  return { major: ticks, minor };
 }
 
 export function formatRulerTime(ms: number): string {

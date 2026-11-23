@@ -1,4 +1,4 @@
-import { rulerTicks, formatRulerTime } from "../src/timing.ts";
+import { rulerMarks, formatRulerTime } from "../src/timing.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
@@ -329,20 +329,30 @@ test("drag previews can cross neighbors in separate lanes without committing ove
 });
 
 test("ruler density increases with zoom using readable regular intervals", () => {
-  const wide = rulerTicks(184516, 800 * 32),
-    normal = rulerTicks(184516, 800 * 8);
+  const wide = rulerMarks(184516, 800 * 32).major,
+    normal = rulerMarks(184516, 800 * 8).major;
   assert.ok(wide.length > normal.length);
   for (const width of [560, 800, 6400, 25600]) {
-    const ticks = rulerTicks(184516, width);
+    const { major: ticks } = rulerMarks(184516, width);
     assert.equal(ticks[0], 0);
     assert.equal(ticks.at(-1), 184516);
     assert.equal(new Set(ticks).size, ticks.length);
     for (let i = 1; i < ticks.length; i++)
       assert.ok(((ticks[i] - ticks[i - 1]) / 184516) * width >= 60);
   }
-  const endTicks = rulerTicks(6000, 4800);
+  const endTicks = rulerMarks(6000, 4800).major;
   assert.ok(((6000 - endTicks.at(-2)!) / 6000) * 4800 >= 128);
-  assert.deepEqual(rulerTicks(0, 800), []);
+  assert.deepEqual(rulerMarks(0, 800), { major: [], minor: [] });
+});
+
+test("the seek ruler continues subdivisions past the last regular label", () => {
+  const { major, minor } = rulerMarks(254144, 856, { endLabel: false });
+  assert.deepEqual(major.slice(-3).map(formatRulerTime), [
+    "3:20",
+    "3:40",
+    "4:00",
+  ]);
+  assert.deepEqual(minor.slice(-3), [235000, 245000, 250000]);
 });
 
 test("dense ruler labels omit unnecessary precision but retain fractional times", () => {
@@ -351,8 +361,8 @@ test("dense ruler labels omit unnecessary precision but retain fractional times"
   assert.equal(formatRulerTime(184516), "3:04.516");
   for (const zoom of [1, 2, 4, 8, 16, 32])
     assert.ok(
-      rulerTicks(184516, 800 * zoom).length >
-        rulerTicks(184516, 800 * zoom, 110).length,
+      rulerMarks(184516, 800 * zoom).major.length >
+        rulerMarks(184516, 800 * zoom, { spacing: 110 }).major.length,
     );
 });
 

@@ -31,7 +31,7 @@ import {
   latestAutomatic,
   editTiming,
   formatTime,
-  rulerTicks,
+  rulerMarks,
   formatRulerTime,
   followPlayhead,
   mediaMs,
@@ -43,6 +43,30 @@ import {
   type Snap,
 } from "./timing.ts";
 import { useLocalAudio } from "./useLocalAudio.ts";
+
+function RulerMarks({
+  major,
+  minor,
+  duration,
+}: {
+  major: number[];
+  minor: number[];
+  duration: number;
+}) {
+  const position = (time: number) => `${(time / duration) * 100}%`;
+  return (
+    <>
+      {minor.map((time) => (
+        <i aria-hidden="true" key={time} style={{ left: position(time) }} />
+      ))}
+      {major.map((time) => (
+        <span key={time} style={{ left: position(time) }}>
+          <span className="timing-ruler-label">{formatRulerTime(time)}</span>
+        </span>
+      ))}
+    </>
+  );
+}
 
 function smoothScroll(
   element: HTMLElement,
@@ -324,17 +348,22 @@ export function TimingEditor({
   }, [active, duplicate]);
   const scroll = useRef<HTMLDivElement>(null),
     track = useRef<HTMLDivElement>(null),
+    seekRuler = useRef<HTMLSpanElement>(null),
     gesture = useRef<Gesture | null>(null);
   const [rulerWidth, setRulerWidth] = useState(560);
+  const [seekWidth, setSeekWidth] = useState(0);
   useEffect(() => {
     const board = track.current;
-    if (!board) return;
+    const seek = seekRuler.current;
+    if (!board || !seek) return;
     const measure = () => {
       if (board.clientWidth > 0) setRulerWidth(board.clientWidth);
+      if (seek.clientWidth > 0) setSeekWidth(seek.clientWidth);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(board);
+    observer.observe(seek);
     return () => observer.disconnect();
   }, []);
   const audio = useLocalAudio(
@@ -375,9 +404,13 @@ export function TimingEditor({
     ...project.occurrences.map((o) => Math.max(o.startMs ?? 0, o.endMs ?? 0)),
   );
   const timelineMs = duplicate?.extent ?? baseTimelineMs;
-  const ticks = useMemo(
-    () => rulerTicks(timelineMs, rulerWidth),
+  const timelineRuler = useMemo(
+    () => rulerMarks(timelineMs, rulerWidth),
     [timelineMs, rulerWidth],
+  );
+  const seekRulerMarks = useMemo(
+    () => rulerMarks(duration ?? 0, seekWidth, { endLabel: false }),
+    [duration, seekWidth],
   );
   useEffect(() => {
     const viewport = scroll.current;
@@ -394,7 +427,7 @@ export function TimingEditor({
       .querySelectorAll(".timing-ruler-label")
       .forEach((label) => observer.observe(label));
     return () => observer.disconnect();
-  }, [active, ticks]);
+  }, [active, timelineRuler]);
   const available = duration !== undefined;
   const audioStatus = localFile
     ? audio.error
@@ -854,12 +887,16 @@ export function TimingEditor({
             disabled={!available}
             onChange={(e) => audio.seek(Number(e.target.value))}
           />
-          <span className="timing-seek-labels" aria-hidden="true">
-            <span>0:00.000</span>
-            <span>{available ? formatTime(duration / 4) : ""}</span>
-            <span>{available ? formatTime(duration / 2) : ""}</span>
-            <span>{available ? formatTime((duration * 3) / 4) : ""}</span>
-            <span>{available ? formatTime(duration) : "No audio"}</span>
+          <span
+            className="timing-ruler timing-seek-ruler"
+            ref={seekRuler}
+            aria-hidden="true"
+          >
+            {available ? (
+              <RulerMarks {...seekRulerMarks} duration={duration} />
+            ) : (
+              <small>No audio</small>
+            )}
           </span>
         </label>
       </section>
@@ -1202,29 +1239,7 @@ export function TimingEditor({
                   );
                 }}
               >
-                {ticks.flatMap((time, index, ticks) =>
-                  index === 0
-                    ? []
-                    : [1, 2, 3].map((part) => (
-                        <i
-                          aria-hidden="true"
-                          key={`${index}-${part}`}
-                          style={{
-                            left: `${((ticks[index - 1] + ((time - ticks[index - 1]) * part) / 4) / timelineMs) * 100}%`,
-                          }}
-                        />
-                      )),
-                )}
-                {ticks.map((time) => (
-                  <span
-                    key={time}
-                    style={{ left: `${(time / timelineMs) * 100}%` }}
-                  >
-                    <span className="timing-ruler-label">
-                      {formatRulerTime(time)}
-                    </span>
-                  </span>
-                ))}
+                <RulerMarks {...timelineRuler} duration={timelineMs} />
               </div>
               <div
                 className="timing-wave"

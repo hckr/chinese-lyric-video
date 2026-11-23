@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import type { openBrowser } from "@remotion/renderer";
 import { rawProject, type Project } from "../src/domain.ts";
-import { reviewTiming } from "../src/timing.ts";
+import { formatRulerTime, reviewTiming, rulerMarks } from "../src/timing.ts";
 import { importLegacy } from "../src/legacy.ts";
 
 type Page = Awaited<
@@ -275,7 +275,83 @@ export async function timingAcceptance(
     "preview clears after lyric ends during playback",
   );
   await click("Pause");
+  const checkSeekRuler = async () => {
+    const ruler = await page.evaluate(async () => {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      const input = document.querySelector<HTMLInputElement>(
+        '[aria-label="Audio seek"]',
+      )!;
+      const ruler = document.querySelector<HTMLElement>(".timing-seek-ruler")!;
+      const inputBounds = input.getBoundingClientRect();
+      const bounds = ruler.getBoundingClientRect();
+      const inputStyle = getComputedStyle(input);
+      return {
+        duration: Number(input.max),
+        width: ruler.clientWidth,
+        rightEdge: bounds.right,
+        startInset: bounds.left - inputBounds.left,
+        endInset: inputBounds.right - bounds.right,
+        thumbSize: Number.parseFloat(
+          inputStyle.getPropertyValue("--seek-thumb-size"),
+        ),
+        inputInsets: [
+          inputStyle.paddingLeft,
+          inputStyle.paddingRight,
+          inputStyle.borderLeftWidth,
+          inputStyle.borderRightWidth,
+        ],
+        minorPositions: Array.from(
+          ruler.querySelectorAll<HTMLElement>("i"),
+          (mark) => Number.parseFloat(mark.style.left),
+        ),
+        labels: Array.from(
+          ruler.querySelectorAll<HTMLElement>(".timing-ruler-label"),
+          (label) => {
+            const rect = label.getBoundingClientRect();
+            return {
+              text: label.textContent,
+              position: label.parentElement!.style.left,
+              left: rect.left,
+              right: rect.right,
+            };
+          },
+        ),
+      };
+    });
+    const { major: ticks, minor } = rulerMarks(ruler.duration, ruler.width, {
+      endLabel: false,
+    });
+    assert.deepEqual(
+      ruler.labels.map((label) => label.text),
+      ticks.map(formatRulerTime),
+    );
+    assert.equal(ruler.startInset, ruler.thumbSize / 2);
+    assert.equal(ruler.endInset, ruler.thumbSize / 2);
+    assert.deepEqual(ruler.inputInsets, ["0px", "0px", "0px", "0px"]);
+    assert.equal(ruler.minorPositions.length, minor.length);
+    minor.forEach((time, index) =>
+      assert.ok(
+        Math.abs(ruler.minorPositions[index] - (time / ruler.duration) * 100) <
+          0.001,
+      ),
+    );
+    for (const [index, label] of ruler.labels.entries()) {
+      assert.ok(
+        Math.abs(
+          Number.parseFloat(label.position) -
+            (ticks[index] / ruler.duration) * 100,
+        ) < 0.001,
+      );
+      assert.ok(index === 0 || label.left >= ruler.labels[index - 1].right);
+      assert.ok(label.right <= ruler.rightEdge);
+    }
+    return ticks.length;
+  };
+  const desktopTickCount = await checkSeekRuler();
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  assert.ok((await checkSeekRuler()) < desktopTickCount);
   assert.equal(
     await page.evaluate(() => {
       const preview = document
