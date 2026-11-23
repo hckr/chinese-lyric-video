@@ -1,67 +1,50 @@
-import { dictionaryReadings, readingKey } from "./dictionary-readings.ts";
-import { lookupDictionary } from "./dictionary-service.ts";
-import type { LyricField } from "./lyric-field.ts";
-import { AssetContext, useVideoFiles } from "./video-assets.tsx";
-import { FootageSettings } from "./FootageSettings.tsx";
-import { StudioHandoff } from "./StudioHandoff.tsx";
-import { VideoDownload } from "./VideoDownload.tsx";
+import { useEffect, useRef, useState } from "react";
 import type { VerifiedSplitAudio } from "./AutomaticTiming";
-import { wordSpans } from "./word-spans";
-import { ImportAudioSplits } from "./ImportAudioSplits";
-import { needsImportSplit } from "./automatic-timing";
-import type { EditorHistory } from "./useEditorHistory";
-import { DocumentImport } from "./DocumentImport";
+import { ExportWorkspace } from "./ExportWorkspace";
+import { FootageSettings } from "./FootageSettings.tsx";
+import { ImportWorkspace } from "./ImportWorkspace";
+import { PhraseEditor } from "./PhraseEditor";
+import { PhraseInspector } from "./PhraseInspector";
+import { PhraseList } from "./PhraseList";
+import { RemoveAppearanceDialog } from "./RemoveAppearanceDialog";
+import { RepeatLyricDialog } from "./RepeatLyricDialog";
+import { TimingEditor } from "./TimingEditor";
 import {
   TranslateLyrics,
   type TranslationExchange,
 } from "./TranslateLyrics.tsx";
-import { translationState } from "./translation.ts";
-import { version } from "../../package.json";
-import { RepeatLyricDialog } from "./RepeatLyricDialog";
-import { orderGroupedProject } from "./lyric-groups.ts";
-import { DictionaryLookup } from "./DictionaryLookup";
-import { RemoveAppearanceDialog } from "./RemoveAppearanceDialog";
-import { draftDetectedWords, draftRawLyrics } from "./raw-import";
-import { ProjectStructure } from "./ProjectStructure";
-import { lyricCount, lyricLimit } from "./lyric-length";
-import { TimingConfirmDialog } from "./TimingConfirmDialog";
-import { TimingEditor } from "./TimingEditor";
-import {
-  attachAudioMetadata,
-  withTimingBaseline,
-  formatTime,
-  timingStatus,
-} from "./timing.ts";
 import { WiktionaryDialog } from "./WiktionaryDialog";
-import { useEffect, useRef, useState } from "react";
+import { WordStructureDialog } from "./WordStructureDialog";
+import { WorkbenchHeader } from "./WorkbenchHeader";
+import { needsImportSplit } from "./automatic-timing";
 import {
-  Project,
-  Phrase,
-  Word,
   History,
+  Phrase,
+  Project,
   Snapshot,
-  commit,
-  undo,
-  redo,
-  repeatAppearance,
+  Word,
   addLyric,
-  removeAppearance,
-  conflictingLyrics,
-  parseProject,
-  serializeProject,
-  projectSchema,
+  commit,
   newId,
+  parseProject,
   pending,
   phraseIssues,
-  phrasesInAppearanceOrder,
-  hanzi,
-  joinReadings,
-  mergeAdjacentTokens,
-  splitToken,
-  exportIssues,
+  projectSchema,
+  redo,
+  removeAppearance,
+  repeatAppearance,
+  serializeProject,
+  undo,
 } from "./domain";
-import { splitSuggestions } from "./split-suggestions";
-import { importLegacy, exportLegacy } from "./legacy";
+import { importLegacy } from "./legacy";
+import type { LyricField } from "./lyric-field.ts";
+import { orderGroupedProject } from "./lyric-groups.ts";
+import { draftDetectedWords, draftRawLyrics } from "./raw-import";
+import { attachAudioMetadata, withTimingBaseline } from "./timing.ts";
+import { translationState } from "./translation.ts";
+import type { EditorHistory } from "./useEditorHistory";
+import { AssetContext, useVideoFiles } from "./video-assets.tsx";
+import { wordSpans } from "./word-spans";
 
 const STORE = "lyric-workbench-v1";
 function loadSession(): History | null {
@@ -97,26 +80,7 @@ function download(filename: string, text: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function GlossInput(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const resize = () => {
-      el.style.height = "0px";
-      const style = getComputedStyle(el);
-      const line = parseFloat(style.lineHeight);
-      const padding =
-        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + 2;
-      el.style.height = `${Math.min(el.scrollHeight + 2, line * 3 + padding)}px`;
-    };
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [props.value]);
-  return <textarea {...props} ref={ref} rows={1} className="gloss-input" />;
-}
+
 export function App() {
   const [history, setHistory] = useState<History | null>(loadSession),
     [screen, setScreen] = useState(history ? "Lyric editor" : "Import lyrics"),
@@ -150,20 +114,7 @@ export function App() {
     }
     setScreen(next);
   }
-  const headerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const header = headerRef.current;
-    if (!header) return;
-    const measure = () =>
-      header.parentElement?.style.setProperty(
-        "--workbench-header-height",
-        `${header.getBoundingClientRect().height}px`,
-      );
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, []);
+
   const [removalId, setRemovalId] = useState<string | null>(null);
   const [lyricAction, setLyricAction] = useState(false);
   const [newLyric, setNewLyric] = useState("");
@@ -171,12 +122,7 @@ export function App() {
   const [editingStructure, setEditingStructure] = useState(false);
   const importDisabled = importLocked || importing || editingStructure;
   const [allowDraft, setAllowDraft] = useState(false);
-  const [dialog, setDialog] = useState<"split" | "merge" | null>(null),
-    [boundary, setBoundary] = useState(1),
-    [leftPy, setLeftPy] = useState(""),
-    [rightPy, setRightPy] = useState(""),
-    [leftGloss, setLeftGloss] = useState(""),
-    [rightGloss, setRightGloss] = useState("");
+  const [dialog, setDialog] = useState<"split" | "merge" | null>(null);
   const [projectSession, setProjectSession] = useState(0);
   const [translationExchanges, setTranslationExchanges] = useState<
     TranslationExchange[]
@@ -214,38 +160,7 @@ export function App() {
         behavior,
       });
   }, [snapshot?.phraseId, screen, query]);
-  useEffect(() => {
-    if (dialog !== "merge" || !selected?.hanzi || !next?.hanzi) return;
-    const term = selected.hanzi + next.hanzi;
-    const initial = joinReadings([selected.pinyin, next.pinyin]);
-    let active = true;
-    void lookupDictionary(term).then(
-      (entries) => {
-        if (!active) return;
-        const options = dictionaryReadings(
-          entries.filter((entry) => entry.hanzi === term),
-        );
-        const matching = options.filter(
-          (option) =>
-            readingKey(term, option.pinyin) === readingKey(term, initial),
-        );
-        const suggested =
-          matching.length === 1
-            ? matching[0]
-            : initial
-              ? undefined
-              : options.length === 1
-                ? options[0]
-                : undefined;
-        if (suggested)
-          setLeftPy((value) => (value === initial ? suggested.pinyin : value));
-      },
-      () => {},
-    );
-    return () => {
-      active = false;
-    };
-  }, [dialog, selected, next]);
+
   const insertionAfterId =
     screen === "Timing"
       ? snapshot?.occurrenceId
@@ -268,39 +183,7 @@ export function App() {
   useEffect(() => {
     setAllowDraft(false);
   }, [project]);
-  useEffect(() => {
-    if (!dialog) return;
-    const previous = dialogReturnFocus.current;
-    const onKey = (e: KeyboardEvent) => {
-      const panel = document.querySelector('[role="dialog"]');
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setDialog(null);
-        return;
-      }
-      if (e.key !== "Tab" || !panel) return;
-      const fields = [
-        ...panel.querySelectorAll<HTMLElement>(
-          "button:not(:disabled), input, textarea, select, a[href]",
-        ),
-      ];
-      const first = fields[0],
-        last = fields[fields.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last?.focus();
-      }
-      if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first?.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      previous?.focus();
-    };
-  }, [dialog]);
+
   const act = (fn: () => void) => {
     try {
       setError("");
@@ -428,6 +311,20 @@ export function App() {
       if (visit === importVisit.current) setImporting(false);
     }
   }
+  const replaceProject = () => {
+    setReplaceTrigger(null);
+    try {
+      localStorage.removeItem(STORE);
+    } catch {
+      setError("Could not remove the saved project.");
+      return;
+    }
+    setHistory(null);
+    setProjectAudio(null);
+    setSaved("");
+    setTranslationExchanges([]);
+    requestAnimationFrame(() => lyricsInput.current?.focus());
+  };
   function read(file: File) {
     return runImport(async () => {
       if (file.size > 5_000_000) throw Error("Import limit is 5 MB");
@@ -537,198 +434,49 @@ export function App() {
       });
     });
   };
-  function populateSplit(at: number) {
-    if (!selected || !project) return;
-    const suggestion = splitSuggestions(selected, at, project.phrases);
-    setBoundary(at);
-    setLeftPy(suggestion.leftPinyin);
-    setRightPy(suggestion.rightPinyin);
-    setLeftGloss(suggestion.leftGloss);
-    setRightGloss(suggestion.rightGloss);
-  }
+
   function openDialog(kind: "split" | "merge") {
     dialogReturnFocus.current = document.activeElement as HTMLElement | null;
     if (!selected) return;
-    setBoundary(1);
-    setLeftPy(
-      kind === "merge"
-        ? joinReadings([selected.pinyin, next?.pinyin ?? ""])
-        : "",
-    );
-    setRightPy("");
-    setLeftGloss(
-      kind === "merge"
-        ? [selected.translation.en, next?.translation.en].join("; ")
-        : "",
-    );
-    setRightGloss("");
-    if (kind === "split") populateSplit(1);
+
     setDialog(kind);
   }
-  const workspaces = [
-    ["Import lyrics", "Import"],
-    ["Lyric editor", "Translations"],
-    ["Timing", "Timing"],
-    ["Video settings", "Video"],
-    ["Export data", "Export"],
-  ];
-  const activeWorkspace =
-    screen === "Song structure" ? "Import lyrics" : screen;
+
+  function selectItem(selection: Partial<Omit<Snapshot, "project">>) {
+    setHistory((h) =>
+      h ? { ...h, present: { ...h.present, ...selection } } : h,
+    );
+  }
   function openWorkspace(name: string) {
     navigate(name);
     setRepeatOpen(false);
     setError("");
     setDialog(null);
   }
-  const counts: Record<string, string> = project
-    ? {
-        "Lyric editor":
-          project.phrases.filter((p) => p.review === "reviewed").length +
-          "/" +
-          project.phrases.length,
-        Timing:
-          project.occurrences.filter(
-            (o) => timingStatus(o, project.audio?.durationMs) === "Reviewed",
-          ).length +
-          "/" +
-          project.occurrences.length,
-      }
-    : {};
-  const projectName = project
-    ? [project.metadata.title || "Untitled song", project.metadata.artist]
-        .filter(Boolean)
-        .join(" · ")
-    : "Lyric Workbench";
+
   const pendingImportSplits =
     project?.timingRun?.candidates.some(needsImportSplit);
-  const jobs: Record<string, string> = {
-    "Import lyrics":
-      importProgress || suggestionProgress || (pendingImportSplits ? "!" : ""),
-    "Lyric editor":
-      translationProgress ||
-      (project?.translationWork?.drafts.length ? "!" : ""),
-    Timing:
-      timingProgress ||
-      (project?.timingRun &&
-      (project.timingRun.candidates.some((c) => !needsImportSplit(c)) ||
-        project.occurrences.some(
-          (o) =>
-            (o.automaticTiming || o.timingIssue) &&
-            o.timingReview !== "reviewed",
-        ))
-        ? "!"
-        : ""),
-  };
-  const warnings = project ? exportIssues(project) : [];
+
   return (
     <div className="app">
       <main>
-        <header ref={headerRef}>
-          <div className="project-identity">
-            <span className="music-mark" aria-hidden="true">
-              ♫
-            </span>
-            <strong>Lyric Workbench</strong>
-            <small title={[projectName, saved].join(" · ")}>
-              v{version}
-              {project && " · " + projectName} {saved && " · " + saved}
-            </small>
-          </div>
-          <nav className="workflow-tabs" aria-label="Workspaces">
-            {workspaces.map(([name, label], index) => (
-              <button
-                key={name}
-                data-workspace={name}
-                aria-current={activeWorkspace === name ? "page" : undefined}
-                onClick={() => openWorkspace(name)}
-              >
-                <span
-                  className="step-marker"
-                  data-complete={name === "Import lyrics" && !!project}
-                  aria-hidden="true"
-                >
-                  {name === "Import lyrics" && project ? "✓" : index + 1}
-                </span>
-                {label}{" "}
-                {jobs[name] && (
-                  <b
-                    aria-label={
-                      jobs[name] === "!" ? "Needs attention" : jobs[name]
-                    }
-                  >
-                    {jobs[name]}
-                  </b>
-                )}
-                {counts[name] && <small> {counts[name]}</small>}
-              </button>
-            ))}
-          </nav>
-          <label className="workspace-picker">
-            Workspace
-            <select
-              value={activeWorkspace}
-              onChange={(e) => openWorkspace(e.target.value)}
-            >
-              {workspaces.map(([name, label]) => (
-                <option value={name} key={name}>
-                  {jobs[name]}
-                  {label} {counts[name]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <span className="mobile-job" role="status">
-            {workspaces
-              .filter(([name]) => jobs[name])
-              .map(([name, label]) => label + " " + jobs[name])
-              .join(" · ")}
-          </span>
-          <div className="actions">
-            <button
-              disabled={
-                importing ||
-                editingStructure ||
-                (editorHistory ? !editorHistory.undo : !history?.past.length)
-              }
-              onClick={() => {
-                if (editorHistory) {
-                  editorHistory.undo?.();
-                  return;
-                }
-                setHistory((h) => (h ? undo(h) : h));
-                setDialog(null);
-              }}
-            >
-              Undo
-            </button>
-            <button
-              disabled={
-                importing ||
-                editingStructure ||
-                (editorHistory ? !editorHistory.redo : !history?.future.length)
-              }
-              onClick={() => {
-                if (editorHistory) {
-                  editorHistory.redo?.();
-                  return;
-                }
-                setHistory((h) => (h ? redo(h) : h));
-                setDialog(null);
-              }}
-            >
-              Redo
-            </button>
-            <button
-              disabled={!project}
-              onClick={() =>
-                project &&
-                download("song.workbench.json", serializeProject(project, 2))
-              }
-            >
-              Download project JSON
-            </button>
-          </div>
-        </header>
+        <WorkbenchHeader
+          screen={screen}
+          project={project}
+          importProgress={importProgress}
+          suggestionProgress={suggestionProgress}
+          translationProgress={translationProgress}
+          timingProgress={timingProgress}
+          saved={saved}
+          openWorkspace={openWorkspace}
+          importing={importing}
+          editingStructure={editingStructure}
+          editorHistory={editorHistory}
+          history={history}
+          setHistory={setHistory}
+          setDialog={setDialog}
+          download={download}
+        />
         <div
           className="content"
           onDragOver={(e) => {
@@ -758,114 +506,30 @@ export function App() {
               {error}
             </div>
           )}
-          {(!project || screen === "Import lyrics") && (
-            <div hidden={screen !== "Import lyrics"}>
-              {project && pendingImportSplits && (
-                <ImportAudioSplits
-                  project={project}
-                  file={projectAudio}
-                  verifiedAudio={splitAudio}
-                  active
-                  apply={(p) => change(p, {}, true)}
-                />
-              )}
-              {replaceTrigger && (
-                <TimingConfirmDialog
-                  cancelLabel="Keep project"
-                  extraAction={
-                    project && (
-                      <button
-                        onClick={() =>
-                          download(
-                            "song.workbench.json",
-                            serializeProject(project, 2),
-                          )
-                        }
-                      >
-                        Download project JSON
-                      </button>
-                    )
-                  }
-                  title="Replace current project?"
-                  action="Discard project and start import"
-                  trigger={replaceTrigger}
-                  onCancel={() => setReplaceTrigger(null)}
-                  onConfirm={() => {
-                    setReplaceTrigger(null);
-                    try {
-                      localStorage.removeItem(STORE);
-                    } catch {
-                      setError("Could not remove the saved project.");
-                      return;
-                    }
-                    setHistory(null);
-                    setProjectAudio(null);
-                    setSaved("");
-                    setTranslationExchanges([]);
-                    requestAnimationFrame(() => lyricsInput.current?.focus());
-                  }}
-                >
-                  Starting a new import will discard this project and its undo
-                  history.{" "}
-                </TimingConfirmDialog>
-              )}
-              {!project && (
-                <fieldset disabled={importDisabled} className="import-fields">
-                  <DocumentImport
-                    publishHistory={setEditorHistory}
-                    key={projectSession}
-                    source={documentSource}
-                    editor={lyricsInput}
-                    active={screen === "Import lyrics"}
-                    locked={importLocked}
-                    reportAI={setSuggestionProgress}
-                    reportAudio={setImportProgress}
-                    runImport={runImport}
-                  />
-                  <section>
-                    <h2>Open a saved project or legacy song</h2>
-                    <p>
-                      Open project JSON or a legacy TypeScript song. Choose a
-                      .txt file to fill the lyrics field.
-                    </p>
-                    <label className="file">
-                      Choose .ts, .txt or project .json
-                      <input
-                        type="file"
-                        accept=".ts,.txt,.json"
-                        aria-label="Song file"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) void read(f);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                  </section>
-                </fieldset>
-              )}
-            </div>
-          )}
-          {project &&
-            (screen === "Song structure" || screen === "Import lyrics") && (
-              <ProjectStructure
-                publishHistory={setEditorHistory}
-                project={project}
-                selectedId={snapshot?.occurrenceId}
-                cancel={() => navigate("Timing")}
-                apply={(p) => {
-                  change(p, {}, true);
-                  navigate("Timing");
-                }}
-              />
-            )}
-          {project && screen === "Import lyrics" && (
-            <div className="import-replacement">
-              <button onClick={(e) => setReplaceTrigger(e.currentTarget)}>
-                Import another song…
-              </button>
-            </div>
-          )}
+          <ImportWorkspace
+            project={project}
+            screen={screen}
+            pendingImportSplits={pendingImportSplits}
+            projectAudio={projectAudio}
+            splitAudio={splitAudio}
+            change={change}
+            replaceTrigger={replaceTrigger}
+            download={download}
+            setReplaceTrigger={setReplaceTrigger}
+            lyricsInput={lyricsInput}
+            importDisabled={importDisabled}
+            setEditorHistory={setEditorHistory}
+            projectSession={projectSession}
+            documentSource={documentSource}
+            importLocked={importLocked}
+            setSuggestionProgress={setSuggestionProgress}
+            setImportProgress={setImportProgress}
+            runImport={runImport}
+            read={read}
+            snapshot={snapshot}
+            navigate={navigate}
+            replaceProject={replaceProject}
+          />
           {project && screen === "Timing" && (
             <div className="lyric-structure-actions">
               <button onClick={() => navigate("Song structure")}>
@@ -1010,529 +674,54 @@ export function App() {
                   : [];
                 return (
                   <div className="workspace">
-                    <section className="phrases">
-                      <h2>
-                        Unique phrases <small>{project.phrases.length}</small>
-                      </h2>
-                      <label>
-                        Search
-                        <input
-                          value={query}
-                          onChange={(e) => setQuery(e.target.value)}
-                          placeholder="Hanzi or translation"
-                        />
-                      </label>
-                      <div className="phrase-list">
-                        {phrasesInAppearanceOrder(project)
-                          .filter((p) =>
-                            `${p.lyricKey} ${p.translation.en} ${p.translation.pl}`
-                              .toLowerCase()
-                              .includes(query.toLowerCase()),
-                          )
-                          .map((p, i) => (
-                            <button
-                              className={`phrase ${phrase?.id === p.id ? "selected" : ""}`}
-                              key={p.id}
-                              onClick={() => selectPhrase(p)}
-                            >
-                              <small>
-                                {i + 1} ·{" "}
-                                {
-                                  project.occurrences.filter(
-                                    (o) => o.phraseId === p.id,
-                                  ).length
-                                }{" "}
-                                occurrences · {p.review}
-                              </small>
-                              {project.translationWork?.drafts.some(
-                                (draft) => draft.phraseId === p.id,
-                              ) && <small> · Draft ready</small>}
-                              <strong>{p.lyricKey}</strong>
-                              <span lang="en">
-                                {p.translation.en || "No English translation"}
-                              </span>
-                              <span lang="pl">
-                                {p.translation.pl || "Brak tłumaczenia"}
-                              </span>
-                              {lyricCount(p.lyricKey) > lyricLimit && (
-                                <small className="warning">
-                                  {lyricCount(p.lyricKey)} / {lyricLimit} lyric
-                                  characters
-                                </small>
-                              )}
-                            </button>
-                          ))}
-                      </div>
-                    </section>
+                    <PhraseList
+                      project={project}
+                      query={query}
+                      setQuery={setQuery}
+                      phrase={phrase}
+                      selectPhrase={selectPhrase}
+                    />
                     {phrase && (
                       <>
-                        <section className="editor">
-                          <div className="two sentence-fields">
-                            {(["en", "pl"] as const).map((language) => {
-                              const draft = preview.sentences[language];
-                              const label =
-                                language === "en" ? "English" : "Polish";
-                              return (
-                                <div key={language}>
-                                  <label>
-                                    {label}
-                                    {draft && " · Draft"}
-                                    <input
-                                      aria-label={`${label} sentence`}
-                                      className={draft && "draft-field"}
-                                      readOnly={draft?.readOnly}
-                                      value={
-                                        draft?.value ??
-                                        phrase.translation[language]
-                                      }
-                                      onChange={(e) =>
-                                        draft
-                                          ? draft.edit(e.target.value)
-                                          : editPhrase({
-                                              ...phrase,
-                                              review: "pending",
-                                              translation: {
-                                                ...phrase.translation,
-                                                [language]: e.target.value,
-                                              },
-                                            })
-                                      }
-                                    />
-                                    {draft?.previous &&
-                                      draft.previous !== draft.value && (
-                                        <small className="draft-previous">
-                                          Previous · {draft.previous}
-                                        </small>
-                                      )}
-                                  </label>
-                                  {preview.actions[language]}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {project.phrases.some(
-                            (other) =>
-                              other.id !== phrase.id &&
-                              other.lyricKey === phrase.lyricKey,
-                          ) && (
-                            <p role="status" className="warning">
-                              Duplicate lyric text. Keep translations and word
-                              breakdowns consistent before TypeScript export.
-                            </p>
-                          )}
-                          {reviewActions}
-                          <h2>
-                            Word breakdown{" "}
-                            {proposedWords && <small>· Draft</small>}
-                          </h2>
-                          {preview.actions.vocabulary}
-                          {proposedWords?.previousBoundaries && (
-                            <p className="draft-previous">
-                              Previous word boundaries ·{" "}
-                              {proposedWords.previousBoundaries}
-                            </p>
-                          )}
-                          {!proposedWords &&
-                            phrase.words.length === 0 &&
-                            hanzi(phrase.lyricKey) &&
-                            project.occurrences.some(
-                              (cue) =>
-                                cue.phraseId === phrase.id &&
-                                cue.detectedFromAudio,
-                            ) && (
-                              <button
-                                disabled={editingStructure}
-                                onClick={() => void restoreDetectedReadings()}
-                              >
-                                Draft words and Pinyin
-                              </button>
-                            )}
-
-                          {!proposedWords && (
-                            <div className="actions wrap">
-                              <button
-                                onClick={() => {
-                                  const id = newId();
-                                  editPhrase(
-                                    {
-                                      ...pending(phrase),
-                                      words: [
-                                        ...phrase.words,
-                                        {
-                                          id,
-                                          hanzi: "",
-                                          pinyin: "",
-                                          translation: { en: "" },
-                                        },
-                                      ],
-                                    },
-                                    id,
-                                  );
-                                }}
-                              >
-                                Add word
-                              </button>
-                              <button
-                                disabled={
-                                  !selected ||
-                                  [...selected.hanzi].length < 2 ||
-                                  hanzi(selected.hanzi) !== selected.hanzi
-                                }
-                                onClick={() => openDialog("split")}
-                              >
-                                Split word
-                              </button>
-                              <button
-                                disabled={!selected?.hanzi || !next?.hanzi}
-                                onClick={() => openDialog("merge")}
-                              >
-                                Merge with next
-                              </button>
-                              <button
-                                disabled={!selected}
-                                onClick={() => {
-                                  const span = wordSpans(
-                                    phrase.lyricKey,
-                                    phrase.words,
-                                  ).find(
-                                    ({ word }) => word.id === selected?.id,
-                                  );
-                                  const lyricKey = span
-                                    ? phrase.lyricKey.slice(0, span.start) +
-                                        phrase.lyricKey.slice(span.end) ||
-                                      phrase.lyricKey
-                                    : phrase.lyricKey;
-                                  editPhrase(
-                                    {
-                                      ...pending(phrase),
-                                      lyricKey,
-                                      words: phrase.words.filter(
-                                        (w) => w.id !== selected?.id,
-                                      ),
-                                    },
-                                    phrase.words[index - 1]?.id ?? "",
-                                  );
-                                }}
-                              >
-                                Remove selected
-                              </button>
-                            </div>
-                          )}
-                          <div className="tokens">
-                            <div className="token headings">
-                              <span aria-hidden="true"></span>
-                              <span>Hanzi</span>
-                              <span>Pinyin</span>
-                              <span>English gloss</span>
-                              <span>Move</span>
-                            </div>
-                            {words.map((w, i) => {
-                              const reading = proposedWords?.pinyin(i);
-                              const gloss = proposedWords?.gloss(i);
-                              return (
-                                <div
-                                  className={`token ${inspectorWord?.id === w.id ? "selected" : ""}`}
-                                  key={w.id}
-                                  onFocusCapture={() =>
-                                    setHistory((h) =>
-                                      h
-                                        ? {
-                                            ...h,
-                                            present: {
-                                              ...h.present,
-                                              tokenId: w.id,
-                                            },
-                                          }
-                                        : h,
-                                    )
-                                  }
-                                >
-                                  <span
-                                    className="word-index"
-                                    aria-hidden="true"
-                                  >
-                                    {i + 1}
-                                  </span>
-                                  <input
-                                    aria-label={`Hanzi ${i + 1}`}
-                                    value={w.hanzi}
-                                    readOnly={!!proposedWords}
-                                    placeholder="Hanzi"
-                                    onChange={(e) =>
-                                      updateWord(w.id, {
-                                        hanzi: e.target.value,
-                                      })
-                                    }
-                                  />
-                                  <div>
-                                    <input
-                                      aria-label={`Pinyin ${i + 1}`}
-                                      ref={
-                                        w.id === snapshot?.tokenId
-                                          ? selectedReading
-                                          : undefined
-                                      }
-                                      className={
-                                        reading &&
-                                        reading.value !== reading.previous
-                                          ? "draft-field"
-                                          : undefined
-                                      }
-                                      readOnly={
-                                        proposedWords
-                                          ? (reading?.readOnly ?? true)
-                                          : undefined
-                                      }
-                                      value={w.pinyin}
-                                      placeholder={
-                                        w.hanzi ? "Reading needs review" : ""
-                                      }
-                                      onChange={(e) =>
-                                        reading
-                                          ? reading.edit(e.target.value)
-                                          : updateWord(w.id, {
-                                              pinyin: e.target.value,
-                                            })
-                                      }
-                                    />
-                                    {reading?.previous &&
-                                      reading.previous !== reading.value && (
-                                        <small className="draft-previous">
-                                          Previous · {reading.previous}
-                                        </small>
-                                      )}
-                                  </div>
-                                  <div>
-                                    <GlossInput
-                                      aria-label={`Gloss ${i + 1}`}
-                                      data-draft={
-                                        gloss && gloss.value !== gloss.previous
-                                          ? true
-                                          : undefined
-                                      }
-                                      readOnly={
-                                        proposedWords
-                                          ? (gloss?.readOnly ?? true)
-                                          : undefined
-                                      }
-                                      value={w.translation.en}
-                                      onChange={(e) =>
-                                        gloss
-                                          ? gloss.edit(e.target.value)
-                                          : updateWord(w.id, {
-                                              translation: {
-                                                en: e.target.value,
-                                              },
-                                            })
-                                      }
-                                    />
-                                    {gloss?.previous &&
-                                      gloss.previous !== gloss.value && (
-                                        <small className="draft-previous">
-                                          Previous · {gloss.previous}
-                                        </small>
-                                      )}
-                                  </div>
-                                  <div className="move">
-                                    {[-1, 1].map((d) => (
-                                      <button
-                                        key={d}
-                                        aria-label={`${d < 0 ? "Move up" : "Move down"} word ${i + 1}`}
-                                        disabled={
-                                          !!proposedWords ||
-                                          !phrase.words[i + d]
-                                        }
-                                        onClick={() => {
-                                          const words = [...phrase.words];
-                                          [words[i], words[i + d]] = [
-                                            words[i + d],
-                                            words[i],
-                                          ];
-                                          const ids = new Set([
-                                            w.id,
-                                            phrase.words[i + d].id,
-                                          ]);
-                                          const [left, right] = wordSpans(
-                                            phrase.lyricKey,
-                                            phrase.words,
-                                          ).filter(({ word }) =>
-                                            ids.has(word.id),
-                                          );
-                                          const lyricKey =
-                                            left && right
-                                              ? phrase.lyricKey.slice(
-                                                  0,
-                                                  left.start,
-                                                ) +
-                                                right.word.hanzi +
-                                                phrase.lyricKey.slice(
-                                                  left.end,
-                                                  right.start,
-                                                ) +
-                                                left.word.hanzi +
-                                                phrase.lyricKey.slice(right.end)
-                                              : phrase.lyricKey;
-                                          editPhrase({
-                                            ...pending(phrase),
-                                            lyricKey,
-                                            words,
-                                          });
-                                        }}
-                                      >
-                                        {d < 0 ? "↑" : "↓"}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  {inspectorWord?.id === w.id &&
-                                    preview.wordAction?.(i)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {reviewIssues.length > 0 && (
-                            <details className="review-warnings">
-                              <summary className="warning">
-                                {reviewIssues.length} review warnings
-                              </summary>
-                              <ul>
-                                {reviewIssues.map((s, i) => (
-                                  <li key={i}>{s}</li>
-                                ))}
-                              </ul>
-                            </details>
-                          )}
-                          <button
-                            className={
-                              phrase.review === "reviewed"
-                                ? undefined
-                                : "primary"
-                            }
-                            disabled={
-                              phrase.review !== "reviewed" &&
-                              (!!proposedWords ||
-                                Object.keys(preview.sentences).length > 0)
-                            }
-                            onClick={() =>
-                              act(() => {
-                                if (phrase.review === "reviewed") {
-                                  editPhrase({ ...phrase, review: "pending" });
-                                  return;
-                                }
-                                const issues = phraseIssues(phrase);
-                                if (issues.length)
-                                  throw Error(issues.join("; "));
-                                editPhrase({
-                                  ...phrase,
-                                  review: "reviewed",
-                                  segmentationApproved: true,
-                                });
-                              })
-                            }
-                          >
-                            {phrase.review === "reviewed"
-                              ? "Mark as needing review"
-                              : "Mark phrase reviewed"}
-                          </button>
-                        </section>
-                        <section className="inspector">
-                          <DictionaryLookup
-                            word={inspectorWord}
-                            onPick={
-                              proposedWords
-                                ? undefined
-                                : (entry) =>
-                                    updateWord(inspectorWord.id, {
-                                      pinyin: entry.pinyin,
-                                    })
-                            }
-                            advice={{
-                              provider: preview.wordProvider,
-                              text: phrase.lyricKey,
-                              position: phrase.lyricKey.indexOf(
-                                inspectorWord?.hanzi ?? "",
-                                words
-                                  .slice(0, words.indexOf(inspectorWord))
-                                  .reduce(
-                                    (offset, w) =>
-                                      phrase.lyricKey.indexOf(w.hanzi, offset) +
-                                      w.hanzi.length,
-                                    0,
-                                  ),
-                              ),
-                            }}
-                            onOpenWiktionary={setDictionaryTerm}
-                          />
-                          <hr />
-                          <h2>Timing</h2>
-                          <p>
-                            Edit timing for each appearance of this lyric.
-                            Translation changes apply to all.
-                          </p>
-                          <ol className="lyric-timing-list">
-                            {project.occurrences
-                              .filter((o) => o.phraseId === phrase.id)
-                              .map((o, appearanceIndex) => (
-                                <li key={o.id}>
-                                  <div className="lyric-timing-row">
-                                    <button
-                                      className="lyric-timing-link"
-                                      data-timing-id={o.id}
-                                      onClick={() => {
-                                        setHistory((h) =>
-                                          h
-                                            ? {
-                                                ...h,
-                                                present: {
-                                                  ...h.present,
-                                                  occurrenceId: o.id,
-                                                },
-                                              }
-                                            : h,
-                                        );
-                                        setScreen("Timing");
-                                        setError("");
-                                        setDialog(null);
-                                      }}
-                                    >
-                                      <span className="lyric-timing-copy">
-                                        {o.detectedFromAudio === true &&
-                                          phrase.review !== "reviewed" && (
-                                            <span className="detected-audio-badge">
-                                              Detected from audio
-                                            </span>
-                                          )}
-                                        <span className="lyric-timing-range">
-                                          {o.startMs === null &&
-                                          o.endMs === null
-                                            ? "Timing not set"
-                                            : `${formatTime(o.startMs)} → ${formatTime(o.endMs)}`}
-                                        </span>
-                                      </span>
-                                      <svg
-                                        aria-hidden="true"
-                                        width="18"
-                                        height="18"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                      >
-                                        <path d="m9 5 7 7-7 7" />
-                                      </svg>
-                                    </button>
-                                    <button
-                                      className="lyric-timing-remove"
-                                      aria-label={`Remove appearance ${appearanceIndex + 1}`}
-                                      title="Remove this appearance"
-                                      onClick={() => setRemovalId(o.id)}
-                                    >
-                                      <span aria-hidden="true">×</span>
-                                    </button>
-                                  </div>
-                                </li>
-                              ))}
-                          </ol>
-                        </section>
+                        <PhraseEditor
+                          preview={preview}
+                          phrase={phrase}
+                          editPhrase={editPhrase}
+                          project={project}
+                          reviewActions={reviewActions}
+                          proposedWords={proposedWords}
+                          editingStructure={editingStructure}
+                          restoreDetectedReadings={restoreDetectedReadings}
+                          selected={selected}
+                          openDialog={openDialog}
+                          next={next}
+                          index={index}
+                          words={words}
+                          inspectorWord={inspectorWord}
+                          onSelectWord={(tokenId) => selectItem({ tokenId })}
+                          updateWord={updateWord}
+                          snapshot={snapshot}
+                          selectedReading={selectedReading}
+                          reviewIssues={reviewIssues}
+                          act={act}
+                        />
+                        <PhraseInspector
+                          inspectorWord={inspectorWord}
+                          proposedWords={proposedWords}
+                          updateWord={updateWord}
+                          preview={preview}
+                          phrase={phrase}
+                          words={words}
+                          setDictionaryTerm={setDictionaryTerm}
+                          project={project}
+                          onOpenTiming={(occurrenceId) => {
+                            selectItem({ occurrenceId });
+                            setScreen("Timing");
+                            setError("");
+                            setDialog(null);
+                          }}
+                          setRemovalId={setRemovalId}
+                        />
                       </>
                     )}
                   </div>
@@ -1541,90 +730,18 @@ export function App() {
             </TranslateLyrics>
           )}
           {screen === "Export data" && project && (
-            <div className="two">
-              <AssetContext.Provider value={videoFiles}>
-                <div>
-                  <VideoDownload project={project} file={projectAudio} />
-                  <StudioHandoff
-                    save={(videoSettings) =>
-                      change({ ...project, videoSettings }, {}, true)
-                    }
-                    openVideo={(tab) => {
-                      setVideoTab(tab);
-                      navigate("Video settings");
-                    }}
-                    project={project}
-                    file={projectAudio}
-                    download={download}
-                  />
-                </div>
-              </AssetContext.Provider>
-              <section>
-                <h2>Review & compatibility</h2>
-                {conflictingLyrics(project).length > 0 && (
-                  <p role="alert">
-                    Resolve conflicting duplicate lyrics before TypeScript
-                    export: {conflictingLyrics(project).join(", ")}
-                  </p>
-                )}
-                <p>
-                  {project.phrases.length} phrases ·{" "}
-                  {project.occurrences.length} ordered occurrences
-                </p>
-                <ul className="warnings">
-                  {warnings.map((s, i) => (
-                    <li key={i}>{s}</li>
-                  ))}
-                </ul>
-                {warnings.length > 0 && (
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      checked={allowDraft}
-                      onChange={(e) => setAllowDraft(e.target.checked)}
-                    />
-                    I have read the warnings. Export an incomplete draft
-                    preserving my data.
-                  </label>
-                )}
-                <button
-                  className="primary"
-                  disabled={
-                    conflictingLyrics(project).length > 0 ||
-                    (warnings.length > 0 && !allowDraft)
-                  }
-                  onClick={() =>
-                    act(() => download("Song.ts", exportLegacy(project)))
-                  }
-                >
-                  Download legacy TypeScript
-                </button>
-                <p>
-                  Manually place the downloaded module in src/ and reference it
-                  in the existing composition. Nothing is overwritten
-                  automatically. Unassigned timing exports as explicit zero
-                  placeholders.
-                </p>
-                <button
-                  onClick={() =>
-                    download(
-                      "song.workbench.json",
-                      serializeProject(project, 2),
-                    )
-                  }
-                >
-                  Download project JSON
-                </button>
-              </section>
-              <section>
-                <h2>Legacy song output</h2>
-                <pre>
-                  {conflictingLyrics(project).length
-                    ? "Resolve duplicate lyric conflicts to preview TypeScript."
-                    : exportLegacy(project)}
-                </pre>
-              </section>
-            </div>
+            <ExportWorkspace
+              project={project}
+              videoFiles={videoFiles}
+              projectAudio={projectAudio}
+              change={change}
+              setVideoTab={setVideoTab}
+              navigate={navigate}
+              download={download}
+              allowDraft={allowDraft}
+              setAllowDraft={setAllowDraft}
+              act={act}
+            />
           )}
           {screen === "Export data" && !project && (
             <section>Import a song first.</section>
@@ -1640,13 +757,7 @@ export function App() {
                 project={project}
                 active={screen === "Timing"}
                 selectedId={snapshot?.occurrenceId}
-                onSelect={(id) =>
-                  setHistory((h) =>
-                    h
-                      ? { ...h, present: { ...h.present, occurrenceId: id } }
-                      : h,
-                  )
-                }
+                onSelect={(occurrenceId) => selectItem({ occurrenceId })}
                 onChange={(p, id, preserveOrder) => {
                   if (p !== project) {
                     const occurrence = p.occurrences.find((o) => o.id === id);
@@ -1747,123 +858,18 @@ export function App() {
               onClose={() => setDictionaryTerm(null)}
             />
           )}
-          {dialog && phrase && selected && (
-            <div className="backdrop">
-              <section
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="dialog-title"
-                className="dialog"
-              >
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    act(() => {
-                      const updated =
-                        dialog === "merge"
-                          ? mergeAdjacentTokens(phrase, selected.id, {
-                              pinyin: leftPy,
-                              glossOverride: leftGloss,
-                            })
-                          : splitToken(phrase, selected.id, {
-                              hanziBoundary: boundary,
-                              leftPinyin: leftPy,
-                              rightPinyin: rightPy,
-                              leftGloss,
-                              rightGloss,
-                            });
-                      editPhrase(updated, selected.id);
-                      setDialog(null);
-                    });
-                  }}
-                >
-                  <h2 id="dialog-title">
-                    {dialog === "merge" ? "Merge adjacent words" : "Split word"}
-                  </h2>
-                  <p>
-                    Original reading: {selected.pinyin}
-                    {dialog === "merge" ? ` + ${next?.pinyin}` : ""}. Confirm
-                    the suggested readings and meanings before confirming.
-                  </p>
-                  {dialog === "merge" ? (
-                    <h3>
-                      {selected.hanzi}
-                      {next?.hanzi}
-                    </h3>
-                  ) : (
-                    <label>
-                      Split between characters
-                      <select
-                        value={boundary}
-                        onChange={(e) => populateSplit(Number(e.target.value))}
-                      >
-                        {[...selected.hanzi].slice(1).map((_, i) => (
-                          <option key={i} value={i + 1}>
-                            {[...selected.hanzi].slice(0, i + 1).join("")} |{" "}
-                            {[...selected.hanzi].slice(i + 1).join("")}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <label>
-                    {dialog === "merge"
-                      ? "Combined Pinyin"
-                      : `${[...selected.hanzi].slice(0, boundary).join("")} — Pinyin`}
-                    <input
-                      autoFocus
-                      value={leftPy}
-                      onChange={(e) => setLeftPy(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    {dialog === "merge"
-                      ? "Combined English gloss (edit the meaning)"
-                      : "Left English gloss"}
-                    <textarea
-                      value={leftGloss}
-                      onChange={(e) => setLeftGloss(e.target.value)}
-                    />
-                  </label>
-                  {dialog === "split" && (
-                    <>
-                      <label>
-                        {[...selected.hanzi].slice(boundary).join("")} — Pinyin
-                        <input
-                          value={rightPy}
-                          onChange={(e) => setRightPy(e.target.value)}
-                        />
-                      </label>
-                      <label>
-                        Right English gloss
-                        <textarea
-                          value={rightGloss}
-                          onChange={(e) => setRightGloss(e.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-                  <p>
-                    Readings are prefilled when the original Pinyin has an
-                    unambiguous syllable alignment. Meanings are reused from
-                    matching words elsewhere in this project; otherwise, enter
-                    them yourself. A compound’s meaning cannot reliably be
-                    divided between its characters.
-                  </p>
-                  <p>
-                    This change needs review. Undo restores the original word.
-                  </p>
-                  <div className="actions">
-                    <button type="button" onClick={() => setDialog(null)}>
-                      Cancel
-                    </button>
-                    <button type="submit" className="primary">
-                      Confirm {dialog} draft
-                    </button>
-                  </div>
-                </form>
-              </section>
-            </div>
+          {dialog && project && phrase && selected && (
+            <WordStructureDialog
+              selected={selected}
+              next={next}
+              dialogReturnFocus={dialogReturnFocus}
+              project={project}
+              act={act}
+              phrase={phrase}
+              editPhrase={editPhrase}
+              dialog={dialog}
+              setDialog={setDialog}
+            />
           )}
         </div>
       </main>

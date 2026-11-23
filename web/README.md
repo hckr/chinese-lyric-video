@@ -19,6 +19,10 @@ Raw import uses the local Python OpenCC/Jieba/CC-CEDICT pipeline to simplify Chi
 
 Browser recovery stores the current project, not the undo stack. History is bounded to 100 edits; source imports begin a new history. Reselecting a phrase preserves its committed edits. Save a portable JSON before clearing browser data. The browser's static TypeScript parser adds bundle size (roughly 11 MB unminified development JS); this avoids introducing an API/server merely for local file parsing.
 
+## Workbench source layout
+
+`src/App.tsx` owns project history, selection, navigation, and shared media. The header and the Import and Export views live in `WorkbenchHeader`, `ImportWorkspace`, and `ExportWorkspace`. In Translations, `TranslateLyrics` manages drafts and review actions, while `PhraseList`, `PhraseEditor`, and `PhraseInspector` render the three panels. `WordStructureDialog` handles word splitting and merging.
+
 ## Timing workflow (checkpoint B)
 
 1. Open **Timing** after importing a song or raw lyrics. **Lyrics** lists every timed appearance, including repeats. Select a sidebar row or timeline block to seek to its start, both paused and playing. In the lyric editor, each appearance has a **Timing** button that opens its own timing selection; **Translate** returns to the shared phrase editor. Select a `???` marker in the playback preview or timing inspector to open Translations for that appearance and focus the missing Pinyin field. If an AI vocabulary draft splits or merges that word, Translations opens on the lyric. Dismiss the draft to see the original word again.

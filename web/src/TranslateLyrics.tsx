@@ -117,7 +117,7 @@ type DraftField = {
   readOnly: boolean;
   edit: (value: string) => void;
 };
-type DraftPreview = {
+export type DraftPreview = {
   wordProvider?: import("./WordReview").WordProvider;
   actions: Partial<Record<Stage, ReactNode>>;
   wordAction?: (index: number) => ReactNode;
