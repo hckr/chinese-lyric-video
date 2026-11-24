@@ -1,3 +1,4 @@
+import { acceptImportedRefinements } from "./import-refinement";
 import { RulerMarks } from "./RulerMarks";
 import { TimingFields } from "./TimingFields";
 import { TimingSettings } from "./TimingSettings";
@@ -157,6 +158,7 @@ export function TimingEditor({
     project.occurrences.findIndex((o) => o.id === selectedId),
   );
   const cue = project.occurrences[index];
+  const phrase = project.phrases.find((p) => p.id === cue?.phraseId);
   const automatic = cue?.automaticTiming;
   const automaticDiffers =
     !!automatic &&
@@ -168,7 +170,6 @@ export function TimingEditor({
     (cue.startMs !== resetTarget.startMs ||
       cue.endMs !== resetTarget.endMs ||
       (!!cue.reviewedTiming && cue.timingReview !== "reviewed"));
-  const phrase = project.phrases.find((p) => p.id === cue?.phraseId);
   const selectedGroup = project.lyricGroups?.find((group) =>
     group.occurrenceIds.includes(cue?.id ?? ""),
   )?.id;
@@ -221,6 +222,7 @@ export function TimingEditor({
     null,
   );
   const { cancelBounded, url: audioUrl } = audio;
+  const duration = audio.durationMs;
   useEffect(() => {
     cancelBounded();
     setLoopEnabled(false);
@@ -234,7 +236,12 @@ export function TimingEditor({
     settings.preRollMs,
     settings.postRollMs,
   ]);
-  const duration = audio.durationMs;
+  useEffect(() => {
+    if (!cue || !duration || !project.occurrences.some((o) => o.refinement))
+      return;
+    const accepted = acceptImportedRefinements(project, duration);
+    if (accepted.count) onChange(accepted.project, cue.id, true);
+  }, [cue, duration, onChange, project]);
   const resetOutsideAudio =
     !!resetTarget && !validTiming(resetTarget, duration);
   const canReset = resetDiffers && !resetOutsideAudio;

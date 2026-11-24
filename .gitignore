@@ -32,3 +32,4 @@ output/playwright/
 
 # Local lyric-timing experiment transcripts and evaluation outputs
 experiments/lyric-timing/artifacts/
+/.cache/youtube/

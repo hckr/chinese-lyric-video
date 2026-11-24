@@ -373,3 +373,116 @@ def test_local_whisper_omits_language_for_auto(monkeypatch, language, options):
         }
     )
     assert calls == [dict(options, word_timestamps=True, fp16=False, verbose=False)]
+
+
+def test_edition_window_selects_repeated_words_and_marks_partial_edges(capsys):
+    import json
+
+    project = {
+        "phrases": [{"id": "p", "lyricKey": "你好"}, {"id": "q", "lyricKey": "世界"}],
+        "occurrences": [
+            {"id": "a", "phraseId": "p"},
+            {"id": "b", "phraseId": "q"},
+        ],
+        "editionTiming": {
+            "cues": [{"startMs": 1000}, {"startMs": 3000}],
+            "pieces": [
+                {"id": "a", "cue": 0, "text": "你好"},
+                {"id": "b", "cue": 0, "text": "世界"},
+            ],
+        },
+    }
+    transcript = {
+        "segments": [
+            {
+                "words": [
+                    {"word": "你好", "start": 1.1, "end": 1.5},
+                    {"word": "世", "start": 1.7, "end": 1.9},
+                    {"word": "你好", "start": 5.1, "end": 5.5},
+                ]
+            }
+        ]
+    }
+    run({"project": project, "durationMs": 6000, "transcript": transcript})
+    first, second = json.loads(capsys.readouterr().out.splitlines()[-1])["result"][
+        "lines"
+    ]
+    assert (first["observedStartMs"], first["observedEndMs"]) == (1100, 1500)
+    assert "Start: Whisper 1700 ms." in second["reasons"]
+    assert "End: needs review." in second["reasons"]
+    assert "observedEndMs" not in second
+
+
+def test_prepare_then_align_reuses_recording_transcript(tmp_path, monkeypatch, capsys):
+    from workbench import automatic_timing, groq_whisper
+
+    calls = []
+    monkeypatch.setattr(
+        automatic_timing, "normalized_audio", lambda _: ([], {"sha256": "abc"})
+    )
+
+    def transcribe(*args, **kwargs):
+        calls.append(1)
+        return {"segments": [{"words": [{"word": "你好", "start": 0.2, "end": 0.8}]}]}
+
+    monkeypatch.setattr(groq_whisper, "transcribe", transcribe)
+    params = {
+        "audioPath": "fixture",
+        "transcriptCache": str(tmp_path),
+        "durationMs": 1000,
+        "provider": "groq",
+        "model": "whisper-large-v3",
+    }
+    run({**params, "prepareOnly": True, "project": {"occurrences": []}})
+    assert '"prepared": true' in capsys.readouterr().out
+    run(
+        {
+            **params,
+            "project": {
+                "occurrences": [{"id": "a", "phraseId": "p"}],
+                "phrases": [{"id": "p", "lyricKey": "你好"}],
+            },
+        }
+    )
+    output = capsys.readouterr().out
+    assert "Using prepared word timestamps" in output
+    assert '"observedStartMs": 200' in output
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("probability, eligible", [(0.25, False), (0.95, True)])
+def test_import_refinement_checks_whisper_word_confidence(
+    probability, eligible, capsys
+):
+    import json
+
+    project = {
+        "phrases": [{"id": "p", "lyricKey": "你好"}],
+        "occurrences": [{"id": "o", "phraseId": "p"}],
+        "editionTiming": {
+            "pieces": [{"id": "o", "text": "你好", "cue": 0}],
+            "cues": [{"startMs": 100}],
+        },
+    }
+    run(
+        {
+            "project": project,
+            "durationMs": 1000,
+            "transcript": {
+                "segments": [
+                    {
+                        "words": [
+                            {
+                                "word": "你好",
+                                "start": 0.1,
+                                "end": 0.8,
+                                "probability": probability,
+                            }
+                        ]
+                    }
+                ]
+            },
+        }
+    )
+    line = json.loads(capsys.readouterr().out.splitlines()[-1])["result"]["lines"][0]
+    assert line["refinementEvidence"] is eligible

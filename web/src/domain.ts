@@ -1,3 +1,5 @@
+import { editionTimingSchema } from "./import/edition-cues.ts";
+import { recordingSchema, lyricCreditSchema } from "./import/song-source.ts";
 import { videoSettingsSchema } from "./video/video-settings.ts";
 import { lyricCount, lyricLimit } from "./lyric-length.ts";
 import { translationSchema } from "./translations/translation-schema.ts";
@@ -89,6 +91,13 @@ export const occurrenceSchema = z
   .object({
     id,
     phraseId: id,
+    refinement: z
+      .object({
+        text: z.string(),
+        startMs: z.number().int().nonnegative().optional(),
+        endMs: z.number().int().nonnegative().optional(),
+      })
+      .optional(),
     detectedFromAudio: z.boolean().optional(),
     timingReview: z.enum(["needs-review", "reviewed"]).optional(),
     reviewedTiming: intervalSchema.optional(),
@@ -111,6 +120,9 @@ export const projectSchema = z
   .object({
     schemaVersion: z.literal(1),
     format: z.literal("lyric-workbench"),
+    editionTiming: editionTimingSchema.optional(),
+    recordingSource: recordingSchema.optional(),
+    lyricsSource: lyricCreditSchema.optional(),
     metadata: z
       .record(z.string(), z.string())
       .refine(

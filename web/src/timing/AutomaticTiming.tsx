@@ -1,3 +1,5 @@
+import { refineImported } from "./import-refinement";
+import { recordingFingerprint } from "../import/song-source";
 import { timingWav } from "./timing-audio.ts";
 import {
   useEffect,
@@ -218,7 +220,11 @@ export function AutomaticTiming({
   const convertedAudio = useRef<{ file: File; wav: Blob } | undefined>(
     undefined,
   );
-  const run = async (identityOnly = false, englishRetry = false) => {
+  const run = async (
+    identityOnly = false,
+    englishRetry = false,
+    refine = false,
+  ) => {
     if (!file || !duration || busy) return;
     const abort = new AbortController();
     controller.current = abort;
@@ -231,13 +237,25 @@ export function AutomaticTiming({
     const source = inputs,
       audio = file;
     try {
+      const edition = project.editionTiming;
+      const useEditionHints =
+        edition &&
+        project.lyricsSource?.id === edition.editionId &&
+        project.recordingSource?.fingerprint === edition.fingerprint &&
+        (await recordingFingerprint(file)) === edition.fingerprint;
+      if (refine && (!useEditionHints || transcript))
+        throw Error(
+          "Refinement requires the imported recording and its own Whisper transcript. Clear any external transcript.",
+        );
       const request = async (media: Blob) => {
         const response = await fetch("/api/automatic-timing", {
           method: "POST",
           signal: abort.signal,
           body: new Blob([
             JSON.stringify({
-              project,
+              project: useEditionHints
+                ? project
+                : { ...project, editionTiming: undefined },
               durationMs: duration,
               model,
               provider: settings.provider ?? "local",
@@ -341,6 +359,20 @@ export function AutomaticTiming({
       if (identityOnly) {
         if (!hash) throw Error("Audio identity could not be checked.");
         setStatus("");
+      } else if (refine) {
+        const improved = refineImported(live.current.project, result, duration);
+        if (improved.count)
+          live.current.onChange(
+            improved.project,
+            selectedId ?? project.occurrences[0].id,
+            true,
+          );
+        setStatus(
+          improved.count
+            ? improved.count +
+                " stronger imported boundaries applied. Review them in Timing."
+            : "No stronger matches found.",
+        );
       } else if (englishRetry) {
         if (!result) throw Error("English retry ended without results.");
         const current = live.current.project;
@@ -589,32 +621,37 @@ export function AutomaticTiming({
                 </select>
               </label>
             )}
-            {(project.timingRun ||
-              project.occurrences.some(
-                (o) => o.startMs !== null || o.endMs !== null,
-              )) && (
-              <label>
-                Regeneration
-                <select
-                  value={policy}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setPolicy(e.target.value as GenerationPolicy)
-                  }
-                >
-                  <option value="preserve-reviewed">
-                    Preserve reviewed timings
-                  </option>
-                  <option value="replace-all">
-                    Replace all regular timings…
-                  </option>
-                </select>
-              </label>
-            )}
+            {(!project.editionTiming || comparison) &&
+              (project.timingRun ||
+                project.occurrences.some(
+                  (o) => o.startMs !== null || o.endMs !== null,
+                )) && (
+                <label>
+                  Regeneration
+                  <select
+                    value={policy}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setPolicy(e.target.value as GenerationPolicy)
+                    }
+                  >
+                    <option value="preserve-reviewed">
+                      Preserve reviewed timings
+                    </option>
+                    <option value="replace-all">
+                      Replace all regular timings…
+                    </option>
+                  </select>
+                </label>
+              )}
             <button
               className="primary"
               disabled={disabled}
               onClick={(e) => {
+                if (project.editionTiming && !comparison) {
+                  void run(false, false, true);
+                  return;
+                }
                 if (policy === "replace-all")
                   setConfirm({ kind: "replace", trigger: e.currentTarget });
                 else if (project.timingRun?.candidates.length)
@@ -622,7 +659,11 @@ export function AutomaticTiming({
                 else void run();
               }}
             >
-              {comparison ? "Transcribe and compare" : "Generate timings"}
+              {comparison
+                ? "Transcribe and compare"
+                : project.editionTiming
+                  ? "Refine imported timing"
+                  : "Generate timings"}
             </button>
           </div>
           {groq && (

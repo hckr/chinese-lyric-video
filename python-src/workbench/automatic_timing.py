@@ -1,10 +1,12 @@
 """Local timing worker. Emits newline-delimited progress/results, never downloads models."""
 
+import hashlib
 import itertools
 import json
 import re
 import sys
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from .boundary_alignment import assigned_lines
 from .timing_evaluation import alignment_reference, evaluate, toneless
@@ -19,7 +21,6 @@ class MediaDecodeError(ValueError):
 
 
 def normalized_audio(audio_path):
-    import hashlib
     import wave
 
     import numpy as np
@@ -181,10 +182,12 @@ def run(request):
         return
     all_ids = [o["id"] for o in project["occurrences"]]
     ids = request.get("ids", all_ids)
-    if not ids or len(ids) != len(set(ids)) or any(id_ not in all_ids for id_ in ids):
+    if not request.get("prepareOnly") and (
+        not ids or len(ids) != len(set(ids)) or any(id_ not in all_ids for id_ in ids)
+    ):
         raise ValueError("Choose a valid lyric range")
     positions = [all_ids.index(id_) for id_ in ids]
-    if positions != list(range(positions[0], positions[-1] + 1)):
+    if positions and positions != list(range(positions[0], positions[-1] + 1)):
         raise ValueError("Choose consecutive lyrics in project order")
     start = request.get("startMs", 0)
     end = request.get("endMs", duration)
@@ -209,6 +212,30 @@ def run(request):
     provider = request.get("provider", "local")
     if provider not in ("local", "groq"):
         raise ValueError("Unsupported timing provider")
+    cache_path = None
+    if request.get("transcriptCache") and identity and transcript is None and not retry:
+        key = json.dumps(
+            [
+                identity["sha256"],
+                provider,
+                request.get("model"),
+                language,
+                "word-timestamps-v1",
+            ]
+        )
+        cache_path = Path(request["transcriptCache"]) / (
+            hashlib.sha256(key.encode()).hexdigest() + ".json"
+        )
+        if cache_path.exists():
+            try:
+                transcript = json.loads(cache_path.read_text())
+                if not isinstance(transcript.get("segments"), list):
+                    transcript = None
+            except (ValueError, AttributeError):
+                transcript = None
+            if transcript is not None:
+                emit({"progress": "Using prepared word timestamps"})
+                cache_path = None
     if transcript is None and provider == "groq":
         from .groq_whisper import transcribe
 
@@ -265,6 +292,22 @@ def run(request):
         if kept:
             segments.append(dict(segment, words=kept))
     transcript = dict(transcript, segments=segments)
+    if cache_path is not None and start == 0 and end == duration:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = None
+        try:
+            with NamedTemporaryFile(
+                mode="w", dir=cache_path.parent, delete=False
+            ) as temp:
+                temp_path = Path(temp.name)
+                json.dump(transcript, temp)
+            temp_path.replace(cache_path)
+        finally:
+            if temp_path:
+                temp_path.unlink(missing_ok=True)
+    if request.get("prepareOnly"):
+        emit({"prepared": True})
+        return
     phrases = {p["id"]: p for p in project["phrases"]}
     song = {
         "TIMELINE": [
@@ -275,6 +318,24 @@ def run(request):
             if o["id"] in ids
         ]
     }
+    timing = project.get("editionTiming") or {}
+    pieces = {piece["id"]: piece for piece in timing.get("pieces", [])}
+    cues = timing.get("cues", [])
+    for line in song["TIMELINE"]:
+        piece = pieces.get(line["id"])
+        if (
+            piece
+            and piece["text"] == line["lyricKey"]
+            and 0 <= piece["cue"] < len(cues)
+        ):
+            index = piece["cue"]
+            begin = cues[index]["startMs"]
+            stop = next(
+                (c["startMs"] for c in cues[index + 1 :] if c["startMs"] > begin),
+                duration,
+            )
+            if 0 <= begin < stop <= duration:
+                line["editionWindow"] = (begin, stop)
     if (
         sum(len(c["lyricKey"]) for c in song["TIMELINE"]) > 5000
         or sum(len(w["word"]) for s in segments for w in s["words"]) > 7000
@@ -290,6 +351,22 @@ def run(request):
         return
     result = evaluate(song, transcript, request["durationMs"])
     lines = result["modes"]["assigned_toneless"]["lines"]
+    if timing:
+        # Toneless matches remain useful for review, but cannot by themselves
+        # justify promoting a boundary over an imported estimate.
+        uncertain_spans = {
+            (round(w["start"] * 1000), round(w["end"] * 1000))
+            for segment in segments
+            for w in segment["words"]
+            if w.get("probability") is not None and not (0.8 <= w["probability"] <= 1)
+        }
+        for line in lines:
+            assignment = line["assignment"]
+            line["refinementEvidence"] = bool(assignment) and all(
+                a["expected"] == a["observed"]
+                and (a["startMs"], a["endMs"]) not in uncertain_spans
+                for a in assignment
+            )
     owned = {(a["startMs"], a["endMs"]) for line in lines for a in line["assignment"]}
     additions = []
     from uuid import uuid4

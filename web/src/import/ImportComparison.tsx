@@ -227,6 +227,9 @@ export function ImportComparison({
                       {discrepancies.map(({ cue, label }) => (
                         <li key={cue.id}>
                           {textById.get(cue.phraseId)} · {label}
+                          {cue.timingIssue?.reasons.map((reason) => (
+                            <div key={reason}>{reason}</div>
+                          ))}
                         </li>
                       ))}
                     </ul>
@@ -240,7 +243,14 @@ export function ImportComparison({
                     <summary>{matched.length} matched occurrences</summary>
                     <ul>
                       {matched.map((o) => (
-                        <li key={o.id}>{textById.get(o.phraseId)}</li>
+                        <li key={o.id}>
+                          {textById.get(o.phraseId)}
+                          {o.automaticTiming &&
+                            " · " +
+                              formatTime(o.automaticTiming.startMs) +
+                              " – " +
+                              formatTime(o.automaticTiming.endMs)}
+                        </li>
                       ))}
                     </ul>
                   </details>

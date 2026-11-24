@@ -1,3 +1,4 @@
+import { cueTime } from "../import/edition-cues";
 import { StudioHandoff } from "./StudioHandoff.tsx";
 import { VideoDownload } from "./VideoDownload.tsx";
 import {
@@ -10,6 +11,15 @@ import {
 import { exportLegacy } from "../legacy";
 import { AssetContext, useVideoFiles } from "../video/video-assets.tsx";
 
+const creditLabels: Record<string, string> = {
+  url: "Source link",
+  channel_url: "Channel link",
+  fetchedAt: "Retrieved",
+  id: "Source ID",
+  duration: "Duration (seconds)",
+  upload_date: "Upload date",
+  fingerprint: "Recording SHA-256",
+};
 export function ExportWorkspace({
   project,
   videoFiles,
@@ -107,6 +117,83 @@ export function ExportWorkspace({
         >
           Download project JSON
         </button>
+      </section>
+      <section>
+        <h2>Sources &amp; credits</h2>
+        {Object.entries({
+          Song: project.metadata,
+          Recording: project.recordingSource,
+          Lyrics: project.lyricsSource,
+        }).map(
+          ([label, values]) =>
+            values && (
+              <div key={label}>
+                <h3>{label}</h3>
+                <dl>
+                  {Object.entries(values).map(([key, value]) => (
+                    <div key={key}>
+                      <dt>
+                        {creditLabels[key] ??
+                          key[0]?.toUpperCase() + key.slice(1)}
+                      </dt>
+                      <dd>
+                        {typeof value === "string" &&
+                        /^https?:\/\//i.test(value) ? (
+                          <a href={value} target="_blank" rel="noreferrer">
+                            {value}
+                          </a>
+                        ) : (
+                          String(value)
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ),
+        )}
+        {project.editionTiming && (
+          <details>
+            <summary>LRCLIB cues ({project.editionTiming.cues.length})</summary>
+            <p>
+              Edition {project.editionTiming.editionId} · Recording SHA-256{" "}
+              {project.editionTiming.fingerprint}
+            </p>
+            {project.editionTiming.credits?.map((c) => (
+              <div key={c.id}>
+                <a href={c.url}>
+                  {c.track} · {c.artist} · LRCLIB {c.id}
+                </a>{" "}
+                · {c.album} · {c.duration}s · {c.fetchedAt}
+                {!!c.cues?.length && (
+                  <details>
+                    <summary>Original edition timestamps</summary>
+                    <pre>
+                      {c.cues
+                        .map((c) => cueTime(c.startMs) + " " + c.text)
+                        .join("\n")}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
+            {project.editionTiming.credits && (
+              <ul>
+                {project.editionTiming.pieces.map((p) => (
+                  <li key={p.id}>
+                    {p.text} · lyrics {p.sourceId}{" "}
+                    {p.timingSourceId && "· timing " + p.timingSourceId}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <pre>
+              {project.editionTiming.cues
+                .map((c) => cueTime(c.startMs) + " " + c.text)
+                .join("\n")}
+            </pre>
+          </details>
+        )}
       </section>
       <section>
         <h2>Legacy song output</h2>

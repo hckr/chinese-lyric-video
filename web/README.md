@@ -202,3 +202,72 @@ GEMINI_API_KEY=
 New projects prefer Groq Qwen when configured. Choose Groq or Gemini and the model in the editor. Previously saved Gemini settings continue to select Gemini. Groq models are allowlisted against the published free-plan limits in `python-src/workbench/translation_providers.py`. Review that list when Groq updates its catalog. GPT-OSS uses structured schema output when enabled. Cached input tokens appear in run details when the API reports them. Percent complete counts validated vocabulary, English and Polish drafts requested in this run. Canceling preserves received drafts.
 
 Groq access failures show the HTTP status and recognized API or gateway reason in the translation status. For authentication failures, the worker uses the exported process credential first, then the Python configuration file, then the repository configuration file. Restart the workbench from the intended environment after changing an exported key.
+
+### YouTube recording cache
+
+The local acquisition endpoint uses the repository Python environment. Install
+its pinned dependencies from the repository root with
+`python-src/venv/bin/python -m pip install -r python-src/requirements.txt`.
+Provide FFmpeg and FFprobe on PATH or set `WORKBENCH_FFMPEG_DIR` to their
+directory. The workbench passes its Node executable to yt-dlp.
+
+Completed recordings and source manifests live under `.cache/youtube/<hex-encoded-video-id>/`.
+Set `WORKBENCH_YOUTUBE_CACHE_DIR` to override the cache root. With the
+workbench stopped, remove a video's cache directory to reclaim its disk space.
+
+Use **Import lyrics → Import from YouTube** with a public video you have permission
+to download and use. **Fetch song** prepares the recording and searches LRCLIB.
+Choose **Set as A** to keep a reference on the left and **Compare in B** to
+change the challenger on the right. Both follow the same player. **Hide** moves an edition to the bottom and excludes it from conflict choices.
+**Show** restores it. **Include hidden editions** brings hidden sources into
+the passage choices while reviewing. **Show
+Pinyin** displays dictionary readings in the preview. **Use this edition**
+imports a single candidate. **Review differences** walks the whole song
+against all editions, focusing on wording, line breaks, and lines that need
+splitting. Edit the wording, adjust passage alignment, or request an AI split
+suggestion under **Edit passage**. Matching source starts and alternatives are
+saved with the project as later timing evidence.
+
+**Use reconciled lyrics** returns the result to the editor as one undoable
+change. Use **Convert to Simplified** beside the editor when the imported text
+should be converted from Traditional Chinese. It preserves headings, blank
+lines, lyric identities, and imported timing links, and Undo restores the
+original text. **Import document** saves the result. Unambiguous source starts
+become initial timing that still needs review. Timing and the original footage
+design use the downloaded file. Select replacement imagery or footage in Video
+to change the picture while retaining its soundtrack.
+
+**Export → Sources & credits** shows saved song metadata, recording provenance,
+and the accepted lyrics source. Project JSON retains the credits if the media
+cache is removed. Reopen on the same machine to reconnect matching media, or
+use **Fetch again** or relink in Timing if it is missing.
+
+For synced editions, long Chinese lines are split into editable pieces using
+the editor's 11-element rule. Each piece retains its source line. **Compare
+with lyrics** or automatic timing in **Timing** aligns the selected edition
+against one Whisper transcript. The source window helps distinguish repeated
+lyrics. Editing a piece invalidates its source association. Original source
+metadata and accepted lyrics credits remain available under **Export → Sources
+& credits**.
+
+After import, **Review unresolved timing** opens the first pending lyric.
+Use **Refine imported timing** to check strong Whisper word evidence against
+the imported recording. It preserves existing boundaries and applies only
+safe missing boundaries, marking each applied interval as needing review in
+the normal Timing editor. Weak, ambiguous, conflicting, or already reviewed
+boundaries remain unchanged. Adjust, audition, mark reviewed, or reset a
+timing using the standard Timing controls.
+
+**Prepare Whisper timing** in Import optionally prepares word timestamps
+with an installed local model. Timing can also transcribe on demand. Full
+generated transcripts for imported recordings are cached privately under
+`.cache/whisper-transcripts/` by normalized audio hash, provider, model,
+and language. Changing lyric wording or splits reuses matching word timestamps.
+Delete that directory to clear the transcript cache. Source and timing
+credits travel with project JSON. Media and transcript caches stay on disk.
+Selecting Groq in Timing sends audio to the configured cloud provider.
+
+The reviewed implementation is covered by `node web/tests/run.ts`,
+`node web/tests/browser.ts --youtube-import`, and
+`node web/tests/browser.ts --import-workflow`. Live provider results, listening
+quality, and AI split quality remain owner-review checks.

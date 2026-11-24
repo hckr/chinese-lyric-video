@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from workbench.react_convert import convert_lines
 from workbench.react_ingest import draft_project
 
 
@@ -59,6 +60,15 @@ def test_explicit_metadata_and_simplification(dictionary):
     project = draft_project("唱：someone\n漂亮的貓", "Explicit", "Artist", dictionary)
     assert project["metadata"] == {"title": "Explicit", "artist": "Artist"}
     assert project["phrases"][0]["lyricKey"] == "漂亮的猫"
+
+
+def test_explicit_character_conversion_preserves_editor_lines():
+    assert convert_lines(["繁體歌詞", "[副歌]", "", "I believe"]) == [
+        "繁体歌词",
+        "[副歌]",
+        "",
+        "I believe",
+    ]
 
 
 def test_missing_dictionary_and_empty_lyrics(dictionary):

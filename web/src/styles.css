@@ -3210,3 +3210,116 @@ main > header {
 .timing-block.timing-block-estimate .timing-block-label {
   cursor: pointer;
 }
+
+.youtube-entry {
+  margin-bottom: 0.6rem;
+}
+.youtube-entry > summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.youtube-entry input {
+  max-width: 44rem;
+}
+.edition-comparison video {
+  display: block;
+  width: min(100%, 44rem);
+  max-height: 34vh;
+  margin: 1rem auto;
+  background: #111;
+}
+.edition-comparison header,
+.edition-grid article header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.edition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.edition-grid article {
+  min-width: 0;
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+.edition-context {
+  display: grid;
+  min-height: 5rem;
+  margin: 0.6rem 0;
+  gap: 0.25rem;
+}
+.edition-transcript {
+  position: relative;
+  overflow: auto;
+  height: 14rem;
+  margin-top: 0.6rem;
+}
+.edition-grid[data-single-visible="true"]
+  > article[data-reviewed="true"]:nth-child(2) {
+  grid-column: 1;
+}
+.edition-grid article[data-reviewed="true"] {
+  opacity: 0.9;
+}
+.edition-transcript button,
+.edition-transcript .edition-plain-line {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: baseline;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  background: #1d2734;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+}
+.edition-transcript [aria-current="true"] {
+  font-weight: bold;
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: inset 3px 0 var(--accent);
+}
+.edition-transcript time {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .edition-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.document-import:has(.youtube-entry[open] .edition-comparison)
+  .document-layout {
+  display: none;
+}
+
+.edition-comparison ruby {
+  ruby-align: center;
+}
+.edition-comparison rt {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.68em;
+}
+.edition-comparison mark {
+  background: #3b3424;
+  color: var(--ink);
+  border-bottom: 2px solid var(--warning);
+}
+.edition-comparison textarea {
+  display: block;
+  width: 100%;
+  min-height: 5em;
+}
+.edition-comparison section > div:has(> strong) {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+.edition-comparison section button {
+  margin: 0.2rem;
+}

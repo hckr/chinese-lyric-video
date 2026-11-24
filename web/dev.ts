@@ -1,3 +1,4 @@
+import { youtubeApi } from "./youtube-api.ts";
 import { execFile } from "node:child_process";
 import { translateLyrics } from "./translation-api.ts";
 import { automaticTiming, cachedTimingModels } from "./timing-api.ts";
@@ -52,6 +53,10 @@ import fs from "node:fs/promises";
       port: 0,
     });
     frontend.server = http.createServer((req, res) => {
+      if (req.url === "/api/youtube" || req.url?.startsWith("/api/youtube/")) {
+        void youtubeApi(req, res, process.cwd());
+        return;
+      }
       if (
         req.url === "/api/render-assets" ||
         req.url?.startsWith("/api/render-assets/")
@@ -98,7 +103,8 @@ import fs from "node:fs/promises";
       if (
         req.url === "/api/import-lyrics" ||
         req.url === "/api/dictionary" ||
-        req.url === "/api/suggest-groups"
+        req.url === "/api/suggest-groups" ||
+        req.url === "/api/convert-characters"
       ) {
         void importLyrics(
           req,
@@ -108,7 +114,9 @@ import fs from "node:fs/promises";
             ? "dictionary"
             : req.url === "/api/suggest-groups"
               ? "groups"
-              : "import",
+              : req.url === "/api/convert-characters"
+                ? "convert"
+                : "import",
         ).catch(() => {
           if (!res.writableEnded)
             res.writeHead(500).end(

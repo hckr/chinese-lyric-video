@@ -1,3 +1,5 @@
+import { unresolvedCount } from "../timing/import-refinement";
+import { acquireRecording, cachedRecording } from "../import/song-source";
 import { useEffect, useRef, useState } from "react";
 import type { VerifiedSplitAudio } from "../timing/AutomaticTiming";
 import { ExportWorkspace } from "../export/ExportWorkspace";
@@ -135,6 +137,38 @@ export function App() {
     focusReading.current = false;
     selectedReading.current?.focus();
   }, [screen, snapshot?.tokenId]);
+  const [cacheMessage, setCacheMessage] = useState("");
+  const [retryRecording, setRetryRecording] = useState(0);
+  const requestedRecording = useRef(false);
+  const recording = project?.recordingSource;
+  const recordingRole =
+    recording &&
+    project?.audio?.name === recording.id + ".mp4" &&
+    project.audio.lastModified === Date.parse(recording.fetchedAt);
+  useEffect(() => {
+    let current = true;
+    setCacheMessage("");
+    if (recording && recordingRole && !projectAudio) {
+      const retry = requestedRecording.current;
+      requestedRecording.current = false;
+      void (async () => {
+        if (retry)
+          await acquireRecording(
+            "https://www.youtube.com/watch?v=" + recording.id,
+          );
+        const media = await cachedRecording(recording);
+        if (current) setProjectAudio(media);
+      })().catch((e) => {
+        if (current)
+          setCacheMessage(
+            e instanceof Error ? e.message : "Could not restore recording.",
+          );
+      });
+    }
+    return () => {
+      current = false;
+    };
+  }, [projectAudio, recording, recordingRole, projectSession, retryRecording]);
   const projectRef = useRef(project);
   projectRef.current = project;
   useEffect(() => {
@@ -393,6 +427,40 @@ export function App() {
                 ? "Song structure"
                 : screen}
           </h1>
+          {project?.editionTiming &&
+            ["Import lyrics", "Lyric editor"].includes(screen) &&
+            unresolvedCount(project) > 0 && (
+              <p>
+                {unresolvedCount(project)} boundaries need timing.{" "}
+                <button
+                  onClick={() => {
+                    const first = project.occurrences.find(
+                      (o) => o.startMs === null || o.endMs === null,
+                    );
+                    if (first) selectItem({ occurrenceId: first.id });
+                    navigate("Timing");
+                  }}
+                >
+                  Review unresolved timing
+                </button>
+              </p>
+            )}
+          {cacheMessage && (
+            <section role="status">
+              {cacheMessage}{" "}
+              <button
+                onClick={() => {
+                  requestedRecording.current = true;
+                  setRetryRecording((v) => v + 1);
+                }}
+              >
+                Fetch again
+              </button>{" "}
+              <button onClick={() => navigate("Timing")}>
+                Relink in Timing
+              </button>
+            </section>
+          )}
           {error && (
             <div role="alert" className="error">
               {error}

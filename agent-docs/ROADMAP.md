@@ -1,14 +1,12 @@
 # Active roadmap and work backlog
 
-**As of 2026-11-23.** Checkpoint E is implemented in Workbench 0.5.0.
-
 This is the **single authoritative list** of priorities and unfinished work. Details live in linked references, not repeated here. Checkpoints are broad migration objectives; smaller features can be implemented before, within or between checkpoints. **Only the owner sets priorities.**
 
 ## Near-term priorities — proposed order, not a locked schedule
 
-| Work         | State | Intent / dependency |
-| ------------ | ----- | ------------------- |
-| nothing left |       |                     |
+| Work                               | State       | Intent / dependency |
+| ---------------------------------- | ----------- | ------------------- |
+| review and improvements by hand :) | in progress |                     |
 
 ## Unresolved carry-forwards
 
@@ -49,6 +47,7 @@ Completed work is listed oldest first.
 - **Dictionary readings and Pinyin spelling (0.6.0)** — The dictionary inspector ranks current readings first and warns about readings absent from the local alternatives. CC-CEDICT idiom tags preserve dictionary syllable spacing, and authored groups are retained through editing and preview. [Pinyin contract](react-workbench/WORD_SEGMENTATION.md).
 - **Mixed-script spacing in the Import lyric editor (0.6.0)** — Pinyin view keeps wider Hanzi spacing and normal Latin text spacing. Owner-browser IME acceptance remains open. [Import editor](react-workbench/features/lyrics-import-enhancements/SPEC.md).
 - **Multilingual lyric timing (0.7.0)** — Timing supports Mandarin or Auto-detect for generation and a separate English retry for untimed English-containing lyrics. Retry preserves existing intervals and detection candidates. Browser audio conversion supports the linked DoDoDo MP4 when the worker decoder fails. [Timing workflow](../web/README.md#automatic-timing-and-review) · [DoDoDo verification](react-workbench/features/automatic-timing-review/SPEC.md#multilingual-timing-and-dododo-verification).
+- **Direct YouTube import and lyric edition reconciliation (0.8.0)** — Import accepts YouTube URLs with a private download cache, searches LRCLIB suggestions, compares editions against the recording with a shared player and Pinyin display, reconciles whole-song passages across editions with AI and manual split review, and provides explicit Traditional-to-Simplified conversion. Source credits travel through project JSON and Export. Timing applies strong imported and Whisper boundaries directly as timing needing review, preserves existing timing, and supports local Whisper preparation and transcript cache reuse. [Workflow & usage](../web/README.md#youtube-recording-cache) · [Import spec](react-workbench/features/lyrics-import-enhancements/SPEC.md#direct-youtube-import-and-edition-reconciliation-080).
 
 <!-- Append the next implemented item here. -->
 
@@ -56,7 +55,7 @@ Completed work is listed oldest first.
 
 These are **not** permission to implement them. Append newly mentioned actionable ideas to the end of this oldest-first list, link detailed specs where they exist, and ask the owner to prioritize only when scheduling work.
 
-- **Direct YouTube-URL song import** — future convenience idea: infer title/artist and find lyrics automatically; defer until the main workflow is established. External data/source reliability and rights need evaluation.
+- **Make YouTube acquisition dependencies optional** — Unprioritized. Evaluate a separate requirements file and workbench capability detection after direct import is accepted.
 - **Project library, asset persistence/file watching and optional render queue** — later possibilities from the original migration plan.
 - **Advanced presets, more background modes and thumbnail design** — later, if warranted by actual use.
 - **Optional publishing/deployment automation** — defer unless requested.

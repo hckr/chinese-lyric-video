@@ -271,6 +271,7 @@ export function LyricsEditor({
   proposalBatch,
   active = true,
   beforeEditor,
+  editorAction,
   afterEditor,
   dictionary,
   onDictionaryToggle,
@@ -278,6 +279,7 @@ export function LyricsEditor({
   proposalBatch?: number;
   active?: boolean;
   beforeEditor?: ReactNode;
+  editorAction?: ReactNode;
   onDictionaryToggle?: (open: boolean) => void;
   dictionary?: ReactNode;
   afterEditor?: ReactNode;
@@ -622,6 +624,7 @@ export function LyricsEditor({
             >
               {readOnly ? "Insertion preview" : "Lyrics editor"}
             </label>
+            {editorAction}
             {!readOnly && (
               <span>
                 Start a section with [Verse] or [Chorus]. End it with a blank

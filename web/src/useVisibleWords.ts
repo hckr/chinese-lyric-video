@@ -39,8 +39,14 @@ export function useVisibleWords(texts: string[]) {
           ],
         ),
       );
-      for (const phrase of parseProject(JSON.stringify(project)).phrases)
-        cache.current.set(phrase.lyricKey, { words: phrase.words, readings });
+      const parsed = parseProject(JSON.stringify(project));
+      const phrases = new Map(parsed.phrases.map((p) => [p.id, p]));
+      for (const o of parsed.occurrences) {
+        const phrase = phrases.get(o.phraseId);
+        const source = batch[Number(o.id.slice("visible-".length))];
+        if (phrase && source)
+          cache.current.set(source, { words: phrase.words, readings });
+      }
       if (!controller.signal.aborted) refresh((n) => n + 1);
     }
     const timer = setTimeout(

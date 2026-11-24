@@ -11,7 +11,7 @@ def units(text):
     return [token.casefold().replace("’", "'") for token in TOKEN.findall(text)]
 
 
-def assign(expected, observed, equivalent):
+def assign(expected, observed, equivalent, windows=None, times=None):
     """Global edit alignment. Substitution costs 2; insertion/deletion cost 3.
 
     Diagonal ties win. Thus a substituted final syllable followed by a
@@ -20,6 +20,14 @@ def assign(expected, observed, equivalent):
     Returns (expected index, observed index, exact/equivalent flag).
     """
     n, m = len(expected), len(observed)
+
+    def distance_cost(i, j):
+        if windows and windows[i]:
+            left, right = windows[i]
+            if times[j][2] < left - 750 or times[j][1] > right + 750:
+                return 1
+        return 0
+
     scores = [[0] * (m + 1) for _ in range(n + 1)]
     for i in range(n + 1):
         scores[i][0] = 3 * i
@@ -29,7 +37,8 @@ def assign(expected, observed, equivalent):
         for j in range(1, m + 1):
             scores[i][j] = min(
                 scores[i - 1][j - 1]
-                + (0 if equivalent(expected[i - 1], observed[j - 1]) else 2),
+                + (0 if equivalent(expected[i - 1], observed[j - 1]) else 2)
+                + distance_cost(i - 1, j - 1),
                 scores[i - 1][j] + 3,
                 scores[i][j - 1] + 3,
             )
@@ -37,7 +46,9 @@ def assign(expected, observed, equivalent):
     i, j = n, m
     while i and j:
         equal = equivalent(expected[i - 1], observed[j - 1])
-        if scores[i][j] == scores[i - 1][j - 1] + (0 if equal else 2):
+        if scores[i][j] == scores[i - 1][j - 1] + (0 if equal else 2) + distance_cost(
+            i - 1, j - 1
+        ):
             pairs.append((i - 1, j - 1, equal))
             i, j = i - 1, j - 1
         elif scores[i][j] == scores[i - 1][j] + 3:
@@ -73,8 +84,13 @@ def assigned_lines(
             & {toneless(v) for v in readings.get(right, ())}
         )
 
+    windows = {c["id"]: c.get("editionWindow") for c in cues}
     pairs = assign(
-        [token for _, token in expected], [x[0] for x in observed], equivalent
+        [token for _, token in expected],
+        [x[0] for x in observed],
+        equivalent,
+        [windows[id_] for id_, _ in expected] if any(windows.values()) else None,
+        observed,
     )
     observed_tokens = [token for token, _, _ in observed]
     rows = []
@@ -112,6 +128,23 @@ def assigned_lines(
                 rows.append(row)
                 continue
         weak = low_match
+        if cue.get("editionWindow"):
+            left, right = cue["editionWindow"]
+            first = owned[0][2] and owned[0][0] == positions[0]
+            last = owned[-1][2] and owned[-1][0] == positions[-1]
+            if not first or not last:
+                reasons.append(f"LRCLIB source window {left}–{right} ms.")
+                for label, supported, edge, key in [
+                    ("Start", first, 0, 1),
+                    ("End", last, -1, 2),
+                ]:
+                    reasons.append(
+                        f"{label}: Whisper {observed[owned[edge][1]][key]} ms."
+                        if supported
+                        else f"{label}: needs review."
+                    )
+                rows.append(row)
+                continue
         if strict_edges:
             anchor_tokens = [expected[i][1] for i, _, equal in owned if equal]
             lyric_tokens = [expected[i][1] for i in positions]

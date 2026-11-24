@@ -22,6 +22,7 @@ const lineSchema = z.object({
   observedStartMs: z.number().int().nonnegative().optional(),
   observedEndMs: z.number().int().nonnegative().optional(),
   reasons: z.array(z.string()),
+  refinementEvidence: z.boolean().optional(),
   matched: z.number().int().nonnegative().optional(),
   total: z.number().int().nonnegative().optional(),
   weakEstimate: z

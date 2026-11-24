@@ -17,3 +17,6 @@ openai-whisper==20250625
 
 # Intel macOS PyTorch wheels require the NumPy 1.x ABI.
 numpy<2; platform_system == "Darwin" and platform_machine == "x86_64"
+
+# YouTube acquisition, including the JavaScript challenge solver.
+yt-dlp[default]==2026.10.26

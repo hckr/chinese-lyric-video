@@ -1,3 +1,4 @@
+import { syntheticWav } from "./synthetic-wav.ts";
 import { rawProject } from "../src/domain.ts";
 import { automaticTiming, cachedTimingModels } from "../timing-api.ts";
 import { detectedAudioAcceptance } from "./detected-audio-browser.ts";
@@ -1204,6 +1205,313 @@ const server = http.createServer((req, res) => {
       await lyricsGrouping(page, { click, fill, read, upload });
       assert.deepEqual(errors, []);
       console.log("Lyrics grouping acceptance passed.");
+      return;
+    }
+    if (process.argv.includes("--youtube-import")) {
+      const wav = Array.from(syntheticWav(1));
+      await page.evaluate(async (bytes) => {
+        const media = new Uint8Array(bytes);
+        const digest = await crypto.subtle.digest("SHA-256", media);
+        const fingerprint = Array.from(new Uint8Array(digest), (b) =>
+          b.toString(16).padStart(2, "0"),
+        ).join("");
+        const baseFetch = window.fetch;
+        window.fetch = async (input, init) => {
+          const url = String(input);
+          if (url === "/api/suggest-groups") {
+            const data = JSON.parse(String(init?.body));
+            if (!data.splitContext || !data.model)
+              throw Error("Missing passage context");
+            return Response.json({
+              groups: [],
+              phrases: [
+                { start: 1, end: 1, pieces: ["你好世界你好", "世界你好世界"] },
+              ],
+            });
+          }
+          if (url === "/api/timing-models")
+            return Response.json({ models: ["medium"] });
+          if (url === "/api/automatic-timing") {
+            const blob = init?.body as Blob;
+            const meta = JSON.parse((await blob.text()).split("\n")[0]);
+            if (meta.prepareOnly) return Response.json({ prepared: true });
+            return Response.json({
+              result: {
+                lines: meta.project.occurrences.map(
+                  (o: { id: string; phraseId: string }, i: number) => ({
+                    id: o.id,
+                    text: meta.project.phrases.find(
+                      (p: { id: string }) => p.id === o.phraseId,
+                    ).lyricKey,
+                    observedStartMs: i ? 600 : 100,
+                    observedEndMs: i ? 920 : 550,
+                    refinementEvidence: true,
+                    matched: i ? 1 : 2,
+                    total: 2,
+                    reasons: i ? ["Uncertain"] : [],
+                  }),
+                ),
+              },
+            });
+          }
+          if (url === "/api/youtube")
+            return Response.json({
+              id: "abcdefghijk",
+              url: "https://youtu.be/abcdefghijk",
+              fingerprint,
+              title: "Original recording",
+              track: "Fixture title",
+              artist: "Fixture artist",
+              channel: "Fixture channel",
+              duration: 1,
+              fetchedAt: new Date().toISOString(),
+            });
+          if (url.startsWith("/api/youtube/media/")) return new Response(media);
+          if (url.startsWith("https://lrclib.net/api/search"))
+            return Response.json([
+              {
+                id: 123,
+                trackName: "Fixture title",
+                artistName: "Fixture artist",
+                albumName: "Album",
+                duration: 1,
+                plainLyrics: "你好世界",
+                syncedLyrics: "[00:00.10]你好世界你好世界你好世界",
+                instrumental: false,
+              },
+              {
+                id: 124,
+                trackName: "Alternate edition",
+                artistName: "Fixture artist",
+                albumName: "",
+                duration: 1,
+                syncedLyrics: "[00:00.55]另一種版本",
+                plainLyrics: null,
+                instrumental: false,
+              },
+              {
+                id: 125,
+                trackName: "Plain edition",
+                artistName: "Fixture artist",
+                albumName: "",
+                duration: 1,
+                plainLyrics: "文本",
+                instrumental: false,
+              },
+              ...[126, 127, 128, 129].map((id, i) => ({
+                id,
+                trackName: "Edition " + id,
+                artistName: "Artist",
+                albumName: "",
+                duration: 1,
+                plainLyrics: "你好世界你好世界你好世界",
+                syncedLyrics:
+                  i < 3 ? "[00:00.10]你好世界你好世界你好世界" : null,
+                instrumental: false,
+              })),
+            ]);
+          return baseFetch(input, init);
+        };
+      }, wav);
+      await page.evaluate(
+        () =>
+          (document.querySelector<HTMLDetailsElement>(".youtube-entry")!.open =
+            true),
+      );
+      await fill('input[type="url"]', "https://youtu.be/abcdefghijk");
+      await click("Fetch song");
+      await page.setViewport({
+        width: 1200,
+        height: 800,
+        deviceScaleFactor: 1,
+      });
+      const compareDeadline = Date.now() + 8000;
+      while (
+        Date.now() < compareDeadline &&
+        !(await page.evaluate(
+          () => !!document.querySelector(".edition-comparison video"),
+        ))
+      )
+        await settle();
+      assert.equal(
+        await page.evaluate(
+          () => document.querySelectorAll(".edition-grid article").length,
+        ),
+        7,
+      );
+      await page.evaluate(() =>
+        document
+          .querySelectorAll<HTMLButtonElement>(".edition-transcript button")[1]
+          .click(),
+      );
+      await settle();
+      assert.deepEqual(
+        await page.evaluate(() =>
+          Array.from(
+            document.querySelectorAll(".edition-context strong"),
+            (el) => el.textContent,
+          ),
+        ),
+        [
+          "你好世界你好世界你好世界",
+          "另一種版本",
+          ...Array(3).fill("你好世界你好世界你好世界"),
+        ],
+      );
+      await page.setViewport({ width: 375, height: 700, deviceScaleFactor: 1 });
+      assert.ok(
+        await page.evaluate(() => {
+          const [a, b] = document.querySelectorAll(".edition-grid article");
+          return (
+            b.getBoundingClientRect().top >= a.getBoundingClientRect().bottom
+          );
+        }),
+      );
+      const referenceBefore = await page.evaluate(
+        () =>
+          document.querySelector(".edition-grid article strong")!.textContent,
+      );
+      await page.evaluate(() => {
+        const buttons = Array.from(
+          document.querySelectorAll<HTMLButtonElement>(
+            ".edition-grid article:nth-child(3) button",
+          ),
+        );
+        buttons.find((b) => b.textContent === "Compare in B")!.click();
+      });
+      await settle();
+      assert.equal(
+        await page.evaluate(
+          () =>
+            document.querySelector(".edition-grid article strong")!.textContent,
+        ),
+        referenceBefore,
+      );
+      assert.ok(
+        await page.evaluate(() =>
+          document
+            .querySelectorAll(".edition-grid article")[1]
+            .textContent?.includes("Plain edition"),
+        ),
+      );
+      await page.evaluate(() => {
+        const card = document.querySelectorAll(".edition-grid article")[1];
+        [...card.querySelectorAll<HTMLButtonElement>("button")]
+          .find((button) => button.textContent === "Hide")!
+          .click();
+      });
+      await settle();
+      assert.ok(
+        await page.evaluate(() => {
+          const card = document.querySelector(
+            ".edition-grid article:last-child",
+          );
+          return (
+            card?.getAttribute("data-reviewed") === "true" &&
+            card.textContent?.includes("Plain edition") &&
+            !card.querySelector(".edition-transcript")
+          );
+        }),
+      );
+      assert.ok(
+        await page.evaluate(() => {
+          const replacement = document.querySelectorAll(
+            ".edition-grid article",
+          )[1];
+          return (
+            replacement
+              .querySelector("header strong")
+              ?.textContent?.startsWith("B ·") &&
+            !!replacement.querySelector(".edition-transcript") &&
+            !replacement.textContent?.includes("First lyric line")
+          );
+        }),
+      );
+      await click("Show");
+      assert.ok(
+        await page.evaluate(() =>
+          document
+            .querySelectorAll(".edition-grid article")[1]
+            .textContent?.includes("Plain edition"),
+        ),
+      );
+      await click("Review differences");
+      await page.evaluate(() => {
+        const edit = [...document.querySelectorAll("summary")].find(
+          (el) => el.textContent === "Edit passage",
+        );
+        edit?.click();
+      });
+      await click("Suggest split with AI");
+      await click("Apply suggested breaks");
+      assert.equal(
+        await page.evaluate(
+          () =>
+            document.querySelector<HTMLTextAreaElement>(
+              ".edition-comparison textarea",
+            )!.value,
+        ),
+        "你好世界你好\n世界你好世界",
+      );
+      await click("Finish review");
+      await click("Use reconciled lyrics");
+      await click("Undo");
+      await click("Redo");
+      await page.setViewport({
+        width: 1640,
+        height: 1050,
+        deviceScaleFactor: 1,
+      });
+      await click("Import document");
+      const deadline = Date.now() + 15000;
+      while (!(await read()) && Date.now() < deadline) await settle();
+      const project = await read();
+      assert.equal(project.metadata.title, "Fixture title");
+      assert.equal(project.recordingSource?.channel, "Fixture channel");
+      assert.equal(project.lyricsSource?.id, 123);
+      assert.equal(project.editionTiming?.pieces.length, 2);
+      assert.equal(project.audio?.name, "abcdefghijk.mp4");
+      assert.equal(project.occurrences[0].startMs, 100);
+      await click("Review unresolved timing");
+      await click("Refine imported timing");
+      const refineDeadline = Date.now() + 5000;
+      while (
+        !(await read()).occurrences[0].refinement &&
+        Date.now() < refineDeadline
+      )
+        await settle();
+      const refined = await read();
+      assert.equal(refined.occurrences[0].endMs, 550);
+      assert.equal(refined.occurrences[0].refinement, undefined);
+      assert.equal(refined.occurrences[0].timingReview, "needs-review");
+      assert.equal(refined.occurrences[1].refinement, undefined);
+      const accepted = refined;
+      await click("Refine imported timing");
+      const unchangedDeadline = Date.now() + 5000;
+      while (
+        Date.now() < unchangedDeadline &&
+        !(await page.evaluate(() =>
+          document.body.innerText.includes("No stronger matches found."),
+        ))
+      )
+        await settle();
+      assert.ok(
+        await page.evaluate(() =>
+          document.body.innerText.includes("No stronger matches found."),
+        ),
+      );
+      assert.deepEqual(await read(), accepted);
+      await click("Export data");
+      assert.ok(
+        await page.evaluate(
+          () =>
+            document.body.innerText.includes("Sources & credits") &&
+            !!document.querySelector(
+              'a[href="https://lrclib.net/api/get/123"]',
+            ),
+        ),
+      );
+      console.log("YouTube draft, media import and export credits passed.");
       return;
     }
     if (process.argv.includes("--import-workflow")) {

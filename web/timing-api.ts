@@ -104,7 +104,17 @@ export async function automaticTiming(
     if (separator < 0 || separator > 5_000_000)
       throw Error("Invalid timing request");
     const metadata = JSON.parse(body.subarray(0, separator).toString());
-    metadata.project = projectSchema.parse(metadata.project);
+    metadata.project =
+      metadata.prepareOnly === true
+        ? { occurrences: [] }
+        : projectSchema.parse(metadata.project);
+    delete metadata.transcriptCache;
+    if (metadata.prepareOnly === true || metadata.project.editionTiming)
+      metadata.transcriptCache = path.join(
+        root,
+        ".cache",
+        "whisper-transcripts",
+      );
     const audioPath = path.join(directory, "audio.media");
     await writeFile(audioPath, body.subarray(separator + 1));
     res.writeHead(200, {

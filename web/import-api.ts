@@ -6,7 +6,7 @@ export async function importLyrics(
   req: IncomingMessage,
   res: ServerResponse,
   root: string,
-  mode: "import" | "dictionary" | "groups" = "import",
+  mode: "import" | "dictionary" | "groups" | "convert" = "import",
 ) {
   res.setHeader("Content-Type", "application/json");
   const fail = (status: number, error: string) => {
@@ -57,7 +57,9 @@ export async function importLyrics(
         ? "workbench.react_dictionary"
         : mode === "groups"
           ? "workbench.react_groups"
-          : "workbench.react_ingest",
+          : mode === "convert"
+            ? "workbench.react_convert"
+            : "workbench.react_ingest",
     ],
     {
       cwd: path.join(root, "python-src"),

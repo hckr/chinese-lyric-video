@@ -1,3 +1,10 @@
+import { importSourceStarts } from "../timing/import-refinement";
+import { PrepareWhisper } from "./PrepareWhisper";
+import { defaultTimingSettings, timingSettingsSchema } from "../domain";
+import { suggestPieces } from "../lyric-length";
+import { editionPieces, type EditionTiming } from "./edition-cues";
+import { YoutubeImport } from "./YoutubeImport";
+import type { Recording, LyricCredit } from "./song-source";
 import type { LyricField } from "./lyric-field.ts";
 import { probeTracks } from "../timing/waveform-stream.ts";
 import type { VerifiedSplitAudio } from "../timing/AutomaticTiming";
@@ -37,6 +44,8 @@ import {
 } from "../domain";
 
 type Draft = {
+  lyricsSource?: LyricCredit;
+  editionTiming?: EditionTiming;
   lastInsertion?: { id: string; text: string };
   choices: Map<string, Word[]>;
   lines: Line[];
@@ -101,6 +110,8 @@ export function DocumentImport({
   const [title, setTitle] = useState(""),
     [artist, setArtist] = useState(""),
     [file, setFile] = useState<File | null>(null);
+  const [preparedModel, setPreparedModel] = useState<string>();
+  const [recording, setRecording] = useState<Recording>();
   const [mediaDuration, setMediaDuration] = useState<number>();
   useEffect(() => {
     setMediaDuration(undefined);
@@ -121,6 +132,7 @@ export function DocumentImport({
   }, [file]);
   const [view, setView] = useState(false),
     [busy, setBusy] = useState(false),
+    [converting, setConverting] = useState(false),
     [error, setError] = useState("");
   const [patches, setPatches] = useState<Patch[]>([]);
   const [proposalBatch, setProposalBatch] = useState(0);
@@ -234,7 +246,11 @@ export function DocumentImport({
   useEffect(() => {
     if (comparison?.timingRun) lastAlignment.current = comparison;
   }, [comparison]);
-  function change(next: Line[], restoreAnalysis = true) {
+  function change(
+    next: Line[],
+    restoreAnalysis = true,
+    preserveEditionTiming = false,
+  ) {
     const same =
       signature ===
       JSON.stringify(parseLines(next).rows.map((r) => [r.id, r.text]));
@@ -266,8 +282,85 @@ export function DocumentImport({
         retained = cached;
       }
     }
-    commit({ ...draft, lines: next, comparison: retained });
+    const previousText = new Map(lines.map((line) => [line.id, line.text]));
+    const unchanged = new Set(
+      next
+        .filter((line) => previousText.get(line.id) === line.text)
+        .map((line) => line.id),
+    );
+    const evidence = new Map(draft.evidence);
+    for (const [id, entry] of evidence) {
+      if (unchanged.has(id)) continue;
+      if (entry.timingReview === "reviewed")
+        evidence.set(id, {
+          ...entry,
+          automaticTiming: undefined,
+          weakTiming: undefined,
+          timingIssue: undefined,
+        });
+      else evidence.delete(id);
+    }
+    const convertedText = new Map(next.map((line) => [line.id, line.text]));
+    commit({
+      ...draft,
+      lines: next,
+      comparison: retained,
+      evidence,
+      ...(preserveEditionTiming && draft.editionTiming
+        ? {
+            editionTiming: {
+              ...draft.editionTiming,
+              pieces: draft.editionTiming.pieces.map((piece) => ({
+                ...piece,
+                text: convertedText.get(piece.id) ?? piece.text,
+              })),
+            },
+          }
+        : {}),
+    });
     if (!retained) setView(false);
+  }
+  async function convertCharacters() {
+    setConverting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/convert-characters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lines: lines.map((line) => line.text) }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        throw Error(
+          err?.error ||
+            (response.status === 404
+              ? "Conversion endpoint unavailable. Restart the workbench development server."
+              : `Could not convert characters (${response.status}).`),
+        );
+      }
+      const data = await response.json();
+      if (!Array.isArray(data.lines))
+        throw Error("Could not convert characters.");
+      if (
+        data.lines.length !== lines.length ||
+        data.lines.some((text: unknown) => typeof text !== "string")
+      )
+        throw Error("Character conversion returned invalid lyric lines.");
+      change(
+        lines.map((line, index) => ({ ...line, text: data.lines[index] })),
+        false,
+        true,
+      );
+      requestAnimationFrame(() => editor.current?.focus());
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not convert characters.",
+      );
+    } finally {
+      setConverting(false);
+    }
   }
   const changeSource = useRef(change);
   changeSource.current = change;
@@ -285,6 +378,8 @@ export function DocumentImport({
     lastAlignment.current = undefined;
     past.current = [];
     future.current = [];
+    setPreparedModel(undefined);
+    setRecording(undefined);
     setFile(audio);
     setView(false);
     setInsertion(undefined);
@@ -300,6 +395,22 @@ export function DocumentImport({
   function withEvidence(p: Project) {
     return {
       ...p,
+      recordingSource: recording,
+      lyricsSource: draft.lyricsSource,
+      editionTiming: draft.editionTiming && {
+        ...draft.editionTiming,
+        pieces: draft.editionTiming.pieces.flatMap((piece) => {
+          if (
+            !lines.some(
+              (line) => line.id === piece.id && line.text.trim() === piece.text,
+            )
+          )
+            return [];
+          const occurrence = p.occurrences.find((o) => o.id === piece.id);
+          const phrase = p.phrases.find((ph) => ph.id === occurrence?.phraseId);
+          return phrase ? [{ ...piece, text: phrase.lyricKey }] : [];
+        }),
+      },
       phrases: p.phrases.map((phrase) =>
         draft.choices.has(phrase.lyricKey)
           ? { ...phrase, words: draft.choices.get(phrase.lyricKey)! }
@@ -405,6 +516,62 @@ export function DocumentImport({
   return (
     <div className="document-import" data-audio-view={view}>
       <div hidden={view}>
+        <YoutubeImport
+          provider={provider}
+          active={active && !view}
+          file={file}
+          title={title}
+          artist={artist}
+          recording={recording}
+          onRecording={(r, f) => {
+            audioChanged(f);
+            setRecording(r);
+            setTitle(r.track || r.title);
+            setArtist(r.artist || "");
+          }}
+          onLyrics={(text, lyricsSource, cues, timing) => {
+            const pieces =
+              timing?.pieces ??
+              (cues.length
+                ? editionPieces(cues)
+                : linesFrom(
+                    text
+                      .split(/\r?\n/)
+                      .flatMap((s) => suggestPieces(s))
+                      .join("\n"),
+                  ).map((line) => ({ ...line, cue: -1 })));
+            lastAlignment.current = undefined;
+            request.current++;
+            setBusy(false);
+            commit({
+              lines: pieces,
+              editionTiming:
+                timing ??
+                (recording && pieces.length
+                  ? {
+                      fingerprint: recording.fingerprint,
+                      editionId: lyricsSource.id,
+                      cues,
+                      pieces,
+                    }
+                  : undefined),
+              lyricsSource,
+              choices: new Map(),
+              evidence: new Map(),
+            });
+            setPatches([]);
+            setView(false);
+            requestAnimationFrame(() => editor.current?.focus());
+          }}
+        />
+        {file && recording && mediaDuration && (
+          <PrepareWhisper
+            key={recording.fingerprint}
+            file={file}
+            duration={mediaDuration}
+            onModel={setPreparedModel}
+          />
+        )}
         <LyricsEditor
           lines={lines}
           change={change}
@@ -431,6 +598,18 @@ export function DocumentImport({
           }
           inspectCursor={dictionaryOpen}
           onDictionaryToggle={setDictionaryOpen}
+          editorAction={
+            <button
+              type="button"
+              disabled={
+                converting ||
+                !lines.some((line) => /[\u3400-\u9fff]/u.test(line.text))
+              }
+              onClick={() => void convertCharacters()}
+            >
+              {converting ? "Converting…" : "Convert to Simplified"}
+            </button>
+          }
           beforeEditor={
             <>
               <div className="document-metadata">
@@ -583,7 +762,11 @@ export function DocumentImport({
                 )}
                 <button
                   className="primary import-document-submit"
-                  disabled={!parsed.rows.length || !!parsed.issues.length}
+                  disabled={
+                    !parsed.rows.length ||
+                    !!parsed.issues.length ||
+                    (!!recording && !mediaDuration)
+                  }
                   onClick={() =>
                     runImport(async () => {
                       const p = withEvidence(
@@ -601,6 +784,24 @@ export function DocumentImport({
                           : undefined;
                       return {
                         ...p,
+                        ...(preparedModel
+                          ? {
+                              timingSettings: timingSettingsSchema.parse({
+                                ...defaultTimingSettings,
+                                model: preparedModel,
+                              }),
+                            }
+                          : {}),
+                        occurrences:
+                          recording && media
+                            ? importSourceStarts(
+                                p,
+                                media.durationMs,
+                                recording.fingerprint,
+                              )
+                            : p.occurrences,
+                        recordingSource: recording,
+                        lyricsSource: draft.lyricsSource,
                         ...(media ? { audio: media } : {}),
                         ...(comparison?.timingRun
                           ? {

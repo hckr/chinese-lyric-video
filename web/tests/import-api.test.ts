@@ -10,7 +10,12 @@ test(
   { skip: !existsSync("python-src/venv/bin/python") },
   async () => {
     const server = http.createServer((req, res) => {
-      void importLyrics(req, res, process.cwd());
+      void importLyrics(
+        req,
+        res,
+        process.cwd(),
+        req.url === "/convert" ? "convert" : "import",
+      );
     });
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -40,6 +45,15 @@ test(
             v.words.length > 0 && v.words.every((w) => !w.pinyin.includes(" ")),
         ),
       );
+      const converted = await fetch(url + "/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: url },
+        body: JSON.stringify({ lines: ["繁體歌詞", "[副歌]", "I believe"] }),
+      });
+      assert.equal(converted.status, 200);
+      assert.deepEqual(await converted.json(), {
+        lines: ["繁体歌词", "[副歌]", "I believe"],
+      });
       assert.equal((await fetch(url)).status, 405);
       assert.equal(
         (

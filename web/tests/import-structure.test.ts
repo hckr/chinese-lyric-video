@@ -164,3 +164,28 @@ test("split audio between two members joins their section in timeline order", ()
   );
   assert.deepEqual(project.lyricGroups[0].occurrenceIds, ["line-0", "line-1"]);
 });
+
+test("project structure document handles Traditional to Simplified conversion with preserved identities", () => {
+  const project = rawProject("美麗的花\n[Chorus]\n可愛的貓", "Title", "");
+  const baseLines = projectDocument(project);
+  const parsedBase = parseLines(baseLines);
+  assert.equal(parsedBase.rows.length, 2);
+
+  const convertedTexts = new Map([
+    ["美麗的花", "美丽的花"],
+    ["可愛的貓", "可爱的猫"],
+  ]);
+  const convertedLines = baseLines.map((l) => ({
+    ...l,
+    text: convertedTexts.get(l.text) ?? l.text,
+  }));
+  const parsedConverted = parseLines(convertedLines);
+
+  assert.equal(parsedConverted.rows.length, parsedBase.rows.length);
+  assert.ok(
+    parsedConverted.rows.every(
+      (r, i) => r.text === convertedTexts.get(parsedBase.rows[i].text),
+    ),
+  );
+  assert.equal(parsedConverted.groups.length, parsedBase.groups.length);
+});
