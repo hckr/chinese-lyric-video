@@ -62,7 +62,14 @@ export function FootageSettings({
       ) : (
         <div className="design-workspace">
           <div>
-            <DesignSettings key={s.activeDesign} s={s} save={save} />
+            <DesignSettings
+              key={s.activeDesign}
+              s={s}
+              save={save}
+              songDurationMs={
+                s.soundtrack?.durationMs ?? project.audio?.durationMs
+              }
+            />
             <p>
               Soundtrack ·{" "}
               {s.soundtrack?.name ??

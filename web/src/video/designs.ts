@@ -33,6 +33,7 @@ export const designSchema = z
     startMs: z.number().int().nonnegative().default(0),
     endMs: z.number().int().positive().optional(),
     speed: z.number().positive().max(4).default(1),
+    freezeStartMs: z.number().int().nonnegative().default(0),
     overrides: z
       .record(
         z.string(),
@@ -43,6 +44,10 @@ export const designSchema = z
             pinyin: z.boolean().optional(),
             watermark: z.boolean().optional(),
             outro: z.boolean().optional(),
+            outroFreeze: z.boolean().default(false),
+            outroOverlapMs: z.number().int().nonnegative().default(0),
+            outroPart1Ms: z.number().int().positive().default(3500),
+            outroPart2Ms: z.number().int().positive().default(4000),
             scale: z.number().min(0.4).max(1.5).default(1),
             vertical: z.number().min(-40).max(40).default(0),
             english: z.boolean().default(true),

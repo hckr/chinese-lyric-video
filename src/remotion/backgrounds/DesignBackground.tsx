@@ -7,9 +7,11 @@ import {
 } from "react";
 import {
   AbsoluteFill,
+  Freeze,
   Html5Audio,
   Html5Video,
   Img,
+  Sequence,
   useCurrentFrame,
   useVideoConfig,
   useRemotionEnvironment,
@@ -212,35 +214,59 @@ export function DesignBackground({
   children: React.ReactNode;
   audioSrc: string;
 }) {
+  const { fps } = useVideoConfig();
   const { isPlayer } = useRemotionEnvironment();
   const AudioEffects = isPlayer ? PreviewEffects : RenderEffects;
+  const freezeStartMs = design.freezeStartMs ?? 0;
+  const hasFreeze = design.kind === "original" && freezeStartMs > 0;
   // A local music video often supplies both outputs. Let the browser demux
   // and play it once while the Player drives seeking and excerpt offsets.
   const originalPreview = isPlayer && design.kind === "original";
   const [nativeFailed, setNativeFailed] = useState(false);
   const nativeFootage = originalPreview && !nativeFailed;
-  const embeddedSoundtrack = originalPreview && src === audioSrc;
+  const embeddedSoundtrack = originalPreview && src === audioSrc && !hasFreeze;
   const fallbackToDecoder = useCallback(() => setNativeFailed(true), []);
   const style = { width: "100%", height: "100%", objectFit: design.fit };
+
+  const renderVideo = (muted: boolean) =>
+    nativeFootage ? (
+      <Html5Video
+        src={src}
+        muted={muted}
+        style={style}
+        onError={fallbackToDecoder}
+      />
+    ) : (
+      <Video src={src} muted={muted} style={style} objectFit={design.fit} />
+    );
+
+  const startFreezeFrames = Math.max(
+    0,
+    Math.round((freezeStartMs * fps) / 1000),
+  );
+
+  const footageVisual = hasFreeze ? (
+    <>
+      {startFreezeFrames > 0 && (
+        <Sequence durationInFrames={startFreezeFrames}>
+          <Freeze frame={0}>{renderVideo(true)}</Freeze>
+        </Sequence>
+      )}
+      <Sequence from={startFreezeFrames} premountFor={startFreezeFrames}>
+        {renderVideo(!embeddedSoundtrack)}
+      </Sequence>
+    </>
+  ) : (
+    renderVideo(!embeddedSoundtrack)
+  );
+
   const visual =
     design.kind === "loop" ? (
       <LoopClip src={src} design={design} />
     ) : design.kind === "image" ? (
       <Img src={src} style={style} />
-    ) : nativeFootage ? (
-      <Html5Video
-        src={src}
-        muted={!embeddedSoundtrack}
-        style={style}
-        onError={fallbackToDecoder}
-      />
     ) : (
-      <Video
-        src={src}
-        muted={!embeddedSoundtrack}
-        style={style}
-        objectFit={design.fit}
-      />
+      footageVisual
     );
   return (
     <>

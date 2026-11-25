@@ -120,20 +120,65 @@ export function resolveFootageJob(
     };
   });
   const count = frame(range.endMs) - frame(range.startMs);
-  const start = frame(range.endMs) - Math.min(Math.round(fps * 7.5), count);
-  const length = frame(range.endMs) - start;
-  const split = start + Math.floor(length * 0.47);
   const override = design.overrides[selectedVariant];
-  const outro =
-    override?.outro && length >= 3
-      ? {
-          outroStart: start,
-          heartStart: start + Math.floor(length * 0.16),
-          firstLineEnd: split,
-          secondLineStart: split,
-          durationInFrames: frame(range.endMs),
-        }
-      : undefined;
+  const part1Frames = Math.max(
+    1,
+    Math.round(((override?.outroPart1Ms ?? 3500) * fps) / 1000),
+  );
+  const part2Frames = Math.max(
+    1,
+    Math.round(((override?.outroPart2Ms ?? 4000) * fps) / 1000),
+  );
+  const totalOutroFrames = part1Frames + part2Frames;
+  const isOutroFreeze = Boolean(override?.outro && override?.outroFreeze);
+  let outro:
+    | {
+        outroStart: number;
+        heartStart: number;
+        firstLineEnd: number;
+        secondLineStart: number;
+        durationInFrames: number;
+      }
+    | undefined;
+  let durationInFrames = count;
+
+  if (override?.outro) {
+    if (isOutroFreeze) {
+      const overlapFrames = Math.max(
+        0,
+        Math.min(
+          totalOutroFrames,
+          Math.round(((override?.outroOverlapMs ?? 0) * fps) / 1000),
+        ),
+      );
+      const extendFrames = totalOutroFrames - overlapFrames;
+      const start = frame(range.endMs) - overlapFrames;
+      const split = start + part1Frames;
+      const end = start + totalOutroFrames;
+      durationInFrames = count + extendFrames;
+      outro = {
+        outroStart: start,
+        heartStart: start + Math.floor(part1Frames * 0.35),
+        firstLineEnd: split,
+        secondLineStart: split,
+        durationInFrames: end,
+      };
+    } else if (count >= 3) {
+      const length = Math.min(totalOutroFrames, count);
+      const start = frame(range.endMs) - length;
+      const effectivePart1 = Math.round(
+        (part1Frames / totalOutroFrames) * length,
+      );
+      const split = start + effectivePart1;
+      outro = {
+        outroStart: start,
+        heartStart: start + Math.floor(effectivePart1 * 0.35),
+        firstLineEnd: split,
+        secondLineStart: split,
+        durationInFrames: frame(range.endMs),
+      };
+    }
+  }
   return {
     outro,
     design: override?.fit ? { ...design, fit: override.fit } : design,
@@ -141,7 +186,7 @@ export function resolveFootageJob(
     layout: design.overrides[selectedVariant],
     lines,
     durationMs,
-    durationInFrames: frame(range.endMs) - frame(range.startMs),
+    durationInFrames,
     sequenceOffset: -frame(range.startMs),
     portrait,
     lyricMode:

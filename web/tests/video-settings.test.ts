@@ -41,7 +41,7 @@ test("footage variants preserve authored data and round absolute excerpt edges",
   assert.equal(serializeProject(project), original);
 });
 
-import { designSchema } from "../src/video/designs.ts";
+import { designSchema, initialDesign } from "../src/video/designs.ts";
 import { jobMedia, resolveThumbnail } from "../src/video/video-settings.ts";
 import { loopFrame } from "../../src/remotion/backgrounds/loop-frame.ts";
 import { parseVideoTime } from "../src/video/video-time.ts";
@@ -150,4 +150,113 @@ test("muted original footage requires one playable master and stores no session 
   assert.equal(media.visual, silent);
   assert.equal(resolveFootageJob(p).durationMs, 6000);
   assert.doesNotMatch(serializeProject(p), /blob:|127\.0\.0\.1/);
+});
+
+test("designSchema supports freezeStartMs with round-trip preservation", () => {
+  const initial = initialDesign();
+  assert.equal(initial.freezeStartMs, 0);
+
+  const custom = designSchema.parse({
+    id: "delayed-bg",
+    name: "Delayed Background",
+    freezeStartMs: 2000,
+  });
+  assert.equal(custom.freezeStartMs, 2000);
+
+  assert.throws(
+    () =>
+      designSchema.parse({
+        id: "invalid-freeze",
+        name: "Invalid",
+        freezeStartMs: -100,
+      }),
+    /too_small|nonnegative/,
+  );
+
+  const p = importLegacy(
+    readFileSync("src/Angela_Zhang_Keep_Walking.ts", "utf8"),
+  );
+  p.audio = {
+    name: "song.mp4",
+    size: 1,
+    durationMs: 120000,
+    lastModified: 0,
+    hasVideo: true,
+    hasAudio: true,
+  };
+  p.videoSettings = videoSettingsSchema.parse({});
+  p.videoSettings.designs[0].freezeStartMs = 2000;
+
+  const restored = parseProject(serializeProject(p));
+  const activeDesign = restored.videoSettings?.designs.find(
+    (d) => d.id === restored.videoSettings?.activeDesign,
+  );
+  assert.equal(activeDesign?.freezeStartMs, 2000);
+
+  const job = resolveFootageJob(restored);
+  assert.equal(job.design.freezeStartMs, 2000);
+});
+
+test("resolveFootageJob handles outro with custom part timings and freeze frame extension", () => {
+  const p = importLegacy(
+    readFileSync("src/Angela_Zhang_Keep_Walking.ts", "utf8"),
+  );
+  p.audio = {
+    name: "song.mp4",
+    size: 1,
+    durationMs: 100000,
+    lastModified: 0,
+    hasVideo: true,
+    hasAudio: true,
+  };
+  p.videoSettings = videoSettingsSchema.parse({});
+  const fps = 25;
+
+  // 1. Outro overlapping song end (default outroFreeze = false)
+  p.videoSettings.designs[0].overrides.landscape = {
+    scale: 1,
+    vertical: 0,
+    english: true,
+    polish: true,
+    gloss: true,
+    hanzi: true,
+    outro: true,
+    outroFreeze: false,
+    outroOverlapMs: 0,
+    outroPart1Ms: 2000,
+    outroPart2Ms: 3000,
+  };
+  const overlapJob = resolveFootageJob(p, undefined, "landscape", fps);
+  assert(overlapJob.outro !== undefined);
+  // Total 5s = 125 frames at 25 fps; song is 100s = 2500 frames
+  assert.equal(overlapJob.durationInFrames, 2500);
+  assert.equal(overlapJob.outro?.outroStart, 2500 - 125);
+  assert.equal(overlapJob.outro?.firstLineEnd, 2500 - 125 + 50); // part 1 = 2s = 50 frames
+  assert.equal(overlapJob.outro?.secondLineStart, 2500 - 125 + 50);
+  assert.equal(overlapJob.outro?.durationInFrames, 2500);
+
+  // 2. Outro extending after song with freeze frame (outroFreeze = true)
+  p.videoSettings.designs[0].overrides.landscape.outroFreeze = true;
+  const freezeJob = resolveFootageJob(p, undefined, "landscape", fps);
+  assert(freezeJob.outro !== undefined);
+  // Total composition extended by 125 frames = 2625 frames
+  assert.equal(freezeJob.durationInFrames, 2500 + 125);
+  assert.equal(freezeJob.outro?.outroStart, 2500);
+  assert.equal(freezeJob.outro?.firstLineEnd, 2500 + 50);
+  assert.equal(freezeJob.outro?.secondLineStart, 2500 + 50);
+  assert.equal(freezeJob.outro?.durationInFrames, 2500 + 125);
+
+  // 3. Outro with freeze frame and overlap (Part 1 overlaps song, Part 2 on freeze frame)
+  p.videoSettings.designs[0].overrides.landscape.outroOverlapMs = 2000; // 50 frames overlap
+  const partialFreezeJob = resolveFootageJob(p, undefined, "landscape", fps);
+  assert(partialFreezeJob.outro !== undefined);
+  // Total composition extended by 125 - 50 = 75 frames (2575 frames)
+  assert.equal(partialFreezeJob.durationInFrames, 2500 + 75);
+  // Outro starts 50 frames before song end (frame 2450)
+  assert.equal(partialFreezeJob.outro?.outroStart, 2450);
+  // Part 1 ends exactly as song ends (frame 2500)
+  assert.equal(partialFreezeJob.outro?.firstLineEnd, 2500);
+  assert.equal(partialFreezeJob.outro?.secondLineStart, 2500);
+  // Entire outro ends at 2575
+  assert.equal(partialFreezeJob.outro?.durationInFrames, 2575);
 });

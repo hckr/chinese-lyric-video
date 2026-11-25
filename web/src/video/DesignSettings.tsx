@@ -7,12 +7,19 @@ import { AssetPicker } from "./video-assets.tsx";
 export function DesignSettings({
   s,
   save,
+  songDurationMs,
 }: {
   s: VideoSettings;
   save: (s: VideoSettings) => void;
+  songDurationMs?: number;
 }) {
   const thumbnailArt = thumbnailModeSettings(s).asset;
   const d = s.designs.find((v) => v.id === s.activeDesign) ?? s.designs[0];
+  const videoDurationMs = d.asset?.durationMs;
+  const diffMs =
+    songDurationMs !== undefined && videoDurationMs !== undefined
+      ? songDurationMs - videoDurationMs
+      : undefined;
   const update = (patch: Partial<Design>) =>
     save({
       ...s,
@@ -98,6 +105,7 @@ export function DesignSettings({
               asset: undefined,
               startMs: 0,
               endMs: undefined,
+              freezeStartMs: 0,
               dim: kind === "original",
               bassPulse: kind === "image",
               visualizer: kind === "image",
@@ -119,7 +127,14 @@ export function DesignSettings({
         }
         kind={d.kind === "image" ? "image" : "video"}
         asset={d.asset}
-        onChange={(asset) => update({ asset, startMs: 0, endMs: undefined })}
+        onChange={(asset) =>
+          update({
+            asset,
+            startMs: 0,
+            endMs: undefined,
+            freezeStartMs: 0,
+          })
+        }
       />
       {d.kind === "image" && thumbnailArt && (
         <button onClick={() => update({ asset: thumbnailArt })}>
@@ -127,7 +142,7 @@ export function DesignSettings({
         </button>
       )}
       {d.kind === "original" && d.asset && (
-        <button onClick={() => update({ asset: undefined })}>
+        <button onClick={() => update({ asset: undefined, freezeStartMs: 0 })}>
           Use imported footage
         </button>
       )}
@@ -141,6 +156,57 @@ export function DesignSettings({
           <option>contain</option>
         </select>
       </label>
+      {d.kind === "original" && (
+        <>
+          <label>
+            Freeze first frame (ms)
+            <input
+              type="number"
+              min="0"
+              step="100"
+              key={d.id + "/freezeStart/" + d.freezeStartMs}
+              defaultValue={d.freezeStartMs}
+              onBlur={(e) => {
+                const val = Number(e.currentTarget.value);
+                if (Number.isFinite(val) && val >= 0) {
+                  update({ freezeStartMs: Math.round(val) });
+                } else {
+                  e.currentTarget.value = String(d.freezeStartMs);
+                }
+              }}
+            />
+            {d.freezeStartMs > 0 && (
+              <small>{formatTime(d.freezeStartMs)} lead-in</small>
+            )}
+          </label>
+          {songDurationMs !== undefined && videoDurationMs !== undefined && (
+            <p>
+              Duration · Song: {formatTime(songDurationMs)} (
+              {songDurationMs.toLocaleString()} ms) · Video:{" "}
+              {formatTime(videoDurationMs)} ({videoDurationMs.toLocaleString()}{" "}
+              ms) ·{" "}
+              <strong>
+                {diffMs === 0
+                  ? "Identical length"
+                  : diffMs !== undefined && diffMs > 0
+                    ? `Video is ${diffMs.toLocaleString()} ms shorter`
+                    : `Video is ${(-diffMs!).toLocaleString()} ms longer`}
+              </strong>
+              {diffMs !== undefined &&
+                diffMs > 0 &&
+                d.freezeStartMs !== diffMs && (
+                  <button
+                    type="button"
+                    onClick={() => update({ freezeStartMs: diffMs })}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Set delay to difference ({diffMs.toLocaleString()} ms)
+                  </button>
+                )}
+            </p>
+          )}
+        </>
+      )}
       {d.kind === "loop" && (
         <>
           <label>
@@ -326,6 +392,125 @@ export function DesignSettings({
           />
           Closing thank-you and subscribe sequence
         </label>
+        {layout.outro && (
+          <div style={{ paddingLeft: "1.25rem" }}>
+            <label>
+              <input
+                type="checkbox"
+                checked={layout.outroFreeze ?? false}
+                onChange={(e) => override({ outroFreeze: e.target.checked })}
+              />
+              Extend video with freeze frame after song
+            </label>
+            {layout.outroFreeze && (
+              <>
+                <label>
+                  Overlap with song (ms)
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    key={
+                      d.id +
+                      "/" +
+                      s.variant +
+                      "/overlap/" +
+                      (layout.outroOverlapMs ?? 0)
+                    }
+                    defaultValue={layout.outroOverlapMs ?? 0}
+                    onBlur={(e) => {
+                      const val = Number(e.currentTarget.value);
+                      if (Number.isFinite(val) && val >= 0) {
+                        override({ outroOverlapMs: Math.round(val) });
+                      } else {
+                        e.currentTarget.value = String(
+                          layout.outroOverlapMs ?? 0,
+                        );
+                      }
+                    }}
+                  />
+                </label>
+                {(layout.outroOverlapMs ?? 0) !==
+                  (layout.outroPart1Ms ?? 3500) && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      override({ outroOverlapMs: layout.outroPart1Ms ?? 3500 })
+                    }
+                    style={{ marginBottom: "0.5rem" }}
+                  >
+                    Match Part 1 duration ({layout.outroPart1Ms ?? 3500} ms)
+                  </button>
+                )}
+                {(layout.outroOverlapMs ?? 0) > 0 && (
+                  <p>
+                    <small>
+                      {formatTime(layout.outroOverlapMs ?? 0)} plays before song
+                      ends; remainder plays on extended freeze frame.
+                    </small>
+                  </p>
+                )}
+              </>
+            )}
+            <label>
+              Part 1 duration (ms) · "Thank you for watching"
+              <input
+                type="number"
+                min="500"
+                step="100"
+                key={
+                  d.id +
+                  "/" +
+                  s.variant +
+                  "/part1/" +
+                  (layout.outroPart1Ms ?? 3500)
+                }
+                defaultValue={layout.outroPart1Ms ?? 3500}
+                onBlur={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  if (Number.isFinite(val) && val >= 500) {
+                    override({ outroPart1Ms: Math.round(val) });
+                  } else {
+                    e.currentTarget.value = String(layout.outroPart1Ms ?? 3500);
+                  }
+                }}
+              />
+            </label>
+            <label>
+              Part 2 duration (ms) · "Please like and subscribe"
+              <input
+                type="number"
+                min="500"
+                step="100"
+                key={
+                  d.id +
+                  "/" +
+                  s.variant +
+                  "/part2/" +
+                  (layout.outroPart2Ms ?? 4000)
+                }
+                defaultValue={layout.outroPart2Ms ?? 4000}
+                onBlur={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  if (Number.isFinite(val) && val >= 500) {
+                    override({ outroPart2Ms: Math.round(val) });
+                  } else {
+                    e.currentTarget.value = String(layout.outroPart2Ms ?? 4000);
+                  }
+                }}
+              />
+            </label>
+            <small>
+              Total outro:{" "}
+              {(
+                ((layout.outroPart1Ms ?? 3500) +
+                  (layout.outroPart2Ms ?? 4000)) /
+                1000
+              ).toFixed(1)}
+              s
+            </small>
+          </div>
+        )}
         {(["hanzi", "english", "polish", "gloss"] as const)
           .filter((k) => s.variant !== "only-pinyin" || k === "hanzi")
           .map((k, i) => (
